@@ -173,7 +173,9 @@ export async function resolveSecret(
   name: SecretName,
 ): Promise<string | undefined> {
   const vault = await decryptVault(env, siteId);
-  return vault[name] ?? env[name];
+  // Env fallback only exists for schema fields (DEEPSEEK_API_KEY / GITHUB_PAT);
+  // the R2 keys are vault-only (dedicated per-site storage).
+  return vault[name] ?? (env as unknown as Record<string, string | undefined>)[name];
 }
 
 /**

@@ -85,7 +85,6 @@ runtime via Cloudflare vars (`wrangler.jsonc` / dashboard):
 | `DEFAULT_SITE_ID` | Site opened by default on the agency domain | `agence` |
 | `SITE_DOMAINS` | JSON map siteId → client custom domain | `{"client-a":"studio.client-a.ch"}` |
 | `SITE_OVERRIDES` | JSON map siteId → partial overrides (repo, cdnDomain, name, r2AccountId, r2Bucket…) | `{"agence":{"repo":"cedric-v/cedricv.com","cdnDomain":"https://cdn.cedricv.com"}}` |
-| `R2_PUBLIC_URL` | Public CDN domain of the R2 bucket | `https://cdn.cedricv.com` |
 
 The code ships with **seed defaults** (business config: repos, prompts, themes)
 in `src/config/sites.ts`; every value can be overridden per deployment via
@@ -103,7 +102,6 @@ is ignored (multi-tenant isolation, verified 403 on foreign status polling).
 npm install
 npx wrangler login                 # authenticate the CLI
 npx wrangler kv namespace create KV     # → copy the returned id into wrangler.jsonc
-npx wrangler r2 bucket create studio-clarte-media
 ```
 
 ### 2. Domains & DNS (Cloudflare) — studio.cedricv.com
@@ -137,13 +135,27 @@ The CNAME target is shown in Workers → `studio-clarte` → **Triggers → Rout
 > ⚠️ Every domain you attach must be declared in `AGENCY_DOMAIN` / `SITE_DOMAINS`,
 > otherwise the middleware returns a 404.
 
-### 2b. Per-client image storage (R2 on the CLIENT's own Cloudflare account)
+### 2b. Per-client image storage — dedicated R2, no webmaster bucket
 
-**Cost model:** each site can store its images in ITS OWN R2 bucket. Storage &
-egress are then billed to the client, not to you. Your Worker only signs the
-presigned URLs (no bytes transit through it).
+**Cost model:** every site stores its images either on ITS OWN R2 bucket
+(client's Cloudflare account) or — by default — in **Git**. Your Worker never
+holds media: it only signs presigned URLs (R2 mode) or the images are committed
+into the site repo with the draft PR (Git mode). Storage & egress are billed to
+the client.
 
-**Flow:**
+**Resolution priority (per active site):**
+
+1. **Client R2** — site has `r2AccountId`/`r2Bucket` AND its vault keys →
+   direct PUT to the client's bucket, public reads via the site's `cdnDomain`;
+2. **Git fallback** — otherwise (no R2 config or vault keys missing): the image
+   is committed into the repo as `public/images/{siteId}/…` and referenced with
+the relative URL `/images/{siteId}/…` (works with Astro `public/`, Eleventy
+passthrough…). Previewed directly in the admin (base64).
+
+> ❌ There is deliberately **no fallback on a webmaster/global bucket** — if you
+> want R2, each site needs its own dedicated configuration.
+
+**Flow (R2 mode):**
 
 ```
 Browser → WebP compression → PUT (presigned URL) → CLIENT bucket (their account, their costs)
@@ -151,7 +163,7 @@ Browser → WebP compression → PUT (presigned URL) → CLIENT bucket (their ac
                                             public reads via the site's cdnDomain
 ```
 
-**Per site, two things are needed:**
+**Per site, two things are needed for R2 mode:**
 
 1. **Identifiers (non-secret)** — in `SITE_OVERRIDES`:
    `{"client-a":{"r2AccountId":"<client-account-id>","r2Bucket":"<client-bucket>"}}`
@@ -168,21 +180,13 @@ Browser → WebP compression → PUT (presigned URL) → CLIENT bucket (their ac
    **« R2 Bucket — Object Read & Write »** → restrict to the single bucket.
 4. Send the Access Key ID + Secret to the webmaster (→ ⚙️ Settings vault).
 
-**Fallback:** a site without per-site R2 config (or without vault keys) falls
-back to your global bucket (`R2_ACCOUNT_ID` / `R2_BUCKET_NAME` + vault/global
-keys) served from `R2_PUBLIC_URL`. Migration is therefore progressive.
-
-> ⚠️ A per-site bucket NEVER mixes with global credentials: without the client's
-> vault keys, uploads go to the global bucket (never to the client bucket with
-> the wrong keys).
+> ⚠️ A per-site bucket NEVER mixes with other credentials: without the client's
+> vault keys, the site falls back to GIT mode (never to another bucket).
 
 ### 3. Secrets (via `wrangler secret put`) & vars
 
 ```bash
 wrangler secret put VAULT_MASTER_KEY        # AES-256 master key (≥16 chars, NEVER lose it)
-wrangler secret put R2_ACCOUNT_ID
-wrangler secret put R2_ACCESS_KEY_ID
-wrangler secret put R2_SECRET_ACCESS_KEY
 wrangler secret put OAUTH_GITHUB_CLIENT_ID
 wrangler secret put OAUTH_GITHUB_CLIENT_SECRET
 wrangler secret put ALLOWED_GITHUB_LOGINS   # optional: allowed GitHub logins whitelist
@@ -191,8 +195,9 @@ wrangler secret put DEEPSEEK_API_KEY
 wrangler secret put GITHUB_PAT
 ```
 
-Vars (already in `wrangler.jsonc`, placeholders to replace) : `R2_PUBLIC_URL`,
-`SESSION_TTL_SECONDS=604800`.
+Vars (already in `wrangler.jsonc`, placeholders to replace) :
+`AGENCY_DOMAIN`, `DEFAULT_SITE_ID`, `SITE_DOMAINS`, `SITE_OVERRIDES`,
+`SESSION_TTL_SECONDS=604800`. No R2 vars: storage is per-site (vault) or Git.
 
 ### 4. GitHub OAuth App (per `studio.*` domain)
 
@@ -249,7 +254,7 @@ Expected local checks:
 | Auth guard | `curl -H "Host: studio.client-a.ch" localhost:4321/` | 302 → `/login` |
 | Protected API | `curl -H "Host: studio.client-a.ch" localhost:4321/api/settings/keys` | 401 JSON |
 | Unknown domain | `curl -H "Host: admin.client-a.ch" localhost:4321/page` | 404 |
-| Super-Admin | `curl -H "Host: studio.mon-agence.ch" localhost:4321/login` | « Studio Clarté » |
+| Super-Admin | `curl -H "Host: studio.cedricv.com" localhost:4321/login` | « Studio Clarté » |
 | Security headers | `curl -sI -H "Host: studio.client-a.ch" localhost:4321/login` | `X-Frame-Options: DENY`… |
 
 ### Full flow (OAuth + Git + preview)

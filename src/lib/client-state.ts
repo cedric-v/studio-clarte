@@ -9,6 +9,8 @@
 export interface PayloadFile {
   path: string;
   content: string;
+  /** True when content is base64-encoded binary (e.g. a Git-fallback image). */
+  base64?: boolean;
 }
 
 export interface GeneratedPayload {
@@ -33,7 +35,8 @@ export interface ScState {
 export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
-  images?: { url: string; alt: string }[];
+  /** Attached images: R2 mode uses `url`, Git mode uses `dataUrl` + `ref`. */
+  images?: { url?: string; dataUrl?: string; ref?: string; alt: string }[];
   payload?: boolean;
 }
 

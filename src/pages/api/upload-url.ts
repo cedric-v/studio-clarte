@@ -2,20 +2,20 @@ import type { APIRoute } from 'astro';
 import {
   createUploadUrl,
   extensionFromMime,
+  gitMediaRef,
   mediaKey,
-  resolveR2UploadTarget,
+  resolveUploadTarget,
 } from '../../lib/storage';
 
 /**
- * POST /api/upload-url — Generates a presigned R2 URL for direct upload.
- * The browser has already compressed the image to WebP (Canvas); it receives
- * the signed PUT URL + object key + public CDN URL here.
+ * POST /api/upload-url — Resolves the storage target for an image.
  *
- * Storage target resolution (per-client cost model):
- *   - if the ACTIVE site has its own R2 config (`r2AccountId`/`r2Bucket` +
- *     vault keys), the image goes to the CLIENT's bucket, served from the
- *     site's `cdnDomain` ;
- *   - otherwise it falls back to the webmaster's global bucket.
+ * DEDICATED per-site storage (no webmaster bucket):
+ *   - `{ mode: 'r2', uploadUrl, key, publicUrl }` — the image is PUT directly
+ *     to the CLIENT's own R2 bucket (keys from the write-only vault), served
+ *     from the site's `cdnDomain` ;
+ *   - `{ mode: 'git', path, ref }` — no R2 configured: the image will be
+ *     committed to the site repo (`path` = repo path, `ref` = relative URL).
  */
 
 function json(data: unknown, status = 200): Response {
@@ -34,18 +34,25 @@ export const POST: APIRoute = async ({ request, locals }) => {
     typeof body?.contentType === 'string' && body.contentType.length > 0
       ? body.contentType
       : 'image/webp';
+  const extension = extensionFromMime(contentType);
 
   try {
-    const resolved = await resolveR2UploadTarget(locals.env, site);
-    const extension = extensionFromMime(contentType);
+    const resolved = await resolveUploadTarget(locals.env, site);
+
+    if (resolved.mode === 'git') {
+      const { path, ref } = gitMediaRef(site.id, extension);
+      return json({ mode: 'git', path, ref });
+    }
+
     const key = mediaKey(site.id, extension);
-    const target = await createUploadUrl(resolved.target, { key, contentType }, resolved.publicBase);
-    return json(target);
+    const target = await createUploadUrl(
+      resolved.target,
+      { key, contentType },
+      resolved.publicBase,
+    );
+    return json({ mode: 'r2', ...target });
   } catch (error) {
     console.error('[upload-url]', error);
-    return json(
-      { error: error instanceof Error ? error.message : 'R2 not configured' },
-      500,
-    );
+    return json({ error: error instanceof Error ? error.message : 'Upload target unavailable' }, 500);
   }
 };

@@ -4,17 +4,11 @@
   "compatibility_date": "2025-08-01",
   "compatibility_flags": ["nodejs_compat"],
   // ⚠️ BEFORE DEPLOYING: replace the id below with a real Cloudflare KV Namespace
-  // (`wrangler kv namespace create KV`), and adjust the R2 bucket name.
+  // (`wrangler kv namespace create KV`).
   "kv_namespaces": [
     {
       "binding": "KV",
       "id": "studio-clarte-kv-local"
-    }
-  ],
-  "r2_buckets": [
-    {
-      "binding": "R2",
-      "bucket_name": "studio-clarte-media"
     }
   ],
   // Site registry (domains are deployment config — never hardcoded in code).
@@ -22,17 +16,23 @@
   //   AGENCY_DOMAIN  → your studio subdomain (e.g. studio.cedricv.com)
   //   SITE_DOMAINS   → {"client-a":"studio.client-a.ch", ...}
   //   SITE_OVERRIDES → {"agence":{"repo":"your-org/your-site","cdnDomain":"https://cdn.your-domain.com"}}
+  //                    + optional per-site R2: "r2AccountId", "r2Bucket"
   // They can also be set as Cloudflare dashboard vars (they override the file).
   "vars": {
-    "R2_PUBLIC_URL": "https://cdn.example.com",
     "SESSION_TTL_SECONDS": 604800,
     "AGENCY_DOMAIN": "studio.example.com",
     "DEFAULT_SITE_ID": "agence",
     "SITE_DOMAINS": "{}",
     "SITE_OVERRIDES": "{}"
   }
+  // Storage model: DEDICATED per-site R2, no webmaster bucket.
+  // Per site, either:
+  //   • own R2 → r2AccountId/r2Bucket in SITE_OVERRIDES + the site's
+  //     R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY in the vault (⚙️ Settings);
+  //   • Git fallback → images are committed into the site repo.
+  //
   // Secrets to create via `wrangler secret put <NAME>` :
-  //   VAULT_MASTER_KEY, R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY,
-  //   OAUTH_GITHUB_CLIENT_ID, OAUTH_GITHUB_CLIENT_SECRET, ALLOWED_GITHUB_LOGINS,
-  //   DEEPSEEK_API_KEY (global fallback), GITHUB_PAT (global fallback)
+  //   VAULT_MASTER_KEY, OAUTH_GITHUB_CLIENT_ID, OAUTH_GITHUB_CLIENT_SECRET,
+  //   ALLOWED_GITHUB_LOGINS, DEEPSEEK_API_KEY (global fallback),
+  //   GITHUB_PAT (global fallback)
 }

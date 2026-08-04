@@ -150,6 +150,9 @@ const { lang } = Astro.locals;
         branch: data.branch,
       } satisfies WorkflowState;
 
+      // Let the chat clear its pending Git-fallback images (now committed).
+      window.dispatchEvent(new CustomEvent('sc:pr-created'));
+
       activateStep(2);
       prLink.href = safeHttpUrl(data.prUrl);
       prLink.textContent = t(lang, 'workflow.prLink', data.prNumber, data.branch);

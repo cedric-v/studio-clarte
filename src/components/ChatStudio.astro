@@ -45,7 +45,7 @@ const SUGGESTION_KEYS = ['chat.suggestion1', 'chat.suggestion2', 'chat.suggestio
 </div>
 
 <script>
-  import { emit, getState, toast, type ChatMessage } from '../lib/client-state';
+  import { emit, getState, on, toast, type ChatMessage } from '../lib/client-state';
   import { uploadImage } from '../lib/client-upload';
   import { getClientLocale, t } from '../i18n';
   import { renderMarkdown } from '../lib/markdown-lite';
@@ -59,8 +59,22 @@ const SUGGESTION_KEYS = ['chat.suggestion1', 'chat.suggestion2', 'chat.suggestio
   const fileInput = document.getElementById('file-input') as HTMLInputElement;
   const stripEl = document.getElementById('image-strip')!;
 
-  let pendingImages: { url: string; alt: string }[] = [];
+  interface PendingImage {
+    kind: 'r2' | 'git';
+    /** R2 mode: public CDN URL. */
+    url?: string;
+    /** Git mode: repo path + relative reference + local data URL. */
+    path?: string;
+    ref?: string;
+    dataUrl?: string;
+    alt: string;
+  }
+
+  let pendingImages: PendingImage[] = [];
   let streaming = false;
+
+  // Git-fallback images waiting to be committed with the next draft PR.
+  let gitImages: { path: string; alt: string; dataUrl: string }[] = [];
 
   // Escapes values inserted into innerHTML (user file names, …)
   function escapeHtml(src: string): string {
@@ -82,7 +96,7 @@ const SUGGESTION_KEYS = ['chat.suggestion1', 'chat.suggestion2', 'chat.suggestio
     const images = (message.images ?? [])
       .map(
         (img) =>
-          `<figure class="md-figure"><img src="${escapeHtml(img.url)}" alt="${escapeHtml(img.alt)}" loading="lazy" /><figcaption>${escapeHtml(img.alt)}</figcaption></figure>`,
+          `<figure class="md-figure"><img src="${escapeHtml(img.url ?? img.dataUrl ?? '')}" alt="${escapeHtml(img.alt)}" loading="lazy" /><figcaption>${escapeHtml(img.alt)}</figcaption></figure>`,
       )
       .join('');
     div.innerHTML = images + renderMarkdown(message.content);
@@ -114,7 +128,19 @@ const SUGGESTION_KEYS = ['chat.suggestion1', 'chat.suggestion2', 'chat.suggestio
         toast(t(lang, 'chat.toastCompressing', file.name), 'info');
         const uploaded = await uploadImage(file);
         const alt = t(lang, 'chat.imageAlt', file.name);
-        pendingImages.push({ url: uploaded.publicUrl, alt });
+        if (uploaded.mode === 'r2') {
+          pendingImages.push({ kind: 'r2', url: uploaded.publicUrl, alt });
+        } else {
+          pendingImages.push({
+            kind: 'git',
+            path: uploaded.path,
+            ref: uploaded.ref,
+            dataUrl: uploaded.dataUrl,
+            alt,
+          });
+          gitImages.push({ path: uploaded.path, alt, dataUrl: uploaded.dataUrl });
+          toast(t(lang, 'chat.toastGitMode'), 'info');
+        }
         renderStrip();
         toast(
           uploaded.compressed
@@ -135,7 +161,7 @@ const SUGGESTION_KEYS = ['chat.suggestion1', 'chat.suggestion2', 'chat.suggestio
     pendingImages.forEach((img, index) => {
       const thumb = document.createElement('div');
       thumb.className = 'thumb';
-      thumb.innerHTML = `<img src="${escapeHtml(img.url)}" alt="${escapeHtml(img.alt)}" /><button class="thumb-x" type="button" title="Remove">✕</button>`;
+      thumb.innerHTML = `<img src="${escapeHtml(img.url ?? img.dataUrl ?? '')}" alt="${escapeHtml(img.alt)}" /><button class="thumb-x" type="button" title="Remove">✕</button>`;
       thumb.querySelector('.thumb-x')?.addEventListener('click', () => {
         pendingImages.splice(index, 1);
         renderStrip();
@@ -207,6 +233,11 @@ const SUGGESTION_KEYS = ['chat.suggestion1', 'chat.suggestion2', 'chat.suggestio
     return null;
   }
 
+  /** Markdown reference of an image (CDN URL or relative repo path). */
+  function imageMarkdown(img: { url?: string; ref?: string; alt: string }): string {
+    return img.url ? `![${img.alt}](${img.url})` : `![${img.alt}](${img.ref ?? ''})`;
+  }
+
   async function send() {
     if (streaming) return;
     const text = inputEl.value.trim();
@@ -216,7 +247,11 @@ const SUGGESTION_KEYS = ['chat.suggestion1', 'chat.suggestion2', 'chat.suggestio
     const userMessage: ChatMessage = {
       role: 'user',
       content: text || t(lang, 'chat.attachedImage'),
-      images,
+      images: images.map((img) => ({
+        url: img.kind === 'r2' ? img.url : undefined,
+        dataUrl: img.kind === 'git' ? img.dataUrl : undefined,
+        alt: img.alt,
+      })),
     };
     state.messages.push(userMessage);
     renderMessage(userMessage);
@@ -230,7 +265,7 @@ const SUGGESTION_KEYS = ['chat.suggestion1', 'chat.suggestion2', 'chat.suggestio
       role: message.role,
       content:
         (message.images?.length
-          ? message.images.map((img) => `![${img.alt}](${img.url})`).join('\n\n') + '\n\n'
+          ? message.images.map((img) => imageMarkdown(img)).join('\n\n') + '\n\n'
           : '') + message.content,
     }));
 
@@ -289,9 +324,10 @@ const SUGGESTION_KEYS = ['chat.suggestion1', 'chat.suggestion2', 'chat.suggestio
           emit('sc:payload', {
             title: payload.title || 'Generated content',
             summary: payload.summary || '',
-            files,
+            // Git-fallback images are committed alongside the generated files.
+            files: [...files, ...gitImages.map((img) => gitImageFile(img))],
           });
-          toast(t(lang, 'chat.filesReady', files.length), 'success');
+          toast(t(lang, 'chat.filesReady', files.length + gitImages.length), 'success');
         } else {
           toast(t(lang, 'chat.invalidPayload'), 'error');
         }
@@ -308,6 +344,25 @@ const SUGGESTION_KEYS = ['chat.suggestion1', 'chat.suggestion2', 'chat.suggestio
       scrollBottom();
     }
   }
+
+  /** Converts a Git-fallback image into a base64 payload file. */
+  function gitImageFile(img: { path: string; dataUrl: string }): {
+    path: string;
+    content: string;
+    base64: true;
+  } {
+    return {
+      path: img.path,
+      content: img.dataUrl.slice(img.dataUrl.indexOf(',') + 1),
+      base64: true,
+    };
+  }
+
+  // Once a draft PR has been created, the Git-fallback images are committed:
+  // clear the pending list so the next generation does not duplicate them.
+  on('sc:pr-created', () => {
+    gitImages = [];
+  });
 
   sendBtn.addEventListener('click', () => void send());
   inputEl.addEventListener('keydown', (event) => {

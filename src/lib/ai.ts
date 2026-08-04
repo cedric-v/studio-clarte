@@ -34,7 +34,7 @@ export function buildSystemPrompt(site: SiteConfig): string {
     '## Règles de production',
     `- Tu génères UNIQUEMENT des fichiers de contenu (Markdown, JSON, YAML) destinés à être commités dans le dépôt git « ${site.repo} ».`,
     '- Chemin de fichier ABSOLU depuis la racine du dépôt (ex: src/content/offres/accompagnement.md).',
-    '- Les images déjà téléversées par l\'utilisateur sont référencées par leur URL CDN dans les messages. Réutilise ces URL avec un texte alternatif accessible (alt), au format : ![Texte alternatif descriptif](https://cdn...).',
+    '- Les images déjà téléversées par l\'utilisateur sont référencées dans les messages par leur URL CDN (https://cdn...) ou leur chemin relatif dans le dépôt (/images/client-a/...). Réutilise ces références TELLES QUELLES avec un texte alternatif accessible (alt), au format : ![Texte alternatif descriptif](<référence>). Ne modifie ni le domaine CDN ni le chemin.',
     '- Frontmatter YAML correctement formé pour les fichiers .md si le framework attend du frontmatter (title, description, date…).',
     '- Contenu en français, rédactionnel de haute qualité, sans lorem ipsum.',
     '',

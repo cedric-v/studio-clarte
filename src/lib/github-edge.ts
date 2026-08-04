@@ -17,6 +17,8 @@ import { Octokit } from '@octokit/rest';
 export interface DraftFile {
   path: string;
   content: string;
+  /** True when content is base64-encoded binary (committed via git.createBlob). */
+  base64?: boolean;
 }
 
 export interface DraftResult {
@@ -95,16 +97,27 @@ export async function createDraftPR(
   const branch = `draft/${slugify(opts.title)}-${Date.now().toString(36)}`;
 
   // 2. Git tree built in memory (no local checkout)
+  //    - binary files (base64) are first materialized as blobs via createBlob ;
+  //    - text files are embedded directly in the tree.
+  const treeItems: { path: string; mode: '100644'; type: 'blob'; content?: string; sha?: string }[] = [];
+  for (const file of files) {
+    if (file.base64) {
+      const { data: blob } = await octokit.git.createBlob({
+        owner,
+        repo: repoName,
+        content: file.content,
+        encoding: 'base64',
+      });
+      treeItems.push({ path: file.path, mode: '100644', type: 'blob', sha: blob.sha });
+    } else {
+      treeItems.push({ path: file.path, mode: '100644', type: 'blob', content: file.content });
+    }
+  }
   const { data: tree } = await octokit.git.createTree({
     owner,
     repo: repoName,
     base_tree: baseSha,
-    tree: files.map((file) => ({
-      path: file.path,
-      mode: '100644' as const,
-      type: 'blob' as const,
-      content: file.content,
-    })),
+    tree: treeItems,
   });
 
   // 3. Commit parented on main

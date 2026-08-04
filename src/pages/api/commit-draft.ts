@@ -19,6 +19,10 @@ function json(data: unknown, status = 200): Response {
 }
 
 const MAX_FILES = 20;
+/** Cap on base64 image payloads (≈2.25 MB binary per file). */
+const MAX_BINARY_CHARS = 3_000_000;
+/** Cap on the total JSON payload size (protects the Worker + GitHub API). */
+const MAX_TOTAL_CHARS = 12_000_000;
 
 export const POST: APIRoute = async ({ request, locals }) => {
   const site = locals.siteConfig;
@@ -34,6 +38,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   if (!files.length) return json({ error: 'No files to commit' }, 400);
 
   // Every file must look like a valid git path
+  let totalChars = 0;
   for (const file of files) {
     if (typeof file.path !== 'string' || typeof file.content !== 'string') {
       return json({ error: 'Invalid files (path/content required)' }, 400);
@@ -41,6 +46,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (file.path.startsWith('/') || file.path.includes('..')) {
       return json({ error: `Invalid file path: ${file.path}` }, 400);
     }
+    if (file.base64 && file.content.length > MAX_BINARY_CHARS) {
+      return json({ error: `Binary file too large: ${file.path}` }, 413);
+    }
+    totalChars += file.content.length;
+  }
+  if (totalChars > MAX_TOTAL_CHARS) {
+    return json({ error: 'Payload too large' }, 413);
   }
 
   const pat =

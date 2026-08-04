@@ -12,14 +12,6 @@ import { z } from 'zod';
  */
 
 export const EnvSchema = z.object({
-  // ── Cloudflare R2 (direct browser upload via presigned URL) ──────
-  R2_ACCOUNT_ID: z.string().min(1).optional(),
-  R2_ACCESS_KEY_ID: z.string().min(1).optional(),
-  R2_SECRET_ACCESS_KEY: z.string().min(1).optional(),
-  R2_BUCKET_NAME: z.string().min(1).optional(),
-  /** Public bucket domain (e.g. https://cdn.client-a.ch) */
-  R2_PUBLIC_URL: z.url().optional(),
-
   // ── API key vault (AES-GCM) ──────────────────────────────────────
   /** Master key used to derive the AES-256 key (hashed via SHA-256). */
   VAULT_MASTER_KEY: z.string().min(16).optional(),

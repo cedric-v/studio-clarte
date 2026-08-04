@@ -5,19 +5,19 @@ import type { SiteConfig } from '../config/sites';
 import { decryptVault } from './vault';
 
 /**
- * Cloudflare R2 connector — presigned URLs for direct browser uploads.
+ * Media storage strategy — DEDICATED per-site storage, no webmaster bucket.
  *
- * COST MODEL (per-client storage): each site can store its images in its OWN
- * Cloudflare account bucket (`r2AccountId` + `r2Bucket` in the site config,
- * access keys in the write-only vault). Storage & egress are then billed to
- * the client. Sites without their own R2 fall back to the global bucket
- * (webmaster's vars R2_ACCOUNT_ID / R2_BUCKET_NAME / R2_ACCESS_KEY_ID /
- * R2_SECRET_ACCESS_KEY).
+ * Cost model: every site stores its images on ITS OWN Cloudflare account
+ * (`r2AccountId` + `r2Bucket` in the site config, access keys in the
+ * write-only vault). Storage & egress are billed to the client; the Worker
+ * only signs presigned URLs (no bytes transit through it).
  *
- * The client compresses the image to WebP (Canvas API) then PUTs the object
- * directly to R2 via the presigned URL (no bytes transit through the Worker).
- * Public reads are served from the site's `cdnDomain` (client CDN) or the
- * global `R2_PUBLIC_URL`.
+ * GIT FALLBACK: if a site has no R2 configuration (or its vault keys are
+ * missing), images are NOT uploaded anywhere — they are committed directly
+ * into the site's repo (`public/images/{siteId}/…`) as part of the draft PR,
+ * referenced via relative URLs (`/images/{siteId}/…`).
+ *
+ * There is deliberately NO fallback on a webmaster/global bucket.
  *
  * AWS SigV4 signing is handled by @aws-sdk/s3-request-presigner
  * (Workers compatibility: `nodejs_compat` flag required in wrangler).
@@ -53,16 +53,20 @@ function getR2Client(target: R2Target): S3Client {
   return client;
 }
 
+export type UploadTarget =
+  | { mode: 'r2'; target: R2Target; publicBase: string }
+  | { mode: 'git' };
+
 /**
  * Resolves where a site's images are stored:
- *  1. Per-site R2 (client's own account): keys from the vault, public CDN =
- *     the site's `cdnDomain` ;
- *  2. Global fallback (webmaster's bucket): public CDN = `R2_PUBLIC_URL`.
+ *  1. Per-site R2 (client's own account) when configured AND its vault keys
+ *     are present — public CDN = the site's `cdnDomain` ;
+ *  2. Otherwise → `git` mode: images are committed to the site repo (no R2).
  */
-export async function resolveR2UploadTarget(
+export async function resolveUploadTarget(
   env: CloudflareEnv,
   site: SiteConfig | null,
-): Promise<{ target: R2Target; publicBase: string }> {
+): Promise<UploadTarget> {
   if (site?.r2AccountId && site.r2Bucket && site.cdnDomain) {
     const keys = await decryptVault(env, site.id);
     // The client bucket REQUIRES the client's own keys: never mix global
@@ -71,6 +75,7 @@ export async function resolveR2UploadTarget(
     const secretAccessKey = keys.R2_SECRET_ACCESS_KEY;
     if (accessKeyId && secretAccessKey) {
       return {
+        mode: 'r2',
         target: {
           accountId: site.r2AccountId,
           bucket: site.r2Bucket,
@@ -81,36 +86,16 @@ export async function resolveR2UploadTarget(
       };
     }
     console.warn(
-      `[storage] Site ${site.id} has per-site R2 config but no R2 keys in the vault — falling back to the global bucket`,
+      `[storage] Site ${site.id}: per-site R2 configured but keys missing in the vault — images will be committed to Git`,
     );
   }
-
-  if (!env.R2_ACCOUNT_ID || !env.R2_BUCKET_NAME || !env.R2_ACCESS_KEY_ID || !env.R2_SECRET_ACCESS_KEY) {
-    throw new StorageError(
-      'R2 not configured: set per-site R2 (r2AccountId/r2Bucket + vault keys) or the global R2 vars',
-    );
-  }
-  const publicBase =
-    env.R2_PUBLIC_URL ?? `https://${env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`;
-  return {
-    target: {
-      accountId: env.R2_ACCOUNT_ID,
-      bucket: env.R2_BUCKET_NAME,
-      accessKeyId: env.R2_ACCESS_KEY_ID,
-      secretAccessKey: env.R2_SECRET_ACCESS_KEY,
-    },
-    publicBase,
-  };
+  return { mode: 'git' };
 }
 
-export interface UploadTarget {
-  /** Presigned URL (direct PUT from the browser). */
+export interface R2UploadResult {
   uploadUrl: string;
-  /** Object key in the bucket. */
   key: string;
-  /** Public CDN URL (display + AI referencing). */
   publicUrl: string;
-  /** Presigned URL validity in seconds. */
   expiresIn: number;
 }
 
@@ -118,7 +103,7 @@ export async function createUploadUrl(
   target: R2Target,
   opts: { key: string; contentType: string; expiresIn?: number },
   publicBase: string,
-): Promise<UploadTarget> {
+): Promise<R2UploadResult> {
   const expiresIn = opts.expiresIn ?? 3600;
 
   const command = new PutObjectCommand({
@@ -143,13 +128,29 @@ export function publicMediaUrl(publicBase: string, key: string): string {
 }
 
 /**
- * Generates a hierarchical object key: uploads/{siteId}/{YYYY}/{MM}/{uuid}.{ext}
+ * Generates a hierarchical R2 object key: uploads/{siteId}/{YYYY}/{MM}/{uuid}.{ext}
  */
 export function mediaKey(siteId: string, extension = 'webp'): string {
   const now = new Date();
   const year = now.getUTCFullYear();
   const month = String(now.getUTCMonth() + 1).padStart(2, '0');
   return `uploads/${siteId}/${year}/${month}/${crypto.randomUUID()}.${extension}`;
+}
+
+/**
+ * Git-fallback target: the image is committed to the site repo under
+ * `public/images/{siteId}/…` and referenced with the relative URL
+ * `/images/{siteId}/…` (works with Astro `public/`, Eleventy passthrough…).
+ */
+export function gitMediaRef(siteId: string, extension = 'webp'): { path: string; ref: string } {
+  const now = new Date();
+  const year = now.getUTCFullYear();
+  const month = String(now.getUTCMonth() + 1).padStart(2, '0');
+  const name = `${crypto.randomUUID()}.${extension}`;
+  return {
+    path: `public/images/${siteId}/${year}/${month}/${name}`,
+    ref: `/images/${siteId}/${year}/${month}/${name}`,
+  };
 }
 
 const MIME_TO_EXT: Record<string, string> = {

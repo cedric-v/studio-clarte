@@ -44,6 +44,21 @@ const { lang } = Astro.locals;
 
   const lang = getClientLocale();
 
+  // MIME type per image extension (Git-fallback base64 preview).
+  const EXT_MIME: Record<string, string> = {
+    webp: 'image/webp',
+    png: 'image/png',
+    jpg: 'image/jpeg',
+    jpeg: 'image/jpeg',
+    gif: 'image/gif',
+    avif: 'image/avif',
+  };
+  const isImageFile = (path: string) => /^public\/images\//i.test(path);
+  const imageMime = (path: string) => {
+    const ext = path.split('.').pop()?.toLowerCase() ?? '';
+    return EXT_MIME[ext] ?? 'image/webp';
+  };
+
   const emptyEl = document.getElementById('preview-empty') as HTMLElement;
   const rootEl = document.getElementById('preview-root') as HTMLElement;
   const tabsEl = document.getElementById('file-tabs') as HTMLElement;
@@ -97,6 +112,12 @@ const { lang } = Astro.locals;
     const file = files[active];
     if (!file) return;
     pathEl.textContent = file.path;
+
+    // Git-fallback image: preview the base64 content directly.
+    if (file.base64 && isImageFile(file.path)) {
+      viewEl.innerHTML = `<figure class="md-figure"><img src="data:${imageMime(file.path)};base64,${file.content}" alt="${escapeHtml(file.path)}" /><figcaption>${escapeHtml(file.path)}</figcaption></figure>`;
+      return;
+    }
 
     if (viewMode === 'code') {
       if (isJson(file.path)) {

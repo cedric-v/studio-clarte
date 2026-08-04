@@ -85,6 +85,7 @@ const fr: Dictionary = {
   'chat.toastOptimized': (from: string) => `Image optimisée WebP ✓ (${from} → CDN)`,
   'chat.toastUploaded': 'Image téléversée ✓ (format non compressible)',
   'chat.toastImagesOnly': 'Seules les images sont acceptées',
+  'chat.toastGitMode': 'Image prête pour le commit Git (R2 non configuré pour ce site)',
   'chat.toastUploadFailed': 'Échec du téléversement R2',
   'chat.noPayload': 'Réponse générée sans payload structuré — précisez la demande',
   'chat.invalidPayload': 'Payload reçu mais aucun fichier exploitable',
@@ -210,6 +211,7 @@ const en: Dictionary = {
   'chat.toastOptimized': (from: string) => `WebP image optimized ✓ (${from} → CDN)`,
   'chat.toastUploaded': 'Image uploaded ✓ (non-compressible format)',
   'chat.toastImagesOnly': 'Only images are accepted',
+  'chat.toastGitMode': 'Image ready for Git commit (no R2 configured for this site)',
   'chat.toastUploadFailed': 'R2 upload failed',
   'chat.noPayload':
     'Response generated without a structured payload — please be more specific',
