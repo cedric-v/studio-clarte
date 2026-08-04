@@ -27,16 +27,33 @@ if ! command -v gitleaks >/dev/null 2>&1; then
   echo "⚠️  gitleaks non installé — exécutez : brew install gitleaks" >&2
   exit 0
 fi
-gitleaks protect --staged --no-banner --exit-code 1 || exit 1
+gitleaks protect --staged --no-banner || exit 1
 '
 
 PRE_PUSH='#!/usr/bin/env bash
 # Gitleaks pre-push (installé par scripts/install-hooks.sh)
+# Note : le flag `--pre-push` a été retiré de gitleaks ≥ 8.20 — on scanne
+# la plage de commits poussés via `git log --log-opts` (le hook reçoit
+# « <local ref> <local sha> <remote ref> <remote sha> » sur stdin).
 if ! command -v gitleaks >/dev/null 2>&1; then
   echo "⚠️  gitleaks non installé — exécutez : brew install gitleaks" >&2
   exit 0
 fi
-gitleaks git --pre-push --no-banner --exit-code 1 || exit 1
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+  [ -z "$local_sha" ] && continue
+  # Suppression de branche (sha nul) → rien à scanner
+  [ "$local_sha" = "0000000000000000000000000000000000000000" ] && continue
+  if [ "$remote_sha" = "0000000000000000000000000000000000000000" ]; then
+    range="--all"      # nouvelle branche : scan complet
+  else
+    range="${remote_sha}..${local_sha}"
+  fi
+  if ! gitleaks git --log-opts="$range" --no-banner; then
+    echo "⛔ Secrets détectés dans les commits poussés — push bloqué" >&2
+    exit 1
+  fi
+done
 '
 
 install_hook() {
