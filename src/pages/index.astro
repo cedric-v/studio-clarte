@@ -5,6 +5,7 @@ import PayloadPreview from '../components/PayloadPreview.astro';
 import WorkflowTracker from '../components/WorkflowTracker.astro';
 import SettingsModal from '../components/SettingsModal.astro';
 import ToastContainer from '../components/ToastContainer.astro';
+import { listSites } from '../config/sites';
 import { t } from '../i18n';
 import '../styles/global.css';
 
@@ -16,6 +17,9 @@ if (!siteConfig) {
 
 const brandColor = siteConfig.theme?.primaryColor ?? '#3b82f6';
 const siteId = siteConfig.id;
+// Super-Admin only: the full site list powers the site switcher.
+// Clients never receive the registry (multi-tenant isolation).
+const sites = isAgency ? listSites(Astro.locals.env) : [];
 ---
 
 <!doctype html>
@@ -42,7 +46,7 @@ const siteId = siteConfig.id;
   </head>
   <body>
     <div class="app-shell">
-      <Header site={siteConfig} user={user} isAgency={isAgency} />
+      <Header site={siteConfig} user={user} isAgency={isAgency} sites={sites} activeSiteId={siteId} />
 
       <main class="layout">
         <!-- Mobile tabs (CSS-first radio) -->

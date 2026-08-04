@@ -12,6 +12,8 @@ if (user) {
 
 const brandColor = siteConfig?.theme?.primaryColor ?? '#3b82f6';
 const siteName = siteConfig?.name ?? 'Studio Clarté';
+// Configurable example domain for the “unknown domain” hint (never hardcoded).
+const agencyExample = Astro.locals.env.AGENCY_DOMAIN ?? 'studio.example.com';
 ---
 
 <!doctype html>
@@ -57,7 +59,7 @@ const siteName = siteConfig?.name ?? 'Studio Clarté';
         <div class="login-error">
           ⚠️ {t(lang, 'login.unknownDomain')}
           <br />
-          {t(lang, 'login.unknownDomainHint', 'studio.client-a.ch')}
+          {t(lang, 'login.unknownDomainHint', agencyExample)}
         </div>
       )}
     </main>

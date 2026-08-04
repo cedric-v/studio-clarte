@@ -8,9 +8,12 @@ interface Props {
   site: SiteConfig;
   user: SessionUser | null;
   isAgency: boolean;
+  /** All sites — only passed in Super-Admin mode (multi-tenant isolation). */
+  sites: SiteConfig[];
+  activeSiteId: string;
 }
 
-const { site, user, isAgency } = Astro.props;
+const { site, user, isAgency, sites, activeSiteId } = Astro.props;
 const { lang } = Astro.locals;
 ---
 
@@ -31,6 +34,19 @@ const { lang } = Astro.locals;
   </div>
 
   <div class="header-actions">
+    {isAgency && sites.length > 1 && (
+      <label class="site-switcher" title={t(lang, 'header.activeSite')}>
+        <span class="hide-sm">{t(lang, 'header.activeSite')}</span>
+        <select id="site-select" aria-label={t(lang, 'header.activeSite')}>
+          {sites.map((candidate) => (
+            <option value={candidate.id} selected={candidate.id === activeSiteId}>
+              {candidate.name}{candidate.domain ? ` · ${candidate.domain}` : ''}
+            </option>
+          ))}
+        </select>
+      </label>
+    )}
+
     <LanguageSwitcher />
 
     <button id="btn-open-settings" class="btn btn-ghost" type="button" title={t(lang, 'header.settings')}>
@@ -53,6 +69,13 @@ const { lang } = Astro.locals;
 </header>
 
 <script>
+  // Super-Admin site switcher: navigating to /?site=<id> sets the sc_site
+  // cookie (middleware) and reloads with the new active site.
+  document.getElementById('site-select')?.addEventListener('change', (event) => {
+    const siteId = (event.target as HTMLSelectElement).value;
+    if (siteId) window.location.href = `/?site=${encodeURIComponent(siteId)}`;
+  });
+
   document.getElementById('btn-open-settings')?.addEventListener('click', () => {
     window.dispatchEvent(new CustomEvent('sc:open-settings'));
   });

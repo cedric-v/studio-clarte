@@ -36,6 +36,8 @@ declare namespace App {
     env: import('./env').CloudflareEnv;
     /** Client site config detected from the subdomain. */
     siteConfig: import('./config/sites').SiteConfig | null;
+    /** Site matched by the host subdomain (the domain the user came from). */
+    hostSite: import('./config/sites').SiteConfig | null;
     /** True when the domain belongs to the agency (Super-Admin mode). */
     isAgency: boolean;
     /** Authenticated GitHub user (null when logged out). */

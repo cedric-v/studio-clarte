@@ -1148,6 +1148,35 @@ button {
   right: 16px;
 }
 
+/* ═══════════════════════════════════════════════════════════════════
+   SITE SWITCHER (Super-Admin only)
+   ═══════════════════════════════════════════════════════════════════ */
+
+.site-switcher {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.site-switcher select {
+  max-width: 200px;
+  padding: 6px 10px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  background: var(--bg-surface-elevated);
+  color: var(--text-main);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color var(--transition-fast);
+}
+.site-switcher select:hover,
+.site-switcher select:focus {
+  border-color: color-mix(in srgb, var(--brand-primary) 55%, transparent);
+  outline: none;
+}
 
 /* ═══════════════════════════════════════════════════════════════════
    RESPONSIVE — Top tabs < 1024px

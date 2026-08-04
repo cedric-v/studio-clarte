@@ -34,6 +34,16 @@ export const EnvSchema = z.object({
   /** Optional whitelist of allowed GitHub logins (comma-separated). */
   ALLOWED_GITHUB_LOGINS: z.string().optional(),
 
+  // ── Site registry (domains are deployment config — never hardcoded) ─
+  /** Webmaster studio subdomain (e.g. studio.cedricv.com) → Super-Admin mode + default site. */
+  AGENCY_DOMAIN: z.string().optional(),
+  /** Site opened by default on the agency domain (defaults to the agency site id). */
+  DEFAULT_SITE_ID: z.string().optional(),
+  /** JSON map siteId → custom domain, e.g. {"client-a":"studio.client-a.ch"}. */
+  SITE_DOMAINS: z.string().optional(),
+  /** JSON map siteId → partial site overrides (repo, cdnDomain, name, systemPromptAddon…). */
+  SITE_OVERRIDES: z.string().optional(),
+
   // ── Session ──────────────────────────────────────────────────────
   SESSION_TTL_SECONDS: z.coerce.number().int().positive().default(60 * 60 * 24 * 7),
 });

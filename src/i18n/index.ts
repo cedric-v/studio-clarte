@@ -49,6 +49,7 @@ const fr: Dictionary = {
   'header.logout': '⎋ Quitter',
   'header.whiteLabel': 'Marque Blanche',
   'header.superAdmin': 'Mode Super-Admin',
+  'header.activeSite': 'Site actif',
 
   // ── Mobile tabs ──────────────────────────────────────────────────
   'tabs.chat': '💬 Assistant IA',
@@ -168,6 +169,7 @@ const en: Dictionary = {
   'header.logout': '⎋ Log out',
   'header.whiteLabel': 'White Label',
   'header.superAdmin': 'Super-Admin Mode',
+  'header.activeSite': 'Active site',
 
   'tabs.chat': '💬 AI Assistant',
   'tabs.workspace': '📄 Preview & Deploy',
