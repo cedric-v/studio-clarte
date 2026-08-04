@@ -1,7 +1,7 @@
 /**
- * Rendu Markdown léger côté client (bulles de chat + vue visuelle du preview).
- * Aucune dépendance externe : headings, listes, code, gras/italique, liens,
- * images CDN, paragraphes. Le contenu est d'abord échappé (anti-XSS).
+ * Lightweight client-side Markdown rendering (chat bubbles + preview visual
+ * view). No external dependency: headings, lists, code, bold/italic, links,
+ * CDN images, paragraphs. Content is escaped first (anti-XSS).
  */
 
 function escapeHtml(src: string): string {
@@ -25,17 +25,17 @@ function inline(src: string): string {
       (_m, alt: string, url: string) =>
         `<figure class="md-figure"><img src="${safeUrl(url)}" alt="${alt}" loading="lazy" /><figcaption>${alt}</figcaption></figure>`,
     )
-    // liens [text](url)
+    // links [text](url)
     .replace(
       /\[([^\]]+)\]\(([^)\s]+)\)/g,
       (_m, text: string, url: string) =>
         `<a href="${safeUrl(url)}" target="_blank" rel="noopener noreferrer">${text}</a>`,
     )
-    // code inline
+    // inline code
     .replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>')
-    // gras
+    // bold
     .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-    // italique
+    // italic
     .replace(/\*([^*]+)\*/g, '<em>$1</em>');
 }
 
@@ -69,7 +69,7 @@ export function renderMarkdown(src: string): string {
   };
 
   for (const line of lines) {
-    // blocs de code ```
+    // code fences ```
     if (line.trimStart().startsWith('```')) {
       if (code) {
         flushCode();
@@ -94,14 +94,14 @@ export function renderMarkdown(src: string): string {
       continue;
     }
 
-    // listes non ordonnées
+    // unordered lists
     if (/^\s*[-•*]\s+/.test(line)) {
       ordered = null;
       list ??= [];
       list.push(line.replace(/^\s*[-•*]\s+/, ''));
       continue;
     }
-    // listes ordonnées
+    // ordered lists
     if (/^\s*\d+\.\s+/.test(line)) {
       list = null;
       ordered ??= [];
@@ -124,7 +124,7 @@ export function renderMarkdown(src: string): string {
 }
 
 /**
- * JSON joli + coloration syntaxique minimale (clés, chaînes, nombres, booléens).
+ * Pretty JSON + minimal syntax highlighting (keys, strings, numbers, booleans).
  */
 export function renderJson(src: string): { html: string; pretty: string } {
   let pretty: string;

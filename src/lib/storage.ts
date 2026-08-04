@@ -3,14 +3,14 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import type { CloudflareEnv } from '../env';
 
 /**
- * Connecteur Cloudflare R2 — URLs présignées pour upload direct navigateur.
+ * Cloudflare R2 connector — presigned URLs for direct browser uploads.
  *
- * Le client compresse l'image en WebP (Canvas API) puis PUT l'objet directement
- * sur R2 via l'URL présignée (aucun octet ne transite par le Worker).
- * La lecture publique se fait via le domaine CDN du bucket (ex: cdn.client-a.ch).
+ * The client compresses the image to WebP (Canvas API) then PUTs the object
+ * directly to R2 via the presigned URL (no bytes transit through the Worker).
+ * Public reads are served from the bucket CDN domain (e.g. cdn.client-a.ch).
  *
- * Signature AWS SigV4 gérée par @aws-sdk/s3-request-presigner
- * (compatibilité Workers : flag `nodejs_compat` requis dans wrangler).
+ * AWS SigV4 signing is handled by @aws-sdk/s3-request-presigner
+ * (Workers compatibility: `nodejs_compat` flag required in wrangler).
  */
 
 let cachedClient: S3Client | null = null;
@@ -20,12 +20,12 @@ export class StorageError extends Error {}
 function getR2Client(env: CloudflareEnv): S3Client {
   if (!env.R2_ACCOUNT_ID || !env.R2_ACCESS_KEY_ID || !env.R2_SECRET_ACCESS_KEY) {
     throw new StorageError(
-      'R2 non configuré (R2_ACCOUNT_ID / R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY)',
+      'R2 not configured (R2_ACCOUNT_ID / R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY)',
     );
   }
   cachedClient ??= new S3Client({
     region: 'auto',
-    // Endpoint S3 de R2, chemin path-style (bucket dans le path).
+    // R2 S3 endpoint, path-style (bucket in the path).
     endpoint: `https://${env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
     forcePathStyle: true,
     credentials: {
@@ -37,13 +37,13 @@ function getR2Client(env: CloudflareEnv): S3Client {
 }
 
 export interface UploadTarget {
-  /** URL présignée (PUT direct depuis le navigateur). */
+  /** Presigned URL (direct PUT from the browser). */
   uploadUrl: string;
-  /** Clé objet dans le bucket. */
+  /** Object key in the bucket. */
   key: string;
-  /** URL publique CDN (affichage + référencement IA). */
+  /** Public CDN URL (display + AI referencing). */
   publicUrl: string;
-  /** Nombre de secondes de validité de l'URL présignée. */
+  /** Presigned URL validity in seconds. */
   expiresIn: number;
 }
 
@@ -52,7 +52,7 @@ export async function createUploadUrl(
   opts: { key: string; contentType: string; expiresIn?: number },
 ): Promise<UploadTarget> {
   const bucket = env.R2_BUCKET_NAME;
-  if (!bucket) throw new StorageError('R2_BUCKET_NAME non configuré');
+  if (!bucket) throw new StorageError('R2_BUCKET_NAME not configured');
   const expiresIn = opts.expiresIn ?? 3600;
 
   const command = new PutObjectCommand({
@@ -70,14 +70,14 @@ export async function createUploadUrl(
   };
 }
 
-/** URL publique CDN d'une clé objet (domaine custom ou endpoint public par défaut). */
+/** Public CDN URL of an object key (custom domain or default endpoint). */
 export function publicMediaUrl(env: CloudflareEnv, key: string): string {
   const base = (env.R2_PUBLIC_URL ?? `https://${env.R2_ACCOUNT_ID ?? 'r2'}.r2.cloudflarestorage.com`).replace(/\/+$/, '');
   return `${base}/${key.split('/').map(encodeURIComponent).join('/')}`;
 }
 
 /**
- * Génère une clé objet hiérarchisée : uploads/{siteId}/{AAAA}/{MM}/{uuid}.{ext}
+ * Generates a hierarchical object key: uploads/{siteId}/{YYYY}/{MM}/{uuid}.{ext}
  */
 export function mediaKey(siteId: string, extension = 'webp'): string {
   const now = new Date();

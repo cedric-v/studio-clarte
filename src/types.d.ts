@@ -1,42 +1,46 @@
 /// <reference types="astro/client" />
 
 /**
- * Types globaux du projet Studio Clarté.
+ * Global types for Studio Clarté.
  *
- * ⚠️ Ce fichier est un SCRIPT GLOBAL (aucun import/export racine) :
- *  - un `declare module "…"` dans un fichier-module serait une simple
- *    augmentation (ignorée si le module cible n'existe pas) ;
- *  - un `declare global` dans un script global ne fusionne pas avec les
- *    augmentations modules d'Astro → on utilise `declare namespace App`.
+ * ⚠️ This file is deliberately a GLOBAL SCRIPT (no root-level imports/exports):
+ * a `declare module "…"` inside a module file would be treated as a plain
+ * AUGMENTATION (silently ignored when the target module does not exist),
+ * whereas in a global script it properly declares an ambient module.
+ * External types are referenced via inline `import()`.
  *
- * NB : on ne charge PAS `@cloudflare/workers-types` globalement (conflit avec
- * la lib DOM pour `Request`/`Response`/`ReadableStream`). Les types des
- * bindings sont référencés via `import()` inline (types structurels définis
- * dans `src/env.ts`).
+ * NB: we do NOT load `@cloudflare/workers-types` globally (it conflicts with
+ * the DOM lib for `Request`/`Response`/`ReadableStream`). The minimal types
+ * needed are declared here:
+ *  - `ExecutionContext` (structural, required by @astrojs/cloudflare) ;
+ *  - the `cloudflare:workers` module (access to the `env` bindings) ;
+ *  - the `App.Locals` augmentation (per-request context set by the middleware).
  */
 
-/** Type structural minimal du contexte d'exécution Cloudflare (adapter v14). */
+/** Minimal structural type for the Cloudflare execution context (adapter v14). */
 interface ExecutionContext {
   waitUntil(promise: Promise<unknown>): void;
   passThroughOnException(): void;
   props: unknown;
 }
 
-/** Module runtime Cloudflare — exposé par l'adaptateur @astrojs/cloudflare v14+. */
+/** Cloudflare runtime module — exposed by @astrojs/cloudflare v14+. */
 declare module 'cloudflare:workers' {
   export const env: import('./env').CloudflareEnv;
 }
 
-/** Augmentation `App.Locals` — contexte par requête posé par le middleware. */
+/** `App.Locals` augmentation — per-request context set by the middleware. */
 declare namespace App {
   interface Locals {
-    /** Bindings Cloudflare (KV, R2, secrets…) typés. */
+    /** Typed Cloudflare bindings (KV, R2, secrets…). */
     env: import('./env').CloudflareEnv;
-    /** Configuration du site client détectée par sous-domaine. */
+    /** Client site config detected from the subdomain. */
     siteConfig: import('./config/sites').SiteConfig | null;
-    /** Vrai si le domaine correspond à l'agence (mode Super-Admin). */
+    /** True when the domain belongs to the agency (Super-Admin mode). */
     isAgency: boolean;
-    /** Utilisateur GitHub authentifié (null si non connecté). */
+    /** Authenticated GitHub user (null when logged out). */
     user: import('./env').SessionUser | null;
+    /** Active UI locale ('fr' | 'en'). */
+    lang: import('./i18n').Locale;
   }
 }

@@ -1,10 +1,10 @@
 import { processImageFile } from './image-processor';
 
 /**
- * Upload direct vers Cloudflare R2 via URL présignée.
- * 1. Compression WebP in-browser (Canvas) ;
- * 2. POST /api/upload-url → URL présignée + clé + URL CDN ;
- * 3. PUT du blob directement sur R2 (aucun octet via le Worker).
+ * Direct upload to Cloudflare R2 via presigned URL.
+ * 1. In-browser WebP compression (Canvas) ;
+ * 2. POST /api/upload-url → presigned URL + key + CDN URL ;
+ * 3. PUT the blob directly to R2 (no bytes transit through the Worker).
  */
 
 export interface UploadedImage {
@@ -24,7 +24,7 @@ export async function uploadImage(file: File): Promise<UploadedImage> {
   });
   if (!tokenRes.ok) {
     const err = await tokenRes.json().catch(() => null);
-    throw new Error(err?.error ?? `Upload impossible (${tokenRes.status})`);
+    throw new Error(err?.error ?? `Upload failed (${tokenRes.status})`);
   }
   const target = (await tokenRes.json()) as {
     uploadUrl: string;
@@ -38,7 +38,7 @@ export async function uploadImage(file: File): Promise<UploadedImage> {
     body: processed.blob,
   });
   if (!putRes.ok) {
-    throw new Error(`Téléversement R2 échoué (${putRes.status})`);
+    throw new Error(`R2 upload failed (${putRes.status})`);
   }
 
   return {

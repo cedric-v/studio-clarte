@@ -1,9 +1,9 @@
 /**
- * État client partagé entre composants Astro.
+ * Shared client state between Astro components.
  *
- * Les `<script>` de chaque composant sont des bundles séparés : on ne peut pas
- * partager de module state classique. On attache donc un unique objet d'état
- * sur `window` (`window.__sc`) et on communique par Custom Events.
+ * Each component's `<script>` is a separate bundle: classic module state cannot
+ * be shared. We therefore attach a single state object to `window`
+ * (`window.__sc`) and communicate through Custom Events.
  */
 
 export interface PayloadFile {
@@ -60,7 +60,7 @@ export function toast(message: string, type: 'info' | 'success' | 'error' = 'inf
   emit('sc:toast', { message, type });
 }
 
-/** Bascule mobile : affiche l'onglet « Aperçu & Déploiement ». */
+/** Mobile switch: shows the "Preview & Deploy" tab. */
 export function switchToWorkspaceTab(): void {
   const tab = document.getElementById('tab-workspace') as HTMLInputElement | null;
   if (tab) tab.checked = true;

@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Studio Clarté — Admin IA multi-tenant edge-native (Astro SSR + Cloudflare Compute + R2 + DeepSeek + Direct Git API)",
+  "description": "Studio Clarté — Edge-native multi-tenant AI admin (Astro SSR + Cloudflare Compute + R2 + DeepSeek + Direct Git API)",
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",

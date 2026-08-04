@@ -1,22 +1,31 @@
-# Gitleaks — configuration Studio Clarté
-# Ce dépôt est PUBLIC (open source) : la détection de secrets est non négociable.
-# Utilisé par :
-#   - le hook pre-commit (`gitleaks protect --staged`)
-#   - le hook pre-push (`gitleaks git --pre-push`)
-#   - `npm run secrets:scan` (scan complet de l'historique)
+# Gitleaks — Studio Clarté configuration
+# This repository is PUBLIC (open source): secret detection is non-negotiable.
+# Used by:
+#   - the pre-commit hook (`gitleaks protect --staged`)
+#   - the pre-push hook (pushed commit range scan via `--log-opts`)
+#   - `npm run secrets:scan` (full history scan)
 
 title = "Studio Clarté Gitleaks Config"
 
 [extend]
 useDefault = true
 
-# Fichiers d'EXEMPLE uniquement : ils contiennent volontairement des
-# placeholders documentaires (jamais de vraies clés). Tout autre fichier
-# contenant un secret sera bloqué avant commit/push.
+# EXAMPLE files only: they intentionally contain documentation placeholders
+# (never real keys). Any other file containing a secret is blocked
+# before commit/push.
+#
+# Build artifacts (gitignored, never pushed) may contain bundled example
+# strings (e.g. the AI system prompt with `sk-…` placeholders) — they are
+# excluded from local --no-git scans only. Git-based hooks (pre-commit /
+# pre-push) scan the staged/pushed content, which never includes these.
 [allowlist]
-description = "Fichiers de documentation / templates à placeholders"
+description = "Documentation / template files with placeholders + gitignored build output"
 paths = [
   '''\.env\.example$''',
   '''.*\.example$''',
   '''LICENSE$''',
+  '''^dist/''',
+  '''^node_modules/''',
+  '''^\.astro/''',
+  '''^\.wrangler/''',
 ]

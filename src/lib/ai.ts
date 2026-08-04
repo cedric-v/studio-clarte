@@ -5,12 +5,12 @@ export const DEEPSEEK_MODEL = 'deepseek-chat';
 export const DEEPSEEK_BASE_URL = 'https://api.deepseek.com';
 
 /**
- * Client DeepSeek via @ai-sdk/openai.
+ * DeepSeek client via @ai-sdk/openai.
  *
- * ⚠️ IMPORTANT (AI SDK v5+) : le provider OpenAI utilise la « Responses API »
- * par défaut ; DeepSeek expose une API compatible « Chat Completions ».
- * On passe donc par `.chat('deepseek-chat')` pour cibler l'endpoint
- * `/chat/completions` de DeepSeek.
+ * ⚠️ IMPORTANT (AI SDK v5+): the OpenAI provider uses the "Responses API" by
+ * default; DeepSeek exposes a "Chat Completions"-compatible API. We therefore
+ * use `.chat('deepseek-chat')` to target DeepSeek's `/chat/completions`
+ * endpoint.
  */
 export function createDeepSeek(apiKey: string) {
   return createOpenAI({
@@ -20,9 +20,12 @@ export function createDeepSeek(apiKey: string) {
 }
 
 /**
- * System prompt multi-tenant : contexte du site client (marque blanche),
- * format de sortie STRICT (JSON structuré pour le pipeline Git) et règles
- * de référencement des médias déjà téléversés sur le CDN R2.
+ * Multi-tenant system prompt: client site context (white label), STRICT JSON
+ * output format (structured for the Git pipeline) and rules for referencing
+ * media already uploaded to the R2 CDN.
+ *
+ * The prompt content stays in French: it drives the CONTENT language of the
+ * (French-speaking) client sites, independently of the UI locale.
  */
 export function buildSystemPrompt(site: SiteConfig): string {
   return [

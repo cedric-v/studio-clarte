@@ -1,6 +1,8 @@
 <div class="toast-container" id="toast-container" aria-live="polite"></div>
 
 <script>
+  // Toast notifications — listens to 'sc:toast' Custom Events.
+  // Messages are already localized by the emitter.
   const container = document.getElementById('toast-container') as HTMLElement;
 
   interface ToastDetail {

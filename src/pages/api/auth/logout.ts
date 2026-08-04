@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 
 /**
- * POST /api/auth/logout — Invalide la session KV et supprime le cookie.
+ * POST /api/auth/logout — Invalidates the KV session and deletes the cookie.
  */
 
 export const POST: APIRoute = async ({ cookies, locals, redirect, url }) => {

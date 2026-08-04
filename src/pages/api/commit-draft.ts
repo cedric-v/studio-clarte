@@ -3,12 +3,12 @@ import { createDraftPR, createOctokit, type DraftFile } from '../../lib/github-e
 import { resolveSecret } from '../../lib/vault';
 
 /**
- * POST /api/commit-draft — Exécuté sur Cloudflare Compute.
+ * POST /api/commit-draft — Runs on Cloudflare Compute.
  *
- * Reçoit la liste des fichiers générés et crée, via l'API Git d'Octokit :
+ * Receives the generated file list and creates, via Octokit's Git API:
  *   git.createTree → git.createCommit → git.createRef (draft/*) → pulls.create
- * Le tout en ~1-2 secondes, SANS jamais toucher `main` directement.
- * La création de la PR déclenche le build de preview Cloudflare Pages.
+ * All in ~1-2 seconds, WITHOUT ever touching `main` directly.
+ * Creating the PR triggers the Cloudflare Pages preview build.
  */
 
 function json(data: unknown, status = 200): Response {
@@ -22,7 +22,7 @@ const MAX_FILES = 20;
 
 export const POST: APIRoute = async ({ request, locals }) => {
   const site = locals.siteConfig;
-  if (!site) return json({ error: 'Site inconnu' }, 404);
+  if (!site) return json({ error: 'Unknown site' }, 404);
 
   const body = (await request.json().catch(() => null)) as {
     files?: DraftFile[];
@@ -31,15 +31,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
   } | null;
 
   const files = Array.isArray(body?.files) ? body.files.slice(0, MAX_FILES) : [];
-  if (!files.length) return json({ error: 'Aucun fichier à commiter' }, 400);
+  if (!files.length) return json({ error: 'No files to commit' }, 400);
 
-  // Chaque fichier doit ressembler à un chemin git valide
+  // Every file must look like a valid git path
   for (const file of files) {
     if (typeof file.path !== 'string' || typeof file.content !== 'string') {
-      return json({ error: 'Fichiers invalides (path/content requis)' }, 400);
+      return json({ error: 'Invalid files (path/content required)' }, 400);
     }
     if (file.path.startsWith('/') || file.path.includes('..')) {
-      return json({ error: `Chemin de fichier invalide : ${file.path}` }, 400);
+      return json({ error: `Invalid file path: ${file.path}` }, 400);
     }
   }
 
@@ -47,7 +47,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     (await resolveSecret(locals.env, site.id, 'GITHUB_PAT')) ?? locals.user?.token ?? undefined;
   if (!pat) {
     return json(
-      { error: 'GITHUB_PAT non configuré pour ce site — ajoutez-le dans ⚙️ Paramètres.' },
+      { error: 'GITHUB_PAT not configured for this site — add it in ⚙️ Settings.' },
       400,
     );
   }
@@ -78,7 +78,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   } catch (error) {
     console.error('[commit-draft]', error);
     return json(
-      { error: error instanceof Error ? error.message : 'Création du draft impossible' },
+      { error: error instanceof Error ? error.message : 'Unable to create the draft' },
       502,
     );
   }

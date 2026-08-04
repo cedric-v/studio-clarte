@@ -4,10 +4,10 @@ import { buildSystemPrompt, createDeepSeek } from '../../lib/ai';
 import { resolveSecret } from '../../lib/vault';
 
 /**
- * POST /api/chat — Streaming DeepSeek (`deepseek-chat`).
- * Injecte le system prompt du site actif + résout la clé API du client
- * (vault chiffré, fallback env globale). Réponse : flux texte brut
- * (`streamText().toTextStreamResponse()`).
+ * POST /api/chat — DeepSeek streaming (`deepseek-chat`).
+ * Injects the active site system prompt and resolves the client API key
+ * (encrypted vault, global env fallback). Response: plain text stream
+ * (`createTextStreamResponse`).
  */
 
 function json(data: unknown, status = 200): Response {
@@ -19,16 +19,16 @@ function json(data: unknown, status = 200): Response {
 
 export const POST: APIRoute = async ({ request, locals }) => {
   const site = locals.siteConfig;
-  if (!site) return json({ error: 'Site inconnu' }, 404);
+  if (!site) return json({ error: 'Unknown site' }, 404);
 
   const body = (await request.json().catch(() => null)) as { messages?: unknown[] } | null;
   const messages = Array.isArray(body?.messages) ? body.messages : [];
-  if (!messages.length) return json({ error: 'Paramètre "messages" requis' }, 400);
+  if (!messages.length) return json({ error: 'Parameter "messages" required' }, 400);
 
   const apiKey = await resolveSecret(locals.env, site.id, 'DEEPSEEK_API_KEY');
   if (!apiKey) {
     return json(
-      { error: 'Clé DeepSeek non configurée pour ce site — ajoutez-la dans ⚙️ Paramètres.' },
+      { error: 'DeepSeek key not configured for this site — add it in ⚙️ Settings.' },
       400,
     );
   }
@@ -41,6 +41,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
     maxOutputTokens: 8192,
   });
 
-  // AI SDK v7 : helpers standalone (toTextStreamResponse est déprécié).
+  // AI SDK v7: standalone helpers (toTextStreamResponse is deprecated).
   return createTextStreamResponse({ stream: toTextStream({ stream: result.stream }) });
 };

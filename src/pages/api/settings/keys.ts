@@ -3,13 +3,13 @@ import { readVaultDisplay, writeSecrets, type SecretName } from '../../../lib/va
 import { SECRET_KEYS } from '../../../lib/vault';
 
 /**
- * Coffre-fort des clés API client — WRITE-ONLY.
+ * Client API key vault — WRITE-ONLY.
  *
- * GET  /api/settings/keys  → liste des clés configurées en version MASQUÉE
- *                            (`sk-••••••••1234`). Le clair n'est JAMAIS renvoyé.
- * POST /api/settings/keys  → chiffre (AES-256-GCM) et enregistre les clés
- *                            fournies (remplacement des valeurs absentes laissé
- *                            intact). Retourne uniquement les versions masquées.
+ * GET  /api/settings/keys  → lists the configured keys in MASKED form
+ *                            (`sk-••••••••1234`). Plaintext is NEVER returned.
+ * POST /api/settings/keys  → encrypts (AES-256-GCM) and stores the provided
+ *                            keys (absent values are left untouched, partial
+ *                            update). Returns only the masked versions.
  */
 
 function json(data: unknown, status = 200): Response {
@@ -21,7 +21,7 @@ function json(data: unknown, status = 200): Response {
 
 export const GET: APIRoute = async ({ locals }) => {
   const site = locals.siteConfig;
-  if (!site) return json({ error: 'Site inconnu' }, 404);
+  if (!site) return json({ error: 'Unknown site' }, 404);
 
   const display = await readVaultDisplay(locals.env, site.id);
   return json({ siteId: site.id, configured: display });
@@ -29,7 +29,7 @@ export const GET: APIRoute = async ({ locals }) => {
 
 export const POST: APIRoute = async ({ request, locals }) => {
   const site = locals.siteConfig;
-  if (!site) return json({ error: 'Site inconnu' }, 404);
+  if (!site) return json({ error: 'Unknown site' }, 404);
 
   const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;
 
@@ -42,7 +42,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   if (Object.keys(secrets).length === 0) {
-    return json({ error: 'Aucune clé à enregistrer' }, 400);
+    return json({ error: 'No keys to save' }, 400);
   }
 
   try {
@@ -56,7 +56,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   } catch (error) {
     console.error('[settings/keys]', error);
     return json(
-      { error: error instanceof Error ? error.message : 'Enregistrement impossible' },
+      { error: error instanceof Error ? error.message : 'Unable to save' },
       500,
     );
   }

@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 # ═══════════════════════════════════════════════════════════════════
-# Studio Clarté — installation des hooks Git de sécurité
+# Studio Clarté — Git security hooks installer
 #
-# Installe dans .git/hooks/ :
-#   pre-commit : `gitleaks protect --staged`  (bloque un commit avec secret)
-#   pre-push   : `gitleaks git --pre-push`    (bloque un push avec secret)
+# Installs into .git/hooks/ :
+#   pre-commit : `gitleaks protect --staged`  (blocks a commit containing a secret)
+#   pre-push   : scans the pushed commit range (blocks a push with a secret)
 #
-# Exécuté automatiquement via le script npm `prepare` (npm install).
-# Si gitleaks n'est pas installé, les hooks désactivent proprement
-# (le commit n'est pas bloqué) et un avertissement s'affiche.
+# Runs automatically via the npm `prepare` script (npm install).
+# If gitleaks is not installed, the hooks degrade gracefully
+# (commits are not blocked) and a warning is printed.
 # ═══════════════════════════════════════════════════════════════════
 set -euo pipefail
 
@@ -16,41 +16,41 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 HOOKS_DIR="${ROOT_DIR}/.git/hooks"
 
 if [ ! -d "${HOOKS_DIR}" ]; then
-  # Pas de dépôt git (ex: CI sans .git) → rien à installer
+  # Not a git repository (e.g. CI without .git) → nothing to install
   exit 0
 fi
 
-# ── Contenu des hooks ──────────────────────────────────────────────
+# ── Hook contents ──────────────────────────────────────────────────
 PRE_COMMIT='#!/usr/bin/env bash
-# Gitleaks pre-commit (installé par scripts/install-hooks.sh)
+# Gitleaks pre-commit (installed by scripts/install-hooks.sh)
 if ! command -v gitleaks >/dev/null 2>&1; then
-  echo "⚠️  gitleaks non installé — exécutez : brew install gitleaks" >&2
+  echo "⚠️  gitleaks is not installed — run: brew install gitleaks" >&2
   exit 0
 fi
 gitleaks protect --staged --no-banner || exit 1
 '
 
 PRE_PUSH='#!/usr/bin/env bash
-# Gitleaks pre-push (installé par scripts/install-hooks.sh)
-# Note : le flag `--pre-push` a été retiré de gitleaks ≥ 8.20 — on scanne
-# la plage de commits poussés via `git log --log-opts` (le hook reçoit
-# « <local ref> <local sha> <remote ref> <remote sha> » sur stdin).
+# Gitleaks pre-push (installed by scripts/install-hooks.sh)
+# Note: the `--pre-push` flag was removed in gitleaks ≥ 8.20 — we scan the
+# pushed commit range via `git log --log-opts` (the hook receives
+# "<local ref> <local sha> <remote ref> <remote sha>" on stdin).
 if ! command -v gitleaks >/dev/null 2>&1; then
-  echo "⚠️  gitleaks non installé — exécutez : brew install gitleaks" >&2
+  echo "⚠️  gitleaks is not installed — run: brew install gitleaks" >&2
   exit 0
 fi
 
 while read -r local_ref local_sha remote_ref remote_sha; do
   [ -z "$local_sha" ] && continue
-  # Suppression de branche (sha nul) → rien à scanner
+  # Branch deletion (null sha) → nothing to scan
   [ "$local_sha" = "0000000000000000000000000000000000000000" ] && continue
   if [ "$remote_sha" = "0000000000000000000000000000000000000000" ]; then
-    range="--all"      # nouvelle branche : scan complet
+    range="--all"      # new branch: scan the full history
   else
     range="${remote_sha}..${local_sha}"
   fi
   if ! gitleaks git --log-opts="$range" --no-banner; then
-    echo "⛔ Secrets détectés dans les commits poussés — push bloqué" >&2
+    echo "⛔ Secrets detected in the pushed commits — push blocked" >&2
     exit 1
   fi
 done
@@ -60,18 +60,18 @@ install_hook() {
   local name="$1"
   local content="$2"
   if [ -f "${HOOKS_DIR}/${name}" ]; then
-    # Ne pas écraser un hook personnalisé existant (sauf notre marqueur)
+    # Do not overwrite a custom hook (unless it carries our marker)
     if grep -q "install-hooks.sh" "${HOOKS_DIR}/${name}" 2>/dev/null; then
       printf '%s' "${content}" > "${HOOKS_DIR}/${name}"
       chmod +x "${HOOKS_DIR}/${name}"
-      echo "✓ hook ${name} mis à jour"
+      echo "✓ hook ${name} updated"
     else
-      echo "⚠️  hook ${name} existant préservé (supprimez-le pour forcer l'installation)" >&2
+      echo "⚠️  existing hook ${name} preserved (delete it to force installation)" >&2
     fi
   else
     printf '%s' "${content}" > "${HOOKS_DIR}/${name}"
     chmod +x "${HOOKS_DIR}/${name}"
-    echo "✓ hook ${name} installé"
+    echo "✓ hook ${name} installed"
   fi
 }
 
@@ -81,5 +81,5 @@ install_hook "pre-push" "${PRE_PUSH}"
 if command -v gitleaks >/dev/null 2>&1; then
   echo "✓ gitleaks $(gitleaks version) — protection active"
 else
-  echo "⚠️  gitleaks n'est pas installé (brew install gitleaks) — hooks en attente" >&2
+  echo "⚠️  gitleaks is not installed (brew install gitleaks) — hooks pending" >&2
 fi

@@ -2,9 +2,9 @@ import type { APIRoute } from 'astro';
 import type { SessionUser } from '../../../env';
 
 /**
- * GET /api/auth/callback — Échange le code OAuth contre un token GitHub,
- * vérifie la liste blanche (optionnelle), crée la session en KV et pose le
- * cookie `sc_session` (HttpOnly, SameSite=Lax, Secure en HTTPS).
+ * GET /api/auth/callback — Exchanges the OAuth code for a GitHub token,
+ * checks the optional whitelist, creates the KV session and sets the
+ * `sc_session` cookie (HttpOnly, SameSite=Lax, Secure over HTTPS).
  */
 
 function json(data: unknown, status: number): Response {
@@ -25,18 +25,18 @@ export const GET: APIRoute = async ({ locals, cookies, redirect, url }) => {
   const code = url.searchParams.get('code');
   const state = url.searchParams.get('state');
 
-  if (!code || !state) return json({ error: 'code/state manquants' }, 400);
+  if (!code || !state) return json({ error: 'Missing code/state' }, 400);
 
   const kv = env.KV;
   const storedRaw = kv ? await kv.get(`oauth:${state}`, 'text') : null;
-  if (!storedRaw) return json({ error: 'État OAuth invalide ou expiré' }, 400);
+  if (!storedRaw) return json({ error: 'Invalid or expired OAuth state' }, 400);
   if (kv) await kv.delete(`oauth:${state}`);
 
   if (!env.OAUTH_GITHUB_CLIENT_ID || !env.OAUTH_GITHUB_CLIENT_SECRET) {
-    return json({ error: 'OAuth GitHub non configuré' }, 500);
+    return json({ error: 'GitHub OAuth not configured' }, 500);
   }
 
-  // 1. Échange du code contre un access token
+  // 1. Exchange the code for an access token
   const tokenRes = await fetch('https://github.com/login/oauth/access_token', {
     method: 'POST',
     headers: { 'content-type': 'application/json', accept: 'application/json' },
@@ -48,9 +48,9 @@ export const GET: APIRoute = async ({ locals, cookies, redirect, url }) => {
   });
   const tokenData = (await tokenRes.json().catch(() => null)) as { access_token?: string } | null;
   const accessToken = tokenData?.access_token;
-  if (!accessToken) return json({ error: 'Échange de code GitHub échoué' }, 401);
+  if (!accessToken) return json({ error: 'GitHub code exchange failed' }, 401);
 
-  // 2. Profil utilisateur
+  // 2. User profile
   const userRes = await fetch('https://api.github.com/user', {
     headers: {
       authorization: `Bearer ${accessToken}`,
@@ -58,7 +58,7 @@ export const GET: APIRoute = async ({ locals, cookies, redirect, url }) => {
       'user-agent': 'studio-clarte',
     },
   });
-  if (!userRes.ok) return json({ error: 'Profil GitHub illisible' }, 502);
+  if (!userRes.ok) return json({ error: 'Unable to read the GitHub profile' }, 502);
   const ghUser = (await userRes.json()) as GitHubUser;
 
   // 3. Liste blanche optionnelle
@@ -67,7 +67,7 @@ export const GET: APIRoute = async ({ locals, cookies, redirect, url }) => {
     .map((login) => login.trim().toLowerCase())
     .filter(Boolean);
   if (allowlist.length > 0 && !allowlist.includes(ghUser.login.toLowerCase())) {
-    return json({ error: `Compte GitHub non autorisé (${ghUser.login})` }, 403);
+    return json({ error: `GitHub account not authorized (${ghUser.login})` }, 403);
   }
 
   // 4. Session en KV + cookie

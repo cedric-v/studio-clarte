@@ -1,4 +1,5 @@
 ---
+import { t } from '../i18n';
 import type { SiteConfig } from '../config/sites';
 
 interface Props {
@@ -6,28 +7,20 @@ interface Props {
 }
 
 const { site } = Astro.props;
+const { lang } = Astro.locals;
 
-const SUGGESTIONS = [
-  'Crée la page « Offres » avec 3 accompagnements',
-  'Rédige un article de blog sur notre méthode',
-  'Génère les témoignages clients (5 avis)',
-  'Met à jour la page d\'accueil (héro + 2 sections)',
-];
+const SUGGESTION_KEYS = ['chat.suggestion1', 'chat.suggestion2', 'chat.suggestion3', 'chat.suggestion4'];
 ---
 
 <div class="chat-panel" id="chat-studio">
   <!-- Messages -->
   <div class="chat-messages" id="chat-messages">
     <div class="welcome">
-      <div class="welcome-title">💬 Bonjour, {site.name} !</div>
-      <p class="welcome-text">
-        Décrivez le contenu à créer. Glissez-déposez une image ou faites
-        <kbd>Ctrl</kbd>+<kbd>V</kbd> : elle sera compressée en WebP dans votre
-        navigateur puis téléversée sur le CDN <code>{site.cdnDomain}</code>.
-      </p>
+      <div class="welcome-title">{t(lang, 'chat.welcomeTitle', site.name)}</div>
+      <p class="welcome-text">{t(lang, 'chat.welcomeText', site.cdnDomain)}</p>
       <div class="chips" id="suggestion-chips">
-        {SUGGESTIONS.map((suggestion) => (
-          <button class="chip" type="button" data-suggestion={suggestion}>{suggestion}</button>
+        {SUGGESTION_KEYS.map((key) => (
+          <button class="chip" type="button" data-suggestion={t(lang, key)}>{t(lang, key)}</button>
         ))}
       </div>
     </div>
@@ -37,27 +30,27 @@ const SUGGESTIONS = [
   <div class="chat-composer">
     <div class="composer-strip" id="image-strip" hidden></div>
     <div class="composer-row">
-      <button class="icon-btn" id="btn-attach" type="button" title="Joindre une image">🖼️</button>
+      <button class="icon-btn" id="btn-attach" type="button" title={t(lang, 'chat.attach')}>🖼️</button>
       <textarea
         id="chat-input"
         rows="1"
-        placeholder="Décrivez le contenu à créer… (Ctrl+V pour coller une image)"
-        aria-label="Message"
+        placeholder={t(lang, 'chat.placeholder')}
+        aria-label={t(lang, 'chat.placeholder')}
       ></textarea>
-      <button class="btn btn-primary" id="btn-send" type="button">Envoyer ↵</button>
+      <button class="btn btn-primary" id="btn-send" type="button">{t(lang, 'chat.send')}</button>
     </div>
     <input type="file" id="file-input" accept="image/*" multiple hidden />
-    <p class="composer-hint">
-      Zero-Click Upload · WebP ≤1920px · DeepSeek génère l'alt text accessible
-    </p>
+    <p class="composer-hint">{t(lang, 'chat.composerHint')}</p>
   </div>
 </div>
 
 <script>
   import { emit, getState, toast, type ChatMessage } from '../lib/client-state';
   import { uploadImage } from '../lib/client-upload';
+  import { getClientLocale, t } from '../i18n';
   import { renderMarkdown } from '../lib/markdown-lite';
 
+  const lang = getClientLocale();
   const state = getState();
   const messagesEl = document.getElementById('chat-messages')!;
   const inputEl = document.getElementById('chat-input') as HTMLTextAreaElement;
@@ -69,7 +62,7 @@ const SUGGESTIONS = [
   let pendingImages: { url: string; alt: string }[] = [];
   let streaming = false;
 
-  // Échappe les valeurs insérées dans innerHTML (noms de fichiers utilisateur…)
+  // Escapes values inserted into innerHTML (user file names, …)
   function escapeHtml(src: string): string {
     return src
       .replace(/&/g, '&amp;')
@@ -78,7 +71,7 @@ const SUGGESTIONS = [
       .replace(/>/g, '&gt;');
   }
 
-  // ── Rendu ────────────────────────────────────────────────────────
+  // ── Rendering ────────────────────────────────────────────────────
   function scrollBottom() {
     messagesEl.scrollTop = messagesEl.scrollHeight;
   }
@@ -96,7 +89,7 @@ const SUGGESTIONS = [
     if (message.payload) {
       const note = document.createElement('div');
       note.className = 'payload-note';
-      note.textContent = '📦 Contenu structuré généré — voir l\'onglet « Aperçu & Déploiement ».';
+      note.textContent = t(lang, 'chat.payloadNote');
       div.appendChild(note);
     }
     messagesEl.appendChild(div);
@@ -109,29 +102,29 @@ const SUGGESTIONS = [
     for (const message of state.messages) renderMessage(message);
   }
 
-  // ── Images (paste / drag&drop / bouton) ──────────────────────────
+  // ── Images (paste / drag&drop / button) ──────────────────────────
   async function handleFiles(files: FileList | File[]) {
     const list = Array.from(files).filter((file) => file.type.startsWith('image/'));
     if (!list.length) {
-      toast('Seules les images sont acceptées', 'error');
+      toast(t(lang, 'chat.toastImagesOnly'), 'error');
       return;
     }
     for (const file of list) {
       try {
-        toast(`Compression WebP de « ${file.name} »…`, 'info');
+        toast(t(lang, 'chat.toastCompressing', file.name), 'info');
         const uploaded = await uploadImage(file);
-        const alt = `Image téléversée — ${file.name}`;
+        const alt = t(lang, 'chat.imageAlt', file.name);
         pendingImages.push({ url: uploaded.publicUrl, alt });
         renderStrip();
         toast(
           uploaded.compressed
-            ? `Image optimisée WebP ✓ (${formatBytes(file.size)} → CDN)`
-            : 'Image téléversée ✓ (format non compressible)',
+            ? t(lang, 'chat.toastOptimized', formatBytes(file.size))
+            : t(lang, 'chat.toastUploaded'),
           'success',
         );
       } catch (error) {
         console.error('[upload]', error);
-        toast(error instanceof Error ? error.message : 'Échec du téléversement R2', 'error');
+        toast(error instanceof Error ? error.message : t(lang, 'chat.toastUploadFailed'), 'error');
       }
     }
   }
@@ -142,7 +135,7 @@ const SUGGESTIONS = [
     pendingImages.forEach((img, index) => {
       const thumb = document.createElement('div');
       thumb.className = 'thumb';
-      thumb.innerHTML = `<img src="${escapeHtml(img.url)}" alt="${escapeHtml(img.alt)}" /><button class="thumb-x" type="button" title="Retirer">✕</button>`;
+      thumb.innerHTML = `<img src="${escapeHtml(img.url)}" alt="${escapeHtml(img.alt)}" /><button class="thumb-x" type="button" title="Remove">✕</button>`;
       thumb.querySelector('.thumb-x')?.addEventListener('click', () => {
         pendingImages.splice(index, 1);
         renderStrip();
@@ -152,9 +145,9 @@ const SUGGESTIONS = [
   }
 
   function formatBytes(bytes: number): string {
-    if (bytes < 1024) return `${bytes} o`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} Ko`;
-    return `${(bytes / (1024 * 1024)).toFixed(1)} Mo`;
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   }
 
   inputEl.addEventListener('paste', (event) => {
@@ -196,7 +189,7 @@ const SUGGESTIONS = [
     inputEl.focus();
   });
 
-  // ── Envoi / Streaming DeepSeek ───────────────────────────────────
+  // ── Send / DeepSeek streaming ────────────────────────────────────
   function extractPayload(text: string): { title: string; summary: string; files: unknown[] } | null {
     const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/);
     const candidate = fenced?.[1] ?? text;
@@ -222,7 +215,7 @@ const SUGGESTIONS = [
 
     const userMessage: ChatMessage = {
       role: 'user',
-      content: text || '(image jointe)',
+      content: text || t(lang, 'chat.attachedImage'),
       images,
     };
     state.messages.push(userMessage);
@@ -243,7 +236,7 @@ const SUGGESTIONS = [
 
     streaming = true;
     sendBtn.disabled = true;
-    sendBtn.textContent = '⏳';
+    sendBtn.textContent = '…';
     const bubble = document.createElement('div');
     bubble.className = 'msg msg-assistant';
     bubble.innerHTML = '<span class="typing">…</span>';
@@ -258,7 +251,7 @@ const SUGGESTIONS = [
       });
       if (!res.ok) {
         const error = (await res.json().catch(() => null)) as { error?: string } | null;
-        bubble.textContent = `⚠️ ${error?.error ?? `Erreur ${res.status}`}`;
+        bubble.textContent = `⚠️ ${error?.error ?? `Error ${res.status}`}`;
         return;
       }
 
@@ -279,7 +272,7 @@ const SUGGESTIONS = [
       const payload = extractPayload(acc);
       const assistantMessage: ChatMessage = {
         role: 'assistant',
-        content: acc.trim() || '(réponse vide)',
+        content: acc.trim() || '(empty response)',
         payload: Boolean(payload),
       };
       state.messages.push(assistantMessage);
@@ -294,24 +287,24 @@ const SUGGESTIONS = [
         );
         if (files.length) {
           emit('sc:payload', {
-            title: payload.title || 'Contenu généré',
+            title: payload.title || 'Generated content',
             summary: payload.summary || '',
             files,
           });
-          toast(`${files.length} fichier(s) généré(s) ✓ — prêt pour le draft PR`, 'success');
+          toast(t(lang, 'chat.filesReady', files.length), 'success');
         } else {
-          toast('Payload reçu mais aucun fichier exploitable', 'error');
+          toast(t(lang, 'chat.invalidPayload'), 'error');
         }
       } else {
-        toast('Réponse générée sans payload structuré — précisez la demande', 'info');
+        toast(t(lang, 'chat.noPayload'), 'info');
       }
     } catch (error) {
       console.error('[chat]', error);
-      bubble.textContent = '⚠️ Erreur réseau lors du streaming';
+      bubble.textContent = t(lang, 'chat.streamError');
     } finally {
       streaming = false;
       sendBtn.disabled = false;
-      sendBtn.textContent = 'Envoyer ↵';
+      sendBtn.textContent = t(lang, 'chat.send');
       scrollBottom();
     }
   }

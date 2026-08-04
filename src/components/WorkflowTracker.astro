@@ -1,17 +1,20 @@
 ---
+import { t } from '../i18n';
+
 interface Props {
   siteId: string;
   siteName: string;
 }
 
 const { siteId, siteName } = Astro.props;
+const { lang } = Astro.locals;
 ---
 
 <div class="workspace-panel panel-workflow" data-site-id={siteId}>
   <div class="panel-header">
     <div>
-      <h2>🚀 Déploiement Edge — {siteName}</h2>
-      <span class="panel-sub">Branche draft/* + PR en ~1-2 s via l'API Git — zéro commit direct sur main.</span>
+      <h2>{t(lang, 'workflow.title')} — {siteName}</h2>
+      <span class="panel-sub">{t(lang, 'workflow.sub')}</span>
     </div>
   </div>
 
@@ -19,14 +22,12 @@ const { siteId, siteName } = Astro.props;
     <li class="step" data-step="1">
       <span class="step-num">1</span>
       <div class="step-content">
-        <div class="step-head">Génération Edge</div>
+        <div class="step-head">{t(lang, 'workflow.step1')}</div>
         <div class="step-body">
           <button class="btn btn-primary" type="button" id="btn-create-pr" disabled>
-            💾 Créer la branche draft/* + PR
+            {t(lang, 'workflow.createPr')}
           </button>
-          <span class="step-hint">
-            Arbre Git construit en mémoire (git.createTree → createCommit → createRef → pulls.create).
-          </span>
+          <span class="step-hint">{t(lang, 'workflow.step1Hint')}</span>
         </div>
       </div>
     </li>
@@ -34,12 +35,12 @@ const { siteId, siteName } = Astro.props;
     <li class="step" data-step="2">
       <span class="step-num">2</span>
       <div class="step-content">
-        <div class="step-head">Draft PR Active</div>
+        <div class="step-head">{t(lang, 'workflow.step2')}</div>
         <div class="step-body">
           <a class="pr-link" id="pr-link" href="#" target="_blank" rel="noopener noreferrer" hidden>
-            Voir la Pull Request ↗
+            {t(lang, 'workflow.viewPr')}
           </a>
-          <span class="step-hint" id="pr-hint">En attente de création…</span>
+          <span class="step-hint" id="pr-hint">{t(lang, 'workflow.prPending')}</span>
         </div>
       </div>
     </li>
@@ -47,11 +48,11 @@ const { siteId, siteName } = Astro.props;
     <li class="step" data-step="3">
       <span class="step-num">3</span>
       <div class="step-content">
-        <div class="step-head">Preview Cloudflare</div>
+        <div class="step-head">{t(lang, 'workflow.step3')}</div>
         <div class="step-body">
-          <span class="step-hint" id="preview-hint">La build de prévisualisation se lance automatiquement sur la PR.</span>
+          <span class="step-hint" id="preview-hint">{t(lang, 'workflow.step3Hint')}</span>
           <a class="preview-link" id="preview-link" href="#" target="_blank" rel="noopener noreferrer" hidden>
-            Voir la Preview ↗
+            {t(lang, 'workflow.viewPreview')}
           </a>
         </div>
       </div>
@@ -60,14 +61,12 @@ const { siteId, siteName } = Astro.props;
     <li class="step" data-step="4">
       <span class="step-num">4</span>
       <div class="step-content">
-        <div class="step-head">Validation</div>
+        <div class="step-head">{t(lang, 'workflow.step4')}</div>
         <div class="step-body">
           <button class="btn btn-success" type="button" id="btn-merge" disabled>
-            🚀 Valider &amp; Fusionner en Prod
+            {t(lang, 'workflow.merge')}
           </button>
-          <span class="step-hint">
-            Squash &amp; merge vers <code>main</code>, puis suppression de la branche temporaire.
-          </span>
+          <span class="step-hint">{t(lang, 'workflow.step4Hint')}</span>
         </div>
       </div>
     </li>
@@ -77,11 +76,13 @@ const { siteId, siteName } = Astro.props;
 <script>
   import { getState, on, switchToWorkspaceTab, toast } from '../lib/client-state';
   import type { GeneratedPayload, WorkflowState } from '../lib/client-state';
+  import { getClientLocale, t } from '../i18n';
 
+  const lang = getClientLocale();
   const siteId = '{siteId}';
   const state = getState();
 
-  // Les URL proviennent de GitHub (dépôts/PR) → n'autoriser que http(s).
+  // URLs come from GitHub (repos/PRs) → only allow http(s).
   function safeHttpUrl(value: string): string {
     return /^https?:\/\//i.test(value) ? value : '#';
   }
@@ -111,7 +112,7 @@ const { siteId, siteName } = Astro.props;
     }
   }
 
-  // Nouveau payload généré → prêt pour l'étape 1
+  // New payload generated → ready for step 1
   on('sc:payload', (data: GeneratedPayload) => {
     payload = data;
     btnCreate.disabled = false;
@@ -121,13 +122,13 @@ const { siteId, siteName } = Astro.props;
       previewLink.hidden = true;
       btnMerge.disabled = true;
     }
-    toast('Contenu prêt — créez la branche draft/* + PR', 'info');
+    toast(t(lang, 'workflow.toastPayloadReady'), 'info');
   });
 
   btnCreate.addEventListener('click', async () => {
     if (!payload || !payload.files.length) return;
     btnCreate.disabled = true;
-    btnCreate.textContent = '⏳ Création de la PR (Edge)…';
+    btnCreate.textContent = t(lang, 'workflow.creating');
 
     try {
       const res = await fetch('/api/commit-draft', {
@@ -140,7 +141,7 @@ const { siteId, siteName } = Astro.props;
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? `Erreur ${res.status}`);
+      if (!res.ok) throw new Error(data.error ?? `Error ${res.status}`);
 
       state.workflow = {
         siteId,
@@ -151,17 +152,17 @@ const { siteId, siteName } = Astro.props;
 
       activateStep(2);
       prLink.href = safeHttpUrl(data.prUrl);
-      prLink.textContent = `PR #${data.prNumber} · ${data.branch} ↗`;
+      prLink.textContent = t(lang, 'workflow.prLink', data.prNumber, data.branch);
       prLink.hidden = false;
-      prHint.textContent = 'Draft PR créée — build de preview Cloudflare Pages en cours…';
-      toast(`PR #${data.prNumber} créée en ~1-2 s ⚡`, 'success');
+      prHint.textContent = t(lang, 'workflow.step3Hint');
+      toast(t(lang, 'workflow.toastPrCreated', data.prNumber), 'success');
       switchToWorkspaceTab();
       startPolling();
     } catch (error) {
       console.error('[workflow]', error);
-      toast(error instanceof Error ? error.message : 'Création de la PR échouée', 'error');
+      toast(error instanceof Error ? error.message : t(lang, 'workflow.toastCreateFailed'), 'error');
       btnCreate.disabled = false;
-      btnCreate.textContent = '💾 Créer la branche draft/* + PR';
+      btnCreate.textContent = t(lang, 'workflow.createPr');
     }
   });
 
@@ -175,13 +176,13 @@ const { siteId, siteName } = Astro.props;
       try {
         const res = await fetch(`/api/status/${workflow.siteId}/${workflow.prNumber}`);
         const status = await res.json();
-        if (!res.ok) throw new Error(status.error ?? 'Statut indisponible');
+        if (!res.ok) throw new Error(status.error ?? 'Status unavailable');
 
         if (status.merged) {
           activateStep(4, true);
           btnMerge.disabled = true;
-          btnMerge.textContent = '✅ Fusionné & branch supprimée';
-          previewHint.textContent = 'PR fusionnée vers main.';
+          btnMerge.textContent = t(lang, 'workflow.mergedDone2');
+          previewHint.textContent = t(lang, 'workflow.mergedNote', workflow.prNumber);
           stopPolling();
           return;
         }
@@ -191,26 +192,26 @@ const { siteId, siteName } = Astro.props;
           activateStep(4);
           previewLink.href = safeHttpUrl(status.previewUrl);
           previewLink.hidden = false;
-          previewHint.textContent = 'Build de prévisualisation prête ✓';
+          previewHint.textContent = t(lang, 'workflow.previewReady');
           btnMerge.disabled = false;
           stopPolling();
-          toast('Preview Cloudflare disponible ✓', 'success');
+          toast(t(lang, 'workflow.toastPreviewReady'), 'success');
           return;
         }
 
         if (status.state === 'error') {
-          previewHint.textContent = '⚠️ La build de preview a échoué (voir la PR GitHub).';
+          previewHint.textContent = t(lang, 'workflow.previewFailed');
           stopPolling();
           return;
         }
 
         previewHint.textContent =
           status.state === 'in_progress'
-            ? 'Build de prévisualisation en cours…'
-            : 'Build de prévisualisation en attente…';
+            ? t(lang, 'workflow.previewBuilding')
+            : t(lang, 'workflow.previewPending');
       } catch (error) {
         console.error('[polling]', error);
-        previewHint.textContent = '⚠️ Impossible de récupérer le statut (nouvel essai…).';
+        previewHint.textContent = t(lang, 'workflow.statusError');
       }
     }, 4000);
   }
@@ -225,7 +226,7 @@ const { siteId, siteName } = Astro.props;
     const workflow = state.workflow;
     if (!workflow) return;
     btnMerge.disabled = true;
-    btnMerge.textContent = '⏳ Fusion en cours…';
+    btnMerge.textContent = t(lang, 'workflow.merging');
     try {
       const res = await fetch('/api/merge', {
         method: 'POST',
@@ -233,18 +234,18 @@ const { siteId, siteName } = Astro.props;
         body: JSON.stringify({ prNumber: workflow.prNumber }),
       });
       const data = await res.json();
-      if (!res.ok || !data.merged) throw new Error(data.message ?? data.error ?? 'Fusion refusée');
+      if (!res.ok || !data.merged) throw new Error(data.message ?? data.error ?? 'Merge refused');
 
       activateStep(4, true);
-      btnMerge.textContent = '✅ Publié sur main !';
-      previewHint.textContent = 'PR #' + workflow.prNumber + ' fusionnée (squash) — branch supprimée.';
+      btnMerge.textContent = t(lang, 'workflow.mergedDone');
+      previewHint.textContent = t(lang, 'workflow.mergedNote', workflow.prNumber);
       stopPolling();
-      toast('🚀 Contenu publié en production !', 'success');
+      toast(t(lang, 'workflow.toastMerged'), 'success');
     } catch (error) {
       console.error('[merge]', error);
-      toast(error instanceof Error ? error.message : 'Fusion impossible', 'error');
+      toast(error instanceof Error ? error.message : t(lang, 'workflow.toastMergeFailed'), 'error');
       btnMerge.disabled = false;
-      btnMerge.textContent = '🚀 Valider & Fusionner en Prod';
+      btnMerge.textContent = t(lang, 'workflow.merge');
     }
   });
 </script>

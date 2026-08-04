@@ -1,8 +1,8 @@
 import type { APIRoute } from 'astro';
 
 /**
- * GET /api/auth/login — Redirige vers GitHub OAuth authorize.
- * Un jeton d'état (CSRF) est stocké en KV avec le `next` à 10 min.
+ * GET /api/auth/login — Redirects to GitHub OAuth authorize.
+ * A state token (CSRF) is stored in KV with `next` for 10 minutes.
  */
 
 function json(data: unknown, status = 500): Response {
@@ -15,7 +15,7 @@ function json(data: unknown, status = 500): Response {
 export const GET: APIRoute = async ({ locals, url, redirect }) => {
   const clientId = locals.env.OAUTH_GITHUB_CLIENT_ID;
   if (!clientId) {
-    return json({ error: 'OAuth GitHub non configuré (OAUTH_GITHUB_CLIENT_ID manquant)' }, 500);
+    return json({ error: 'GitHub OAuth not configured (missing OAUTH_GITHUB_CLIENT_ID)' }, 500);
   }
 
   const state = crypto.randomUUID();

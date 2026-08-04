@@ -1,22 +1,25 @@
 ---
+import { t } from '../i18n';
+
 interface Props {
   siteName: string;
 }
 
 const { siteName } = Astro.props;
+const { lang } = Astro.locals;
 
 const FIELDS = [
   {
     name: 'DEEPSEEK_API_KEY',
-    label: 'DeepSeek (moteur IA)',
-    placeholder: 'sk-… (écrire une nouvelle valeur pour remplacer)',
-    hint: 'Utilisée pour générer la structure de contenu du site.',
+    labelKey: 'settings.fieldDeepseek',
+    placeholderKey: 'settings.placeholderDeepseek',
+    hintKey: 'settings.hintDeepseek',
   },
   {
     name: 'GITHUB_PAT',
-    label: 'GitHub (Git Engine)',
-    placeholder: 'github_pat_… (écrire une nouvelle valeur pour remplacer)',
-    hint: 'PAT avec scope repo : création des branches draft/* et des PR.',
+    labelKey: 'settings.fieldGithub',
+    placeholderKey: 'settings.placeholderGithub',
+    hintKey: 'settings.hintGithub',
   },
 ] as const;
 ---
@@ -24,42 +27,38 @@ const FIELDS = [
 <div class="modal-backdrop" id="settings-modal" hidden>
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="settings-title">
     <div class="modal-header">
-      <h2 id="settings-title">🔐 Coffre-fort des clés API — {siteName}</h2>
-      <button class="icon-btn" id="settings-close" type="button" aria-label="Fermer">✕</button>
+      <h2 id="settings-title">{t(lang, 'settings.title', siteName)}</h2>
+      <button class="icon-btn" id="settings-close" type="button" aria-label={t(lang, 'settings.close')}>✕</button>
     </div>
 
-    <div class="modal-note">
-      Clés chiffrées en <strong>AES-256-GCM</strong> (Cloudflare KV) et stockées en
-      <strong>write-only</strong> : une fois enregistrées, elles ne peuvent
-      <em>jamais</em> être relues, affichées en clair ni copiées.
-    </div>
+    <div class="modal-note">{t(lang, 'settings.note')}</div>
 
     <form id="keys-form">
       {FIELDS.map((field) => (
         <label class="field" for={`key-${field.name}`}>
           <span class="field-label">
-            {field.label} <code>{field.name}</code>
+            {t(lang, field.labelKey)} <code>{field.name}</code>
           </span>
           <div class="masked-row">
             <span class="masked-value" id={`masked-${field.name}`}>—</span>
-            <span class="badge badge-muted" id={`badge-${field.name}`}>non configurée</span>
+            <span class="badge badge-muted" id={`badge-${field.name}`}>{t(lang, 'settings.notConfigured')}</span>
           </div>
           <input
             id={`key-${field.name}`}
             class="input"
             type="password"
             name={field.name}
-            placeholder={field.placeholder}
+            placeholder={t(lang, field.placeholderKey)}
             autocomplete="new-password"
             spellcheck="false"
           />
-          <span class="field-hint">{field.hint}</span>
+          <span class="field-hint">{t(lang, field.hintKey)}</span>
         </label>
       ))}
 
       <div class="modal-actions">
         <button class="btn btn-primary" type="submit" id="keys-save">
-          💾 Enregistrer les clés
+          {t(lang, 'settings.save')}
         </button>
       </div>
     </form>
@@ -67,13 +66,17 @@ const FIELDS = [
 </div>
 
 <script>
+  import { getClientLocale, t } from '../i18n';
+
+  const lang = getClientLocale();
+
   const modal = document.getElementById('settings-modal') as HTMLElement;
   const form = document.getElementById('keys-form') as HTMLFormElement;
   const saveBtn = document.getElementById('keys-save') as HTMLButtonElement;
 
   const FIELDS = [
-    { name: 'DEEPSEEK_API_KEY', label: 'DeepSeek' },
-    { name: 'GITHUB_PAT', label: 'GitHub PAT' },
+    { name: 'DEEPSEEK_API_KEY', labelKey: 'settings.fieldDeepseek' },
+    { name: 'GITHUB_PAT', labelKey: 'settings.fieldGithub' },
   ] as const;
 
   function toast(message: string, type: 'info' | 'success' | 'error' = 'info') {
@@ -108,13 +111,15 @@ const FIELDS = [
         const badge = document.getElementById(`badge-${field.name}`);
         if (el) el.textContent = value || '—';
         if (badge) {
-          badge.textContent = value ? 'configurée (write-only)' : 'non configurée';
+          badge.textContent = value
+            ? t(lang, 'settings.configured')
+            : t(lang, 'settings.notConfigured');
           badge.classList.toggle('badge-success', Boolean(value));
           badge.classList.toggle('badge-muted', !value);
         }
       }
     } catch {
-      toast('Impossible de lire les clés configurées', 'error');
+      toast(t(lang, 'settings.toastReadFailed'), 'error');
     }
   }
 
@@ -126,11 +131,11 @@ const FIELDS = [
       if (input.value.trim()) payload[field.name] = input.value.trim();
     }
     if (!Object.keys(payload).length) {
-      toast('Saisissez au moins une clé à enregistrer', 'info');
+      toast(t(lang, 'settings.toastEmpty'), 'info');
       return;
     }
     saveBtn.disabled = true;
-    saveBtn.textContent = '⏳ Chiffrement…';
+    saveBtn.textContent = t(lang, 'settings.saving');
     try {
       const res = await fetch('/api/settings/keys', {
         method: 'POST',
@@ -138,15 +143,15 @@ const FIELDS = [
         body: JSON.stringify(payload),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? 'Enregistrement échoué');
+      if (!res.ok) throw new Error(data.error ?? 'Save failed');
       form.reset();
       await loadMasked();
-      toast('Clés chiffrées et enregistrées ✓ (write-only)', 'success');
+      toast(t(lang, 'settings.toastSaved'), 'success');
     } catch (error) {
-      toast(error instanceof Error ? error.message : 'Erreur', 'error');
+      toast(error instanceof Error ? error.message : 'Error', 'error');
     } finally {
       saveBtn.disabled = false;
-      saveBtn.textContent = '💾 Enregistrer les clés';
+      saveBtn.textContent = t(lang, 'settings.save');
     }
   });
 </script>

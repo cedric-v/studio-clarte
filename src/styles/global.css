@@ -106,7 +106,7 @@ button {
 }
 
 /* ═══════════════════════════════════════════════════════════════════
-   LAYOUT GLOBAL — 2 colonnes 100vh, scroll par colonne
+   GLOBAL LAYOUT — 2 columns 100vh, per-column scrolling
    ═══════════════════════════════════════════════════════════════════ */
 
 .app-shell {
@@ -266,7 +266,7 @@ button {
 }
 
 /* ═══════════════════════════════════════════════════════════════════
-   BOUTONS & CHAMPS
+   BUTTONS & INPUTS
    ═══════════════════════════════════════════════════════════════════ */
 
 .btn {
@@ -406,7 +406,7 @@ button {
 }
 
 /* ═══════════════════════════════════════════════════════════════════
-   CHAT — Assistant IA
+   CHAT — AI Assistant
    ═══════════════════════════════════════════════════════════════════ */
 
 .chat-panel {
@@ -819,7 +819,7 @@ button {
 }
 
 /* ═══════════════════════════════════════════════════════════════════
-   STEPPER CI/CD — 4 étapes
+   CI/CD STEPPER — 4 steps
    ═══════════════════════════════════════════════════════════════════ */
 
 .stepper {
@@ -899,7 +899,7 @@ button {
 }
 
 /* ═══════════════════════════════════════════════════════════════════
-   MODALE — Coffre-fort
+   MODAL — Key vault
    ═══════════════════════════════════════════════════════════════════ */
 
 .modal-backdrop {
@@ -1109,8 +1109,48 @@ button {
   line-height: 1.6;
 }
 
+
 /* ═══════════════════════════════════════════════════════════════════
-   RESPONSIVE — Onglets supérieurs < 1024px
+   LANGUAGE SWITCHER (FR | EN)
+   ═══════════════════════════════════════════════════════════════════ */
+
+.lang-switcher {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  background: var(--bg-app);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+}
+.lang-switcher a {
+  padding: 4px 9px;
+  border-radius: calc(var(--radius-md) - 3px);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  text-decoration: none;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+.lang-switcher a:hover {
+  color: var(--text-main);
+}
+.lang-switcher a.active {
+  background: color-mix(in srgb, var(--brand-primary) 18%, var(--bg-surface-elevated));
+  color: var(--text-main);
+  border: 1px solid color-mix(in srgb, var(--brand-primary) 45%, transparent);
+}
+
+/* Login page: fixed position top-right */
+.login-body > .lang-switcher {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   RESPONSIVE — Top tabs < 1024px
    ═══════════════════════════════════════════════════════════════════ */
 
 @media (max-width: 1023px) {

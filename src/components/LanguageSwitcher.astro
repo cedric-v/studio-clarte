@@ -1,0 +1,26 @@
+---
+import { LOCALES } from '../i18n';
+
+// Language switcher — links to the current path with ?lang=… .
+// The middleware persists the choice in the `sc_lang` cookie and redirects
+// to a clean URL (param removed).
+const { lang } = Astro.locals;
+
+function langHref(locale: string): string {
+  const url = new URL(Astro.url);
+  url.searchParams.set('lang', locale);
+  return url.pathname + url.search;
+}
+---
+
+<div class="lang-switcher" role="group" aria-label="Language">
+  {LOCALES.map((locale) => (
+    <a
+      href={langHref(locale)}
+      class:list={{ active: locale === lang }}
+      aria-current={locale === lang ? 'true' : undefined}
+    >
+      {locale.toUpperCase()}
+    </a>
+  ))}
+</div>

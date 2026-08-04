@@ -1,31 +1,35 @@
 ---
+import { t } from '../i18n';
+
+const { lang } = Astro.locals;
 ---
 
 <div class="workspace-panel panel-preview">
   <div class="panel-header">
     <div>
-      <h2>📄 Fichiers générés</h2>
-      <span class="panel-sub" id="preview-meta">Aucun contenu — générez via le chat IA.</span>
+      <h2>{t(lang, 'preview.title')}</h2>
+      <span class="panel-sub" id="preview-meta">{t(lang, 'preview.empty')}</span>
     </div>
-    <div class="seg" id="view-toggle" role="tablist" aria-label="Mode d'affichage">
-      <button type="button" role="tab" data-view="visual" class="active" aria-selected="true">Vue visuelle</button>
-      <button type="button" role="tab" data-view="code" aria-selected="false">Code</button>
+    <div class="seg" id="view-toggle" role="tablist" aria-label="View mode">
+      <button type="button" role="tab" data-view="visual" class="active" aria-selected="true">
+        {t(lang, 'preview.visual')}
+      </button>
+      <button type="button" role="tab" data-view="code" aria-selected="false">
+        {t(lang, 'preview.code')}
+      </button>
     </div>
   </div>
 
   <div class="empty-state" id="preview-empty">
     <span class="empty-icon">🗂️</span>
-    <p>
-      Les fichiers générés par l'assistant IA apparaîtront ici, navigables par
-      onglets, avec une vue visuelle ou un aperçu du code.
-    </p>
+    <p>{t(lang, 'preview.emptyDetail')}</p>
   </div>
 
   <div class="preview-root" id="preview-root" hidden>
-    <div class="file-tabs" id="file-tabs" role="tablist" aria-label="Fichiers"></div>
+    <div class="file-tabs" id="file-tabs" role="tablist" aria-label="Files"></div>
     <div class="file-toolbar">
-      <button class="btn btn-ghost btn-sm" type="button" id="btn-copy">📋 Copier</button>
-      <button class="btn btn-ghost btn-sm" type="button" id="btn-download">⬇️ Télécharger</button>
+      <button class="btn btn-ghost btn-sm" type="button" id="btn-copy">📋 {t(lang, 'preview.copy')}</button>
+      <button class="btn btn-ghost btn-sm" type="button" id="btn-download">⬇️ {t(lang, 'preview.download')}</button>
       <span class="file-path" id="file-path"></span>
     </div>
     <div class="file-view" id="file-view"></div>
@@ -35,7 +39,10 @@
 <script>
   import { on } from '../lib/client-state';
   import type { PayloadFile } from '../lib/client-state';
+  import { getClientLocale, t } from '../i18n';
   import { renderJson, renderMarkdown } from '../lib/markdown-lite';
+
+  const lang = getClientLocale();
 
   const emptyEl = document.getElementById('preview-empty') as HTMLElement;
   const rootEl = document.getElementById('preview-root') as HTMLElement;
@@ -63,7 +70,7 @@
     emptyEl.hidden = true;
     rootEl.hidden = false;
     const kb = (files.reduce((sum, file) => sum + file.content.length, 0) / 1024).toFixed(1);
-    metaEl.textContent = `${files.length} fichier(s) · ${kb} Ko · ${payload.title ?? ''}`.trim();
+    metaEl.textContent = t(lang, 'preview.meta', files.length, kb, payload.title ?? '');
   });
 
   function renderTabs() {
@@ -73,7 +80,7 @@
       button.type = 'button';
       button.className = `file-tab${index === active ? ' active' : ''}`;
       button.setAttribute('role', 'tab');
-      // Les chemins proviennent du payload IA → échappés avant insertion
+      // Paths come from the AI payload → escaped before insertion
       const name = escapeHtml(file.path.split('/').pop() ?? file.path);
       const path = escapeHtml(file.path);
       button.innerHTML = `${iconFor(file.path)}<span>${name}</span><em>${path}</em>`;
@@ -100,7 +107,7 @@
       return;
     }
 
-    // Vue visuelle
+    // Visual view
     if (isMarkdown(file.path)) {
       viewEl.innerHTML = `<article class="md-preview">${renderMarkdown(file.content)}</article>`;
     } else if (isJson(file.path)) {
@@ -114,7 +121,7 @@
     return src.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 
-  // Toggle vue visuelle / code
+  // Visual / code toggle
   document.getElementById('view-toggle')?.addEventListener('click', (event) => {
     const button = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-view]');
     if (!button) return;
@@ -132,11 +139,11 @@
     try {
       await navigator.clipboard.writeText(file.content);
       window.dispatchEvent(
-        new CustomEvent('sc:toast', { detail: { message: `« ${file.path} » copié ✓`, type: 'success' } }),
+        new CustomEvent('sc:toast', { detail: { message: t(lang, 'preview.copied', file.path), type: 'success' } }),
       );
     } catch {
       window.dispatchEvent(
-        new CustomEvent('sc:toast', { detail: { message: 'Copie impossible', type: 'error' } }),
+        new CustomEvent('sc:toast', { detail: { message: t(lang, 'preview.copyFailed'), type: 'error' } }),
       );
     }
   });

@@ -1,14 +1,14 @@
 import type { CloudflareEnv, KVNamespace } from '../env';
 
 /**
- * Coffre-fort de clés API (WRITE-ONLY VAULT).
+ * Write-only API key vault.
  *
- * Sécurité :
- * - Chaque clé est chiffrée en AES-256-GCM (Web Crypto) avec une IV aléatoire.
- * - La clé maîtresse (`VAULT_MASTER_KEY`) est dérivée via SHA-256 → 32 octets.
- * - Le blob chiffré est stocké dans Cloudflare KV : `vault:{siteId}`.
- * - Une fois écrite, une clé ne peut JAMAIS être relue : l'interface et l'API
- *   n'exposent que la version masquée `sk-••••••••1234`.
+ * Security:
+ * - Every key is encrypted with AES-256-GCM (Web Crypto) and a random IV.
+ * - The master key (`VAULT_MASTER_KEY`) is derived via SHA-256 → 32 bytes.
+ * - The encrypted blob is stored in Cloudflare KV: `vault:{siteId}`.
+ * - Once written, a key can NEVER be read back: the UI and the API only expose
+ *   the masked form `sk-••••••••1234`.
  */
 
 const VAULT_PREFIX = 'vault:';
@@ -40,7 +40,7 @@ async function deriveKey(masterKey: string): Promise<CryptoKey> {
 
 export async function encryptSecret(env: CloudflareEnv, plaintext: string): Promise<string> {
   const master = env.VAULT_MASTER_KEY;
-  if (!master) throw new Error('VAULT_MASTER_KEY non configurée — impossible de chiffrer les clés');
+  if (!master) throw new Error('VAULT_MASTER_KEY not configured — cannot encrypt keys');
   const key = await deriveKey(master);
   const iv = crypto.getRandomValues(new Uint8Array(IV_BYTES));
   const cipher = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, encoder.encode(plaintext));
@@ -52,10 +52,10 @@ export async function encryptSecret(env: CloudflareEnv, plaintext: string): Prom
 
 export async function decryptSecret(env: CloudflareEnv, token: string): Promise<string> {
   const master = env.VAULT_MASTER_KEY;
-  if (!master) throw new Error('VAULT_MASTER_KEY non configurée — impossible de déchiffrer');
+  if (!master) throw new Error('VAULT_MASTER_KEY not configured — cannot decrypt');
   const key = await deriveKey(master);
   const data = fromB64(token);
-  if (data.length <= IV_BYTES) throw new Error('Blob chiffré invalide');
+  if (data.length <= IV_BYTES) throw new Error('Invalid encrypted blob');
   const iv = data.slice(0, IV_BYTES);
   const cipher = data.slice(IV_BYTES);
   const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, cipher);
@@ -64,9 +64,9 @@ export async function decryptSecret(env: CloudflareEnv, token: string): Promise<
 
 interface VaultRecord {
   v: 1;
-  /** name → blob chiffré base64 (jamais de clair). */
+  /** name → base64 encrypted blob (never plaintext). */
   data: Partial<Record<SecretName, string>>;
-  /** name → version MASQUÉE (sk-••••••••1234) calculée à l'écriture. */
+  /** name → MASKED form (sk-••••••••1234) computed at write time. */
   display: Partial<Record<SecretName, string>>;
 }
 
@@ -74,7 +74,7 @@ function vaultKey(siteId: string): string {
   return `${VAULT_PREFIX}${siteId}`;
 }
 
-/** Lit le blob chiffré brut (sans déchiffrer). */
+/** Reads the raw encrypted blob (without decrypting). */
 export async function readEncryptedVault(
   env: CloudflareEnv,
   siteId: string,
@@ -92,9 +92,9 @@ export async function readEncryptedVault(
 }
 
 /**
- * Lit les versions MASQUÉES (sk-••••••••1234) stockées à l'écriture.
- * C'est la SEULE représentation des clés exposée au client — le clair et le
- * chiffré ne sortent jamais de l'API.
+ * Reads the MASKED versions (sk-••••••••1234) stored at write time.
+ * This is the ONLY representation of the keys exposed to the client —
+ * plaintext and ciphertext never leave the API.
  */
 export async function readVaultDisplay(
   env: CloudflareEnv,
@@ -112,7 +112,7 @@ export async function readVaultDisplay(
   }
 }
 
-/** Déchiffre toutes les clés du site (usage serveur uniquement). */
+/** Decrypts all keys of a site (server-side use only). */
 export async function decryptVault(
   env: CloudflareEnv,
   siteId: string,
@@ -124,16 +124,15 @@ export async function decryptVault(
     try {
       out[name as SecretName] = await decryptSecret(env, token);
     } catch (error) {
-      console.error(`[vault] Échec de déchiffrement de ${name} pour ${siteId}`, error);
+      console.error(`[vault] Failed to decrypt ${name} for ${siteId}`, error);
     }
   }
   return out;
 }
 
 /**
- * Écrit (remplace) les clés fournies pour un site. Les clés absentes du payload
- * sont conservées telles quelles (mise à jour partielle).
- * Retourne la version MASQUÉE (jamais le clair).
+ * Writes (replaces) the provided keys for a site. Keys absent from the payload
+ * are kept as-is (partial update). Returns the MASKED version (never plaintext).
  */
 export async function writeSecrets(
   env: CloudflareEnv,
@@ -160,8 +159,8 @@ export async function writeSecrets(
 }
 
 /**
- * Résout une clé pour un site : vault du client d'abord, fallback sur la
- * variable d'environnement globale.
+ * Resolves a key for a site: the client vault first, then the global
+ * environment variable as a fallback.
  */
 export async function resolveSecret(
   env: CloudflareEnv,
@@ -173,9 +172,9 @@ export async function resolveSecret(
 }
 
 /**
- * Masquage d'affichage : `sk-••••••••1234`.
- * Seuls les 3 premiers et les 4 derniers caractères restent visibles.
- * Cette fonction est la SEULE sortie publique des clés.
+ * Display masking: `sk-••••••••1234`.
+ * Only the first 3 and the last 4 characters remain visible.
+ * This function is the ONLY public output of the keys.
  */
 export function maskKey(raw: string): string {
   if (!raw) return '';

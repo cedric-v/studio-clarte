@@ -2,9 +2,9 @@ import type { APIRoute } from 'astro';
 import { createUploadUrl, extensionFromMime, mediaKey } from '../../lib/storage';
 
 /**
- * POST /api/upload-url — Génère une URL présignée R2 pour l'upload direct.
- * Le navigateur a déjà compressé l'image en WebP (Canvas) ; il reçoit ici
- * l'URL de PUT signée + la clé objet + l'URL publique CDN.
+ * POST /api/upload-url — Generates a presigned R2 URL for direct upload.
+ * The browser has already compressed the image to WebP (Canvas); it receives
+ * the signed PUT URL + object key + public CDN URL here.
  */
 
 function json(data: unknown, status = 200): Response {
@@ -16,7 +16,7 @@ function json(data: unknown, status = 200): Response {
 
 export const POST: APIRoute = async ({ request, locals }) => {
   const site = locals.siteConfig;
-  if (!site) return json({ error: 'Site inconnu' }, 404);
+  if (!site) return json({ error: 'Unknown site' }, 404);
 
   const body = (await request.json().catch(() => null)) as { contentType?: string } | null;
   const contentType =

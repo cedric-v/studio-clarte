@@ -1,23 +1,23 @@
 /**
- * Compression d'image IN-BROWSER (Canvas API) → WebP.
+ * In-browser image compression (Canvas API) → WebP.
  *
- * Objectif « Zero-Click Upload » : une photo smartphone de 12 Mo devient un
- * WebP de ~150 Ko en <300 ms, avant tout téléversement R2.
- * - Redimensionnement plafonné (maxWidth, défaut 1920 px — ratio conservé) ;
- * - Conversion WebP (qualité 0.82) ;
- * - Fallback : si createImageBitmap échoue (ex: HEIC non décodable), on renvoie
- *   le fichier d'origine (le serveur lui donnera une extension adaptée).
+ * "Zero-Click Upload" goal: a 12 MB smartphone photo becomes a ~150 KB WebP
+ * in <300 ms, before any R2 upload.
+ * - Resizing capped at maxWidth (default 1920 px — ratio preserved) ;
+ * - WebP conversion (quality 0.82) ;
+ * - Fallback: if createImageBitmap fails (e.g. undecodable HEIC), the original
+ *   file is returned (the server gives it a suitable extension).
  */
 
 export interface ProcessedImage {
   blob: Blob;
-  /** Largeur finale en pixels (0 si fallback). */
+  /** Final width in pixels (0 on fallback). */
   width: number;
-  /** Hauteur finale en pixels (0 si fallback). */
+  /** Final height in pixels (0 on fallback). */
   height: number;
-  /** Type MIME du blob produit. */
+  /** MIME type of the produced blob. */
   contentType: string;
-  /** True si la compression WebP a réussi. */
+  /** True if the WebP compression succeeded. */
   compressed: boolean;
 }
 
@@ -39,7 +39,7 @@ export async function processImageFile(
     canvas.height = height;
 
     const ctx = canvas.getContext('2d');
-    if (!ctx) throw new Error('Canvas 2D indisponible');
+    if (!ctx) throw new Error('Canvas 2D unavailable');
 
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
@@ -47,7 +47,7 @@ export async function processImageFile(
 
     const blob = await new Promise<Blob>((resolve, reject) => {
       canvas.toBlob(
-        (result) => (result ? resolve(result) : reject(new Error('Conversion WebP échouée'))),
+        (result) => (result ? resolve(result) : reject(new Error('WebP conversion failed'))),
         'image/webp',
         quality,
       );
@@ -62,7 +62,7 @@ export async function processImageFile(
       compressed: blob.type === 'image/webp',
     };
   } catch (error) {
-    console.warn('[image-processor] Compression impossible, fallback fichier d\'origine :', error);
+    console.warn('[image-processor] Compression failed, falling back to the original file:', error);
     return {
       blob: file,
       width: 0,
@@ -73,7 +73,7 @@ export async function processImageFile(
   }
 }
 
-/** Aperçu local (Data URL) d'un fichier image — vignettes avant upload. */
+/** Local preview (Data URL) of an image file — thumbnails before upload. */
 export function fileToDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();

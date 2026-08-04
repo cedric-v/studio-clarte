@@ -1,26 +1,26 @@
 import { z } from 'zod';
 
 /**
- * Configuration multi-tenant « Marque Blanche ».
- * Chaque site client possède son sous-domaine d'admin, son dépôt git cible,
- * son framework, son prompt système additionnel et son CDN d'images.
+ * Multi-tenant "White Label" configuration.
+ * Each client site has its own admin subdomain, target git repo, framework,
+ * system-prompt addon and media CDN.
  */
 
 export const SiteConfigSchema = z.object({
-  /** Identifiant interne stable (ex: "client-a"). */
+  /** Stable internal identifier (e.g. "client-a"). */
   id: z.string(),
-  /** Nom commercial affiché dans le header. */
+  /** Commercial name shown in the header. */
   name: z.string(),
-  /** Sous-domaine d'administration (ex: "studio.client-a.ch"). */
+  /** Admin subdomain (e.g. "studio.client-a.ch"). */
   domain: z.string(),
-  /** Dépôt GitHub cible au format "owner/repo". */
+  /** Target GitHub repo as "owner/repo". */
   repo: z.string(),
   framework: z.enum(['astro', 'eleventy', 'generic']),
-  /** Directives additionnelles injectées dans le system prompt DeepSeek. */
+  /** Extra directives injected into the DeepSeek system prompt. */
   systemPromptAddon: z.string().default(''),
-  /** Domaine CDN des médias (ex: "https://cdn.client-a.ch"). */
+  /** Media CDN domain (e.g. "https://cdn.client-a.ch"). */
   cdnDomain: z.url(),
-  /** Branche de base pour les PR (ne JAMAIS pousser directement dessus). */
+  /** Base branch for PRs (never push directly to it). */
   defaultBranch: z.string().default('main'),
   theme: z
     .object({
@@ -28,14 +28,14 @@ export const SiteConfigSchema = z.object({
       logoUrl: z.url().optional(),
     })
     .optional(),
-  /** Si vrai → domaine de l'agence : mode Super-Admin actif. */
+  /** If true → agency domain: Super-Admin mode is active. */
   isAgency: z.boolean().default(false),
 });
 
 export type SiteConfig = z.infer<typeof SiteConfigSchema>;
 
 // ═══════════════════════════════════════════════════════════════════
-// REGISTRE DES SITES CLIENTS
+// CLIENT SITES REGISTRY
 // ═══════════════════════════════════════════════════════════════════
 const SITES: SiteConfig[] = [
   {
@@ -79,7 +79,7 @@ const SITES: SiteConfig[] = [
   },
 ];
 
-/** Détection du site par sous-domaine (le host est normalisé sans port). */
+/** Detects the site from the subdomain (host normalized without port). */
 export function getSiteByHost(host: string): SiteConfig | null {
   const hostname = host.split(':')[0].toLowerCase();
   return SITES.find((site) => site.domain === hostname) ?? null;
@@ -89,12 +89,12 @@ export function getSiteById(id: string): SiteConfig | null {
   return SITES.find((site) => site.id === id) ?? null;
 }
 
-/** Liste des sites visibles (tous — le filtrage se fait côté UI). */
+/** Returns all sites (filtering is done in the UI). */
 export function listSites(): SiteConfig[] {
   return SITES;
 }
 
-/** Mode Super-Admin : le domaine appartient à l'agence. */
+/** Super-Admin mode: the domain belongs to the agency. */
 export function isAgencyDomain(host: string): boolean {
   return getSiteByHost(host)?.isAgency ?? false;
 }

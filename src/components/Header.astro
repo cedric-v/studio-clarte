@@ -1,4 +1,6 @@
 ---
+import LanguageSwitcher from './LanguageSwitcher.astro';
+import { t } from '../i18n';
 import type { SiteConfig } from '../config/sites';
 import type { SessionUser } from '../env';
 
@@ -9,6 +11,7 @@ interface Props {
 }
 
 const { site, user, isAgency } = Astro.props;
+const { lang } = Astro.locals;
 ---
 
 <header class="app-header">
@@ -21,15 +24,17 @@ const { site, user, isAgency } = Astro.props;
     <div class="brand-text">
       <h1 class="brand-name">{site.name}</h1>
       <span class="brand-sub">
-        {isAgency ? 'Mode Super-Admin' : 'Marque Blanche'} · <code>{site.framework}</code> ·{' '}
-        <code>{site.repo}</code>
+        {isAgency ? t(lang, 'header.superAdmin') : t(lang, 'header.whiteLabel')} ·{' '}
+        <code>{site.framework}</code> · <code>{site.repo}</code>
       </span>
     </div>
   </div>
 
   <div class="header-actions">
-    <button id="btn-open-settings" class="btn btn-ghost" type="button" title="Coffre-fort des clés API (write-only)">
-      ⚙️ <span class="hide-sm">Paramètres</span>
+    <LanguageSwitcher />
+
+    <button id="btn-open-settings" class="btn btn-ghost" type="button" title={t(lang, 'header.settings')}>
+      ⚙️ <span class="hide-sm">{t(lang, 'header.settings')}</span>
     </button>
 
     {user && (
@@ -40,8 +45,8 @@ const { site, user, isAgency } = Astro.props;
     )}
 
     <form method="post" action="/api/auth/logout">
-      <button class="btn btn-ghost" type="submit" title="Déconnexion">
-        ⎋ <span class="hide-sm">Quitter</span>
+      <button class="btn btn-ghost" type="submit" title={t(lang, 'header.logout')}>
+        ⎋ <span class="hide-sm">{t(lang, 'header.logout')}</span>
       </button>
     </form>
   </div>

@@ -1,17 +1,17 @@
 import { Octokit } from '@octokit/rest';
 
 /**
- * Git Engine « Direct Git API » — zéro commit direct sur `main`.
+ * "Direct Git API" engine — zero direct commits to `main`.
  *
- * Tout est exécuté sur Cloudflare Compute via l'API Git d'Octokit :
- *   1. `git.getRef`       → SHA de la branche de base (main) ;
- *   2. `git.createTree`   → arbre Git complet créé EN MÉMOIRE (base_tree + blobs) ;
- *   3. `git.createCommit` → commit parenté sur main ;
- *   4. `git.createRef`    → branche de brouillon `draft/*` ;
- *   5. `pulls.create`     → Pull Request (déclenche le build de preview Cloudflare Pages).
+ * Everything runs on Cloudflare Compute via Octokit's Git API:
+ *   1. `git.getRef`       → SHA of the base branch (main) ;
+ *   2. `git.createTree`   → full Git tree built IN MEMORY (base_tree + blobs) ;
+ *   3. `git.createCommit` → commit parented on main ;
+ *   4. `git.createRef`    → draft branch `draft/*` ;
+ *   5. `pulls.create`     → Pull Request (triggers the Cloudflare Pages preview build).
  *
- * Le tout en ~1-2 secondes. La fusion vers `main` n'est possible que via
- * `/api/merge` (squash & merge) après validation humaine sur la preview.
+ * All in ~1-2 seconds. Merging to `main` is only possible via `/api/merge`
+ * (squash & merge) after human validation on the preview.
  */
 
 export interface DraftFile {
@@ -48,7 +48,7 @@ export function createOctokit(pat: string): Octokit {
 
 function splitRepo(repo: string): { owner: string; repoName: string } {
   const [owner, repoName] = repo.split('/');
-  if (!owner || !repoName) throw new Error(`Dépôt invalide : ${repo} (attendu "owner/repo")`);
+  if (!owner || !repoName) throw new Error(`Invalid repo: ${repo} (expected "owner/repo")`);
   return { owner, repoName };
 }
 
@@ -71,8 +71,8 @@ export async function getDefaultBranch(octokit: Octokit, repo: string): Promise<
 }
 
 /**
- * Crée la branche `draft/*` + la Pull Request en une passe atomique.
- * Ne touche JAMAIS à `main`.
+ * Creates the `draft/*` branch + the Pull Request in one atomic pass.
+ * Never touches `main`.
  */
 export async function createDraftPR(
   octokit: Octokit,
@@ -84,7 +84,7 @@ export async function createDraftPR(
   const base = opts.base ?? 'main';
   const createdAt = new Date().toISOString();
 
-  // 1. SHA courant de la branche de base
+  // 1. Current SHA of the base branch
   const { data: baseRef } = await octokit.git.getRef({
     owner,
     repo: repoName,
@@ -94,7 +94,7 @@ export async function createDraftPR(
 
   const branch = `draft/${slugify(opts.title)}-${Date.now().toString(36)}`;
 
-  // 2. Arbre Git construit en mémoire (aucun checkout local)
+  // 2. Git tree built in memory (no local checkout)
   const { data: tree } = await octokit.git.createTree({
     owner,
     repo: repoName,
@@ -107,7 +107,7 @@ export async function createDraftPR(
     })),
   });
 
-  // 3. Commit parenté sur main
+  // 3. Commit parented on main
   const { data: commit } = await octokit.git.createCommit({
     owner,
     repo: repoName,
@@ -116,7 +116,7 @@ export async function createDraftPR(
     parents: [baseSha],
   });
 
-  // 4. Branche de brouillon
+  // 4. Draft branch
   await octokit.git.createRef({
     owner,
     repo: repoName,
@@ -124,7 +124,7 @@ export async function createDraftPR(
     sha: commit.sha,
   });
 
-  // 5. Pull Request (déclenche le build Cloudflare Pages sur la PR)
+  // 5. Pull Request (triggers the Cloudflare Pages build on the PR)
   const { data: pr } = await octokit.pulls.create({
     owner,
     repo: repoName,
@@ -160,12 +160,12 @@ function mapDeploymentState(state: string): PRState {
 }
 
 /**
- * Statut de la PR + lien de preview Cloudflare Pages.
+ * PR status + Cloudflare Pages preview link.
  *
- * Stratégie de découverte de la preview :
- *  1. Deployments GitHub (`repos.listDeployments` sur le head SHA) → statut +
- *     `environment_url` / `target_url` du déploiement cloudflare-pages ;
- *  2. Fallback : Check Runs (`checks.listForRef`) avec l'app Cloudflare Pages.
+ * Preview discovery strategy:
+ *  1. GitHub Deployments (`repos.listDeployments` on the head SHA) → status +
+ *     `environment_url` / `target_url` of the cloudflare-pages deployment ;
+ *  2. Fallback: Check Runs (`checks.listForRef`) with the Cloudflare Pages app.
  */
 export async function getPRStatus(octokit: Octokit, repo: string, prNumber: number): Promise<PRStatus> {
   const { owner, repoName } = splitRepo(repo);
@@ -187,7 +187,7 @@ export async function getPRStatus(octokit: Octokit, repo: string, prNumber: numb
   let previewUrl: string | null = null;
   let state: PRState = 'pending';
 
-  // Stratégie 1 — Deployments
+  // Strategy 1 — Deployments
   try {
     const { data: deployments } = await octokit.repos.listDeployments({
       owner,
@@ -210,10 +210,10 @@ export async function getPRStatus(octokit: Octokit, repo: string, prNumber: numb
       }
     }
   } catch {
-    // Deployments API indisponible → on continue
+    // Deployments API unavailable → fall through
   }
 
-  // Stratégie 2 — Check Runs Cloudflare Pages
+  // Strategy 2 — Cloudflare Pages Check Runs
   if (!previewUrl && state !== 'error') {
     try {
       const { data: runs } = await octokit.checks.listForRef({
@@ -256,7 +256,7 @@ export interface MergeResult {
   message: string | null;
 }
 
-/** Squash & merge vers `main` puis suppression de la branche `draft/*`. */
+/** Squash & merge to `main`, then deletes the temporary `draft/*` branch. */
 export async function mergePR(
   octokit: Octokit,
   repo: string,
