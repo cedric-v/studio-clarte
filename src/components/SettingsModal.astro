@@ -1,0 +1,152 @@
+---
+interface Props {
+  siteName: string;
+}
+
+const { siteName } = Astro.props;
+
+const FIELDS = [
+  {
+    name: 'DEEPSEEK_API_KEY',
+    label: 'DeepSeek (moteur IA)',
+    placeholder: 'sk-… (écrire une nouvelle valeur pour remplacer)',
+    hint: 'Utilisée pour générer la structure de contenu du site.',
+  },
+  {
+    name: 'GITHUB_PAT',
+    label: 'GitHub (Git Engine)',
+    placeholder: 'github_pat_… (écrire une nouvelle valeur pour remplacer)',
+    hint: 'PAT avec scope repo : création des branches draft/* et des PR.',
+  },
+] as const;
+---
+
+<div class="modal-backdrop" id="settings-modal" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+    <div class="modal-header">
+      <h2 id="settings-title">🔐 Coffre-fort des clés API — {siteName}</h2>
+      <button class="icon-btn" id="settings-close" type="button" aria-label="Fermer">✕</button>
+    </div>
+
+    <div class="modal-note">
+      Clés chiffrées en <strong>AES-256-GCM</strong> (Cloudflare KV) et stockées en
+      <strong>write-only</strong> : une fois enregistrées, elles ne peuvent
+      <em>jamais</em> être relues, affichées en clair ni copiées.
+    </div>
+
+    <form id="keys-form">
+      {FIELDS.map((field) => (
+        <label class="field" for={`key-${field.name}`}>
+          <span class="field-label">
+            {field.label} <code>{field.name}</code>
+          </span>
+          <div class="masked-row">
+            <span class="masked-value" id={`masked-${field.name}`}>—</span>
+            <span class="badge badge-muted" id={`badge-${field.name}`}>non configurée</span>
+          </div>
+          <input
+            id={`key-${field.name}`}
+            class="input"
+            type="password"
+            name={field.name}
+            placeholder={field.placeholder}
+            autocomplete="new-password"
+            spellcheck="false"
+          />
+          <span class="field-hint">{field.hint}</span>
+        </label>
+      ))}
+
+      <div class="modal-actions">
+        <button class="btn btn-primary" type="submit" id="keys-save">
+          💾 Enregistrer les clés
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  const modal = document.getElementById('settings-modal') as HTMLElement;
+  const form = document.getElementById('keys-form') as HTMLFormElement;
+  const saveBtn = document.getElementById('keys-save') as HTMLButtonElement;
+
+  const FIELDS = [
+    { name: 'DEEPSEEK_API_KEY', label: 'DeepSeek' },
+    { name: 'GITHUB_PAT', label: 'GitHub PAT' },
+  ] as const;
+
+  function toast(message: string, type: 'info' | 'success' | 'error' = 'info') {
+    window.dispatchEvent(new CustomEvent('sc:toast', { detail: { message, type } }));
+  }
+
+  function open() {
+    modal.hidden = false;
+    loadMasked();
+  }
+  function close() {
+    modal.hidden = true;
+    form.reset();
+  }
+
+  window.addEventListener('sc:open-settings', open);
+  document.getElementById('settings-close')?.addEventListener('click', close);
+  modal.addEventListener('click', (event) => {
+    if (event.target === modal) close();
+  });
+  window.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && !modal.hidden) close();
+  });
+
+  async function loadMasked() {
+    try {
+      const res = await fetch('/api/settings/keys');
+      const data = await res.json();
+      for (const field of FIELDS) {
+        const value = data.configured?.[field.name];
+        const el = document.getElementById(`masked-${field.name}`);
+        const badge = document.getElementById(`badge-${field.name}`);
+        if (el) el.textContent = value || '—';
+        if (badge) {
+          badge.textContent = value ? 'configurée (write-only)' : 'non configurée';
+          badge.classList.toggle('badge-success', Boolean(value));
+          badge.classList.toggle('badge-muted', !value);
+        }
+      }
+    } catch {
+      toast('Impossible de lire les clés configurées', 'error');
+    }
+  }
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const payload: Record<string, string> = {};
+    for (const field of FIELDS) {
+      const input = document.getElementById(`key-${field.name}`) as HTMLInputElement;
+      if (input.value.trim()) payload[field.name] = input.value.trim();
+    }
+    if (!Object.keys(payload).length) {
+      toast('Saisissez au moins une clé à enregistrer', 'info');
+      return;
+    }
+    saveBtn.disabled = true;
+    saveBtn.textContent = '⏳ Chiffrement…';
+    try {
+      const res = await fetch('/api/settings/keys', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? 'Enregistrement échoué');
+      form.reset();
+      await loadMasked();
+      toast('Clés chiffrées et enregistrées ✓ (write-only)', 'success');
+    } catch (error) {
+      toast(error instanceof Error ? error.message : 'Erreur', 'error');
+    } finally {
+      saveBtn.disabled = false;
+      saveBtn.textContent = '💾 Enregistrer les clés';
+    }
+  });
+</script>

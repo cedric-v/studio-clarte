@@ -1,0 +1,250 @@
+---
+interface Props {
+  siteId: string;
+  siteName: string;
+}
+
+const { siteId, siteName } = Astro.props;
+---
+
+<div class="workspace-panel panel-workflow" data-site-id={siteId}>
+  <div class="panel-header">
+    <div>
+      <h2>🚀 Déploiement Edge — {siteName}</h2>
+      <span class="panel-sub">Branche draft/* + PR en ~1-2 s via l'API Git — zéro commit direct sur main.</span>
+    </div>
+  </div>
+
+  <ol class="stepper" id="stepper">
+    <li class="step" data-step="1">
+      <span class="step-num">1</span>
+      <div class="step-content">
+        <div class="step-head">Génération Edge</div>
+        <div class="step-body">
+          <button class="btn btn-primary" type="button" id="btn-create-pr" disabled>
+            💾 Créer la branche draft/* + PR
+          </button>
+          <span class="step-hint">
+            Arbre Git construit en mémoire (git.createTree → createCommit → createRef → pulls.create).
+          </span>
+        </div>
+      </div>
+    </li>
+
+    <li class="step" data-step="2">
+      <span class="step-num">2</span>
+      <div class="step-content">
+        <div class="step-head">Draft PR Active</div>
+        <div class="step-body">
+          <a class="pr-link" id="pr-link" href="#" target="_blank" rel="noopener noreferrer" hidden>
+            Voir la Pull Request ↗
+          </a>
+          <span class="step-hint" id="pr-hint">En attente de création…</span>
+        </div>
+      </div>
+    </li>
+
+    <li class="step" data-step="3">
+      <span class="step-num">3</span>
+      <div class="step-content">
+        <div class="step-head">Preview Cloudflare</div>
+        <div class="step-body">
+          <span class="step-hint" id="preview-hint">La build de prévisualisation se lance automatiquement sur la PR.</span>
+          <a class="preview-link" id="preview-link" href="#" target="_blank" rel="noopener noreferrer" hidden>
+            Voir la Preview ↗
+          </a>
+        </div>
+      </div>
+    </li>
+
+    <li class="step" data-step="4">
+      <span class="step-num">4</span>
+      <div class="step-content">
+        <div class="step-head">Validation</div>
+        <div class="step-body">
+          <button class="btn btn-success" type="button" id="btn-merge" disabled>
+            🚀 Valider &amp; Fusionner en Prod
+          </button>
+          <span class="step-hint">
+            Squash &amp; merge vers <code>main</code>, puis suppression de la branche temporaire.
+          </span>
+        </div>
+      </div>
+    </li>
+  </ol>
+</div>
+
+<script>
+  import { getState, on, switchToWorkspaceTab, toast } from '../lib/client-state';
+  import type { GeneratedPayload, WorkflowState } from '../lib/client-state';
+
+  const siteId = '{siteId}';
+  const state = getState();
+
+  // Les URL proviennent de GitHub (dépôts/PR) → n'autoriser que http(s).
+  function safeHttpUrl(value: string): string {
+    return /^https?:\/\//i.test(value) ? value : '#';
+  }
+
+  const btnCreate = document.getElementById('btn-create-pr') as HTMLButtonElement;
+  const prLink = document.getElementById('pr-link') as HTMLAnchorElement;
+  const prHint = document.getElementById('pr-hint') as HTMLElement;
+  const previewLink = document.getElementById('preview-link') as HTMLAnchorElement;
+  const previewHint = document.getElementById('preview-hint') as HTMLElement;
+  const btnMerge = document.getElementById('btn-merge') as HTMLButtonElement;
+
+  let payload: GeneratedPayload | null = null;
+  let polling: ReturnType<typeof setInterval> | null = null;
+  let pollingStarted = false;
+
+  function activateStep(step: number, done = false) {
+    for (let i = 1; i <= 4; i++) {
+      const li = document.querySelector(`[data-step="${i}"]`);
+      li?.classList.toggle('active', i === step && !done);
+      li?.classList.toggle('done', i < step || (i === step && done));
+    }
+  }
+
+  function resetStepper() {
+    for (let i = 1; i <= 4; i++) {
+      document.querySelector(`[data-step="${i}"]`)?.classList.remove('active', 'done');
+    }
+  }
+
+  // Nouveau payload généré → prêt pour l'étape 1
+  on('sc:payload', (data: GeneratedPayload) => {
+    payload = data;
+    btnCreate.disabled = false;
+    if (!state.workflow) {
+      resetStepper();
+      prLink.hidden = true;
+      previewLink.hidden = true;
+      btnMerge.disabled = true;
+    }
+    toast('Contenu prêt — créez la branche draft/* + PR', 'info');
+  });
+
+  btnCreate.addEventListener('click', async () => {
+    if (!payload || !payload.files.length) return;
+    btnCreate.disabled = true;
+    btnCreate.textContent = '⏳ Création de la PR (Edge)…';
+
+    try {
+      const res = await fetch('/api/commit-draft', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          files: payload.files,
+          title: payload.title,
+          summary: payload.summary,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? `Erreur ${res.status}`);
+
+      state.workflow = {
+        siteId,
+        prNumber: data.prNumber,
+        prUrl: data.prUrl,
+        branch: data.branch,
+      } satisfies WorkflowState;
+
+      activateStep(2);
+      prLink.href = safeHttpUrl(data.prUrl);
+      prLink.textContent = `PR #${data.prNumber} · ${data.branch} ↗`;
+      prLink.hidden = false;
+      prHint.textContent = 'Draft PR créée — build de preview Cloudflare Pages en cours…';
+      toast(`PR #${data.prNumber} créée en ~1-2 s ⚡`, 'success');
+      switchToWorkspaceTab();
+      startPolling();
+    } catch (error) {
+      console.error('[workflow]', error);
+      toast(error instanceof Error ? error.message : 'Création de la PR échouée', 'error');
+      btnCreate.disabled = false;
+      btnCreate.textContent = '💾 Créer la branche draft/* + PR';
+    }
+  });
+
+  function startPolling() {
+    const workflow = state.workflow;
+    if (!workflow) return;
+    if (pollingStarted) return;
+    pollingStarted = true;
+
+    polling = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/status/${workflow.siteId}/${workflow.prNumber}`);
+        const status = await res.json();
+        if (!res.ok) throw new Error(status.error ?? 'Statut indisponible');
+
+        if (status.merged) {
+          activateStep(4, true);
+          btnMerge.disabled = true;
+          btnMerge.textContent = '✅ Fusionné & branch supprimée';
+          previewHint.textContent = 'PR fusionnée vers main.';
+          stopPolling();
+          return;
+        }
+
+        if (status.previewUrl) {
+          activateStep(3);
+          activateStep(4);
+          previewLink.href = safeHttpUrl(status.previewUrl);
+          previewLink.hidden = false;
+          previewHint.textContent = 'Build de prévisualisation prête ✓';
+          btnMerge.disabled = false;
+          stopPolling();
+          toast('Preview Cloudflare disponible ✓', 'success');
+          return;
+        }
+
+        if (status.state === 'error') {
+          previewHint.textContent = '⚠️ La build de preview a échoué (voir la PR GitHub).';
+          stopPolling();
+          return;
+        }
+
+        previewHint.textContent =
+          status.state === 'in_progress'
+            ? 'Build de prévisualisation en cours…'
+            : 'Build de prévisualisation en attente…';
+      } catch (error) {
+        console.error('[polling]', error);
+        previewHint.textContent = '⚠️ Impossible de récupérer le statut (nouvel essai…).';
+      }
+    }, 4000);
+  }
+
+  function stopPolling() {
+    if (polling) clearInterval(polling);
+    polling = null;
+    pollingStarted = false;
+  }
+
+  btnMerge.addEventListener('click', async () => {
+    const workflow = state.workflow;
+    if (!workflow) return;
+    btnMerge.disabled = true;
+    btnMerge.textContent = '⏳ Fusion en cours…';
+    try {
+      const res = await fetch('/api/merge', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ prNumber: workflow.prNumber }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.merged) throw new Error(data.message ?? data.error ?? 'Fusion refusée');
+
+      activateStep(4, true);
+      btnMerge.textContent = '✅ Publié sur main !';
+      previewHint.textContent = 'PR #' + workflow.prNumber + ' fusionnée (squash) — branch supprimée.';
+      stopPolling();
+      toast('🚀 Contenu publié en production !', 'success');
+    } catch (error) {
+      console.error('[merge]', error);
+      toast(error instanceof Error ? error.message : 'Fusion impossible', 'error');
+      btnMerge.disabled = false;
+      btnMerge.textContent = '🚀 Valider & Fusionner en Prod';
+    }
+  });
+</script>

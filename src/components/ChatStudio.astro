@@ -1,0 +1,334 @@
+---
+import type { SiteConfig } from '../config/sites';
+
+interface Props {
+  site: SiteConfig;
+}
+
+const { site } = Astro.props;
+
+const SUGGESTIONS = [
+  'Crée la page « Offres » avec 3 accompagnements',
+  'Rédige un article de blog sur notre méthode',
+  'Génère les témoignages clients (5 avis)',
+  'Met à jour la page d\'accueil (héro + 2 sections)',
+];
+---
+
+<div class="chat-panel" id="chat-studio">
+  <!-- Messages -->
+  <div class="chat-messages" id="chat-messages">
+    <div class="welcome">
+      <div class="welcome-title">💬 Bonjour, {site.name} !</div>
+      <p class="welcome-text">
+        Décrivez le contenu à créer. Glissez-déposez une image ou faites
+        <kbd>Ctrl</kbd>+<kbd>V</kbd> : elle sera compressée en WebP dans votre
+        navigateur puis téléversée sur le CDN <code>{site.cdnDomain}</code>.
+      </p>
+      <div class="chips" id="suggestion-chips">
+        {SUGGESTIONS.map((suggestion) => (
+          <button class="chip" type="button" data-suggestion={suggestion}>{suggestion}</button>
+        ))}
+      </div>
+    </div>
+  </div>
+
+  <!-- Composer -->
+  <div class="chat-composer">
+    <div class="composer-strip" id="image-strip" hidden></div>
+    <div class="composer-row">
+      <button class="icon-btn" id="btn-attach" type="button" title="Joindre une image">🖼️</button>
+      <textarea
+        id="chat-input"
+        rows="1"
+        placeholder="Décrivez le contenu à créer… (Ctrl+V pour coller une image)"
+        aria-label="Message"
+      ></textarea>
+      <button class="btn btn-primary" id="btn-send" type="button">Envoyer ↵</button>
+    </div>
+    <input type="file" id="file-input" accept="image/*" multiple hidden />
+    <p class="composer-hint">
+      Zero-Click Upload · WebP ≤1920px · DeepSeek génère l'alt text accessible
+    </p>
+  </div>
+</div>
+
+<script>
+  import { emit, getState, toast, type ChatMessage } from '../lib/client-state';
+  import { uploadImage } from '../lib/client-upload';
+  import { renderMarkdown } from '../lib/markdown-lite';
+
+  const state = getState();
+  const messagesEl = document.getElementById('chat-messages')!;
+  const inputEl = document.getElementById('chat-input') as HTMLTextAreaElement;
+  const sendBtn = document.getElementById('btn-send') as HTMLButtonElement;
+  const attachBtn = document.getElementById('btn-attach') as HTMLButtonElement;
+  const fileInput = document.getElementById('file-input') as HTMLInputElement;
+  const stripEl = document.getElementById('image-strip')!;
+
+  let pendingImages: { url: string; alt: string }[] = [];
+  let streaming = false;
+
+  // Échappe les valeurs insérées dans innerHTML (noms de fichiers utilisateur…)
+  function escapeHtml(src: string): string {
+    return src
+      .replace(/&/g, '&amp;')
+      .replace(/"/g, '&quot;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+
+  // ── Rendu ────────────────────────────────────────────────────────
+  function scrollBottom() {
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+  }
+
+  function renderMessage(message: ChatMessage): HTMLElement {
+    const div = document.createElement('div');
+    div.className = `msg ${message.role === 'user' ? 'msg-user' : 'msg-assistant'}`;
+    const images = (message.images ?? [])
+      .map(
+        (img) =>
+          `<figure class="md-figure"><img src="${escapeHtml(img.url)}" alt="${escapeHtml(img.alt)}" loading="lazy" /><figcaption>${escapeHtml(img.alt)}</figcaption></figure>`,
+      )
+      .join('');
+    div.innerHTML = images + renderMarkdown(message.content);
+    if (message.payload) {
+      const note = document.createElement('div');
+      note.className = 'payload-note';
+      note.textContent = '📦 Contenu structuré généré — voir l\'onglet « Aperçu & Déploiement ».';
+      div.appendChild(note);
+    }
+    messagesEl.appendChild(div);
+    scrollBottom();
+    return div;
+  }
+
+  function renderAll() {
+    messagesEl.innerHTML = '';
+    for (const message of state.messages) renderMessage(message);
+  }
+
+  // ── Images (paste / drag&drop / bouton) ──────────────────────────
+  async function handleFiles(files: FileList | File[]) {
+    const list = Array.from(files).filter((file) => file.type.startsWith('image/'));
+    if (!list.length) {
+      toast('Seules les images sont acceptées', 'error');
+      return;
+    }
+    for (const file of list) {
+      try {
+        toast(`Compression WebP de « ${file.name} »…`, 'info');
+        const uploaded = await uploadImage(file);
+        const alt = `Image téléversée — ${file.name}`;
+        pendingImages.push({ url: uploaded.publicUrl, alt });
+        renderStrip();
+        toast(
+          uploaded.compressed
+            ? `Image optimisée WebP ✓ (${formatBytes(file.size)} → CDN)`
+            : 'Image téléversée ✓ (format non compressible)',
+          'success',
+        );
+      } catch (error) {
+        console.error('[upload]', error);
+        toast(error instanceof Error ? error.message : 'Échec du téléversement R2', 'error');
+      }
+    }
+  }
+
+  function renderStrip() {
+    stripEl.hidden = pendingImages.length === 0;
+    stripEl.innerHTML = '';
+    pendingImages.forEach((img, index) => {
+      const thumb = document.createElement('div');
+      thumb.className = 'thumb';
+      thumb.innerHTML = `<img src="${escapeHtml(img.url)}" alt="${escapeHtml(img.alt)}" /><button class="thumb-x" type="button" title="Retirer">✕</button>`;
+      thumb.querySelector('.thumb-x')?.addEventListener('click', () => {
+        pendingImages.splice(index, 1);
+        renderStrip();
+      });
+      stripEl.appendChild(thumb);
+    });
+  }
+
+  function formatBytes(bytes: number): string {
+    if (bytes < 1024) return `${bytes} o`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} Ko`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} Mo`;
+  }
+
+  inputEl.addEventListener('paste', (event) => {
+    const items = event.clipboardData?.items ?? [];
+    const files = Array.from(items)
+      .filter((item) => item.kind === 'file' && item.type.startsWith('image/'))
+      .map((item) => item.getAsFile())
+      .filter((file): file is File => file !== null);
+    if (files.length) {
+      event.preventDefault();
+      void handleFiles(files);
+    }
+  });
+
+  for (const type of ['dragover', 'dragenter']) {
+    messagesEl.addEventListener(type, (event) => {
+      event.preventDefault();
+      messagesEl.classList.add('dragging');
+    });
+  }
+  messagesEl.addEventListener('dragleave', () => messagesEl.classList.remove('dragging'));
+  messagesEl.addEventListener('drop', (event) => {
+    event.preventDefault();
+    messagesEl.classList.remove('dragging');
+    void handleFiles(event.dataTransfer?.files ?? []);
+  });
+
+  attachBtn.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files) void handleFiles(fileInput.files);
+    fileInput.value = '';
+  });
+
+  // ── Suggestions ──────────────────────────────────────────────────
+  document.getElementById('suggestion-chips')?.addEventListener('click', (event) => {
+    const button = (event.target as HTMLElement).closest<HTMLButtonElement>('.chip');
+    if (!button) return;
+    inputEl.value = button.dataset.suggestion ?? '';
+    inputEl.focus();
+  });
+
+  // ── Envoi / Streaming DeepSeek ───────────────────────────────────
+  function extractPayload(text: string): { title: string; summary: string; files: unknown[] } | null {
+    const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+    const candidate = fenced?.[1] ?? text;
+    const start = candidate.indexOf('{');
+    const end = candidate.lastIndexOf('}');
+    if (start === -1 || end <= start) return null;
+    try {
+      const obj = JSON.parse(candidate.slice(start, end + 1));
+      if (obj && typeof obj === 'object' && Array.isArray(obj.files) && obj.files.length) {
+        return obj as { title: string; summary: string; files: unknown[] };
+      }
+    } catch {
+      return null;
+    }
+    return null;
+  }
+
+  async function send() {
+    if (streaming) return;
+    const text = inputEl.value.trim();
+    const images = [...pendingImages];
+    if (!text && !images.length) return;
+
+    const userMessage: ChatMessage = {
+      role: 'user',
+      content: text || '(image jointe)',
+      images,
+    };
+    state.messages.push(userMessage);
+    renderMessage(userMessage);
+
+    inputEl.value = '';
+    pendingImages = [];
+    renderStrip();
+    scrollBottom();
+
+    const history = state.messages.map((message) => ({
+      role: message.role,
+      content:
+        (message.images?.length
+          ? message.images.map((img) => `![${img.alt}](${img.url})`).join('\n\n') + '\n\n'
+          : '') + message.content,
+    }));
+
+    streaming = true;
+    sendBtn.disabled = true;
+    sendBtn.textContent = '⏳';
+    const bubble = document.createElement('div');
+    bubble.className = 'msg msg-assistant';
+    bubble.innerHTML = '<span class="typing">…</span>';
+    messagesEl.appendChild(bubble);
+    scrollBottom();
+
+    try {
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ messages: history.slice(-12) }),
+      });
+      if (!res.ok) {
+        const error = (await res.json().catch(() => null)) as { error?: string } | null;
+        bubble.textContent = `⚠️ ${error?.error ?? `Erreur ${res.status}`}`;
+        return;
+      }
+
+      const reader = res.body?.getReader();
+      const decoder = new TextDecoder();
+      let acc = '';
+      if (reader) {
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          acc += decoder.decode(value, { stream: true });
+          bubble.innerHTML = renderMarkdown(acc);
+          scrollBottom();
+        }
+        acc += decoder.decode();
+      }
+
+      const payload = extractPayload(acc);
+      const assistantMessage: ChatMessage = {
+        role: 'assistant',
+        content: acc.trim() || '(réponse vide)',
+        payload: Boolean(payload),
+      };
+      state.messages.push(assistantMessage);
+
+      if (payload) {
+        const files = payload.files.filter(
+          (file): file is { path: string; content: string } =>
+            typeof file === 'object' &&
+            file !== null &&
+            typeof (file as { path?: unknown }).path === 'string' &&
+            typeof (file as { content?: unknown }).content === 'string',
+        );
+        if (files.length) {
+          emit('sc:payload', {
+            title: payload.title || 'Contenu généré',
+            summary: payload.summary || '',
+            files,
+          });
+          toast(`${files.length} fichier(s) généré(s) ✓ — prêt pour le draft PR`, 'success');
+        } else {
+          toast('Payload reçu mais aucun fichier exploitable', 'error');
+        }
+      } else {
+        toast('Réponse générée sans payload structuré — précisez la demande', 'info');
+      }
+    } catch (error) {
+      console.error('[chat]', error);
+      bubble.textContent = '⚠️ Erreur réseau lors du streaming';
+    } finally {
+      streaming = false;
+      sendBtn.disabled = false;
+      sendBtn.textContent = 'Envoyer ↵';
+      scrollBottom();
+    }
+  }
+
+  sendBtn.addEventListener('click', () => void send());
+  inputEl.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
+      void send();
+    }
+  });
+
+  // Auto-grow textarea
+  inputEl.addEventListener('input', () => {
+    inputEl.style.height = 'auto';
+    inputEl.style.height = `${Math.min(inputEl.scrollHeight, 160)}px`;
+  });
+
+  renderAll();
+</script>

@@ -1,0 +1,28 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "studio-clarte",
+  "compatibility_date": "2025-08-01",
+  "compatibility_flags": ["nodejs_compat"],
+  // ⚠️ AVANT DÉPLOIEMENT : remplacer l'id ci-dessous par un vrai KV Namespace
+  // Cloudflare (`wrangler kv namespace create KV`), et adapter le bucket R2.
+  "kv_namespaces": [
+    {
+      "binding": "KV",
+      "id": "studio-clarte-kv-local"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "R2",
+      "bucket_name": "studio-clarte-media"
+    }
+  ],
+  "vars": {
+    "R2_PUBLIC_URL": "https://cdn.client-a.ch",
+    "SESSION_TTL_SECONDS": 604800
+  }
+  // Secrets à créer via `wrangler secret put <NOM>` :
+  //   VAULT_MASTER_KEY, R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY,
+  //   OAUTH_GITHUB_CLIENT_ID, OAUTH_GITHUB_CLIENT_SECRET, ALLOWED_GITHUB_LOGINS,
+  //   DEEPSEEK_API_KEY (fallback global), GITHUB_PAT (fallback global)
+}

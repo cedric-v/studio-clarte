@@ -1,0 +1,54 @@
+---
+import type { SiteConfig } from '../config/sites';
+import type { SessionUser } from '../env';
+
+interface Props {
+  site: SiteConfig;
+  user: SessionUser | null;
+  isAgency: boolean;
+}
+
+const { site, user, isAgency } = Astro.props;
+---
+
+<header class="app-header">
+  <div class="header-brand">
+    {site.theme?.logoUrl ? (
+      <img src={site.theme.logoUrl} alt={`Logo ${site.name}`} class="brand-logo" />
+    ) : (
+      <span class="brand-mark" aria-hidden="true">◐</span>
+    )}
+    <div class="brand-text">
+      <h1 class="brand-name">{site.name}</h1>
+      <span class="brand-sub">
+        {isAgency ? 'Mode Super-Admin' : 'Marque Blanche'} · <code>{site.framework}</code> ·{' '}
+        <code>{site.repo}</code>
+      </span>
+    </div>
+  </div>
+
+  <div class="header-actions">
+    <button id="btn-open-settings" class="btn btn-ghost" type="button" title="Coffre-fort des clés API (write-only)">
+      ⚙️ <span class="hide-sm">Paramètres</span>
+    </button>
+
+    {user && (
+      <div class="user-chip" title={`@${user.login}`}>
+        <img src={user.avatarUrl} alt="" class="user-avatar" width="28" height="28" />
+        <span class="hide-sm">{user.name}</span>
+      </div>
+    )}
+
+    <form method="post" action="/api/auth/logout">
+      <button class="btn btn-ghost" type="submit" title="Déconnexion">
+        ⎋ <span class="hide-sm">Quitter</span>
+      </button>
+    </form>
+  </div>
+</header>
+
+<script>
+  document.getElementById('btn-open-settings')?.addEventListener('click', () => {
+    window.dispatchEvent(new CustomEvent('sc:open-settings'));
+  });
+</script>

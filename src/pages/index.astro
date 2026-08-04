@@ -1,0 +1,77 @@
+---
+import Header from '../components/Header.astro';
+import ChatStudio from '../components/ChatStudio.astro';
+import PayloadPreview from '../components/PayloadPreview.astro';
+import WorkflowTracker from '../components/WorkflowTracker.astro';
+import SettingsModal from '../components/SettingsModal.astro';
+import ToastContainer from '../components/ToastContainer.astro';
+import '../styles/global.css';
+
+const { siteConfig, user, isAgency } = Astro.locals;
+
+if (!siteConfig) {
+  return Astro.redirect('/login');
+}
+
+const brandColor = siteConfig.theme?.primaryColor ?? '#3b82f6';
+const siteId = siteConfig.id;
+---
+
+<!doctype html>
+<html lang="fr" data-brand={brandColor}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="robots" content="noindex,nofollow" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <title>{siteConfig.name} — Studio Clarté</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
+    <!-- Thème dynamique du client (marque blanche) -->
+    <style is:global>
+      :root {
+        --brand-primary: {brandColor};
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app-shell">
+      <Header site={siteConfig} user={user} isAgency={isAgency} />
+
+      <main class="layout">
+        <!-- Onglets mobiles (radio CSS-first) -->
+        <input type="radio" name="sc-tab" id="tab-chat" class="tab-radio" checked />
+        <input type="radio" name="sc-tab" id="tab-workspace" class="tab-radio" />
+        <nav class="mobile-tabs" aria-label="Navigation">
+          <label for="tab-chat">💬 Assistant IA</label>
+          <label for="tab-workspace">📄 Aperçu &amp; Déploiement</label>
+        </nav>
+
+        <!-- Colonne 1 : Chat IA -->
+        <section class="pane pane-chat" aria-label="Assistant IA">
+          <ChatStudio site={siteConfig} />
+        </section>
+
+        <!-- Colonne 2 : Workspace (Preview multi-fichiers + Stepper CI/CD) -->
+        <section class="pane pane-workspace" aria-label="Aperçu et déploiement">
+          <PayloadPreview />
+          <WorkflowTracker siteId={siteId} siteName={siteConfig.name} />
+        </section>
+      </main>
+
+      <SettingsModal siteName={siteConfig.name} />
+      <ToastContainer />
+
+      <footer class="app-footer">
+        <a href="https://cedricv.com/fr/site-web-rapide/" target="_blank" rel="noopener noreferrer">
+          Réalisé par Cédric V.
+        </a>
+      </footer>
+    </div>
+  </body>
+</html>

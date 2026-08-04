@@ -1,0 +1,36 @@
+{
+  "name": "studio-clarte",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Studio Clarté — Admin IA multi-tenant edge-native (Astro SSR + Cloudflare Compute + R2 + DeepSeek + Direct Git API)",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "check": "astro check",
+    "typecheck": "astro check --minimumSeverity error",
+    "deploy": "wrangler deploy",
+    "prepare": "bash scripts/install-hooks.sh",
+    "secrets:install": "bash scripts/install-hooks.sh",
+    "secrets:scan": "gitleaks git --no-banner",
+    "secrets:verify": "gitleaks detect --no-banner"
+  },
+  "dependencies": {
+    "@ai-sdk/openai": "^4.0.29",
+    "@astrojs/cloudflare": "^14.1.7",
+    "@aws-sdk/client-s3": "^3.1102.0",
+    "@aws-sdk/s3-request-presigner": "^3.1102.0",
+    "@octokit/rest": "^22.0.1",
+    "ai": "^7.0.51",
+    "astro": "^7.1.6",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.10",
+    "@cloudflare/workers-types": "^5.20260804.1",
+    "tsx": "^4.23.5",
+    "typescript": "^5.9.3",
+    "wrangler": "^4.118.0"
+  }
+}

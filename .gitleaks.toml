@@ -1,0 +1,22 @@
+# Gitleaks — configuration Studio Clarté
+# Ce dépôt est PUBLIC (open source) : la détection de secrets est non négociable.
+# Utilisé par :
+#   - le hook pre-commit (`gitleaks protect --staged`)
+#   - le hook pre-push (`gitleaks git --pre-push`)
+#   - `npm run secrets:scan` (scan complet de l'historique)
+
+title = "Studio Clarté Gitleaks Config"
+
+[extend]
+useDefault = true
+
+# Fichiers d'EXEMPLE uniquement : ils contiennent volontairement des
+# placeholders documentaires (jamais de vraies clés). Tout autre fichier
+# contenant un secret sera bloqué avant commit/push.
+[allowlist]
+description = "Fichiers de documentation / templates à placeholders"
+paths = [
+  '''\.env\.example$''',
+  '''.*\.example$''',
+  '''LICENSE$''',
+]

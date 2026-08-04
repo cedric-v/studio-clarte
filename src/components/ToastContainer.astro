@@ -1,0 +1,22 @@
+<div class="toast-container" id="toast-container" aria-live="polite"></div>
+
+<script>
+  const container = document.getElementById('toast-container') as HTMLElement;
+
+  interface ToastDetail {
+    message: string;
+    type: 'info' | 'success' | 'error';
+  }
+
+  window.addEventListener('sc:toast', ((event: CustomEvent<ToastDetail>) => {
+    const { message, type = 'info' } = event.detail ?? {};
+    if (!message) return;
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    toast.textContent = message;
+    container.appendChild(toast);
+    const remove = () => toast.remove();
+    toast.addEventListener('click', remove);
+    setTimeout(remove, 4500);
+  }) as EventListener);
+</script>

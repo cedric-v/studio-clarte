@@ -1,0 +1,154 @@
+---
+---
+
+<div class="workspace-panel panel-preview">
+  <div class="panel-header">
+    <div>
+      <h2>📄 Fichiers générés</h2>
+      <span class="panel-sub" id="preview-meta">Aucun contenu — générez via le chat IA.</span>
+    </div>
+    <div class="seg" id="view-toggle" role="tablist" aria-label="Mode d'affichage">
+      <button type="button" role="tab" data-view="visual" class="active" aria-selected="true">Vue visuelle</button>
+      <button type="button" role="tab" data-view="code" aria-selected="false">Code</button>
+    </div>
+  </div>
+
+  <div class="empty-state" id="preview-empty">
+    <span class="empty-icon">🗂️</span>
+    <p>
+      Les fichiers générés par l'assistant IA apparaîtront ici, navigables par
+      onglets, avec une vue visuelle ou un aperçu du code.
+    </p>
+  </div>
+
+  <div class="preview-root" id="preview-root" hidden>
+    <div class="file-tabs" id="file-tabs" role="tablist" aria-label="Fichiers"></div>
+    <div class="file-toolbar">
+      <button class="btn btn-ghost btn-sm" type="button" id="btn-copy">📋 Copier</button>
+      <button class="btn btn-ghost btn-sm" type="button" id="btn-download">⬇️ Télécharger</button>
+      <span class="file-path" id="file-path"></span>
+    </div>
+    <div class="file-view" id="file-view"></div>
+  </div>
+</div>
+
+<script>
+  import { on } from '../lib/client-state';
+  import type { PayloadFile } from '../lib/client-state';
+  import { renderJson, renderMarkdown } from '../lib/markdown-lite';
+
+  const emptyEl = document.getElementById('preview-empty') as HTMLElement;
+  const rootEl = document.getElementById('preview-root') as HTMLElement;
+  const tabsEl = document.getElementById('file-tabs') as HTMLElement;
+  const viewEl = document.getElementById('file-view') as HTMLElement;
+  const metaEl = document.getElementById('preview-meta') as HTMLElement;
+  const pathEl = document.getElementById('file-path') as HTMLElement;
+  const copyBtn = document.getElementById('btn-copy') as HTMLButtonElement;
+  const downloadBtn = document.getElementById('btn-download') as HTMLButtonElement;
+
+  let files: PayloadFile[] = [];
+  let active = 0;
+  let viewMode: 'visual' | 'code' = 'visual';
+
+  const isMarkdown = (path: string) => /\.(md|mdx|markdown)$/i.test(path);
+  const isJson = (path: string) => /\.json$/i.test(path);
+  const iconFor = (path: string) => (isMarkdown(path) ? '📝' : isJson(path) ? '⚙️' : '📄');
+
+  on('sc:payload', (payload: { files?: PayloadFile[]; title?: string; summary?: string }) => {
+    if (!Array.isArray(payload.files) || !payload.files.length) return;
+    files = payload.files;
+    active = 0;
+    renderTabs();
+    renderFile();
+    emptyEl.hidden = true;
+    rootEl.hidden = false;
+    const kb = (files.reduce((sum, file) => sum + file.content.length, 0) / 1024).toFixed(1);
+    metaEl.textContent = `${files.length} fichier(s) · ${kb} Ko · ${payload.title ?? ''}`.trim();
+  });
+
+  function renderTabs() {
+    tabsEl.innerHTML = '';
+    files.forEach((file, index) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = `file-tab${index === active ? ' active' : ''}`;
+      button.setAttribute('role', 'tab');
+      // Les chemins proviennent du payload IA → échappés avant insertion
+      const name = escapeHtml(file.path.split('/').pop() ?? file.path);
+      const path = escapeHtml(file.path);
+      button.innerHTML = `${iconFor(file.path)}<span>${name}</span><em>${path}</em>`;
+      button.addEventListener('click', () => {
+        active = index;
+        renderTabs();
+        renderFile();
+      });
+      tabsEl.appendChild(button);
+    });
+  }
+
+  function renderFile() {
+    const file = files[active];
+    if (!file) return;
+    pathEl.textContent = file.path;
+
+    if (viewMode === 'code') {
+      if (isJson(file.path)) {
+        viewEl.innerHTML = `<pre class="code-fence"><code>${renderJson(file.content).html}</code></pre>`;
+      } else {
+        viewEl.innerHTML = `<pre class="code-fence"><code>${escapeHtml(file.content)}</code></pre>`;
+      }
+      return;
+    }
+
+    // Vue visuelle
+    if (isMarkdown(file.path)) {
+      viewEl.innerHTML = `<article class="md-preview">${renderMarkdown(file.content)}</article>`;
+    } else if (isJson(file.path)) {
+      viewEl.innerHTML = `<pre class="code-fence"><code>${renderJson(file.content).html}</code></pre>`;
+    } else {
+      viewEl.innerHTML = `<pre class="code-fence"><code>${escapeHtml(file.content)}</code></pre>`;
+    }
+  }
+
+  function escapeHtml(src: string): string {
+    return src.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  // Toggle vue visuelle / code
+  document.getElementById('view-toggle')?.addEventListener('click', (event) => {
+    const button = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-view]');
+    if (!button) return;
+    viewMode = button.dataset.view === 'code' ? 'code' : 'visual';
+    document.querySelectorAll('#view-toggle [data-view]').forEach((el) => {
+      el.classList.toggle('active', el === button);
+      el.setAttribute('aria-selected', String(el === button));
+    });
+    renderFile();
+  });
+
+  copyBtn.addEventListener('click', async () => {
+    const file = files[active];
+    if (!file) return;
+    try {
+      await navigator.clipboard.writeText(file.content);
+      window.dispatchEvent(
+        new CustomEvent('sc:toast', { detail: { message: `« ${file.path} » copié ✓`, type: 'success' } }),
+      );
+    } catch {
+      window.dispatchEvent(
+        new CustomEvent('sc:toast', { detail: { message: 'Copie impossible', type: 'error' } }),
+      );
+    }
+  });
+
+  downloadBtn.addEventListener('click', () => {
+    const file = files[active];
+    if (!file) return;
+    const blob = new Blob([file.content], { type: 'text/plain;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = file.path.split('/').pop() ?? 'file.txt';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  });
+</script>
