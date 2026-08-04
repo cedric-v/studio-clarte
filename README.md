@@ -84,7 +84,7 @@ runtime via Cloudflare vars (`wrangler.jsonc` / dashboard):
 | `AGENCY_DOMAIN` | Webmaster's studio subdomain → Super-Admin + default site | `studio.cedricv.com` |
 | `DEFAULT_SITE_ID` | Site opened by default on the agency domain | `agence` |
 | `SITE_DOMAINS` | JSON map siteId → client custom domain | `{"client-a":"studio.client-a.ch"}` |
-| `SITE_OVERRIDES` | JSON map siteId → partial overrides (repo, cdnDomain, name…) | `{"agence":{"repo":"cedric-v/cedricv.com","cdnDomain":"https://cdn.cedricv.com"}}` |
+| `SITE_OVERRIDES` | JSON map siteId → partial overrides (repo, cdnDomain, name, r2AccountId, r2Bucket…) | `{"agence":{"repo":"cedric-v/cedricv.com","cdnDomain":"https://cdn.cedricv.com"}}` |
 | `R2_PUBLIC_URL` | Public CDN domain of the R2 bucket | `https://cdn.cedricv.com` |
 
 The code ships with **seed defaults** (business config: repos, prompts, themes)
@@ -136,6 +136,45 @@ The CNAME target is shown in Workers → `studio-clarte` → **Triggers → Rout
 
 > ⚠️ Every domain you attach must be declared in `AGENCY_DOMAIN` / `SITE_DOMAINS`,
 > otherwise the middleware returns a 404.
+
+### 2b. Per-client image storage (R2 on the CLIENT's own Cloudflare account)
+
+**Cost model:** each site can store its images in ITS OWN R2 bucket. Storage &
+egress are then billed to the client, not to you. Your Worker only signs the
+presigned URLs (no bytes transit through it).
+
+**Flow:**
+
+```
+Browser → WebP compression → PUT (presigned URL) → CLIENT bucket (their account, their costs)
+                                                         ↓
+                                            public reads via the site's cdnDomain
+```
+
+**Per site, two things are needed:**
+
+1. **Identifiers (non-secret)** — in `SITE_OVERRIDES`:
+   `{"client-a":{"r2AccountId":"<client-account-id>","r2Bucket":"<client-bucket>"}}`
+   (the site's `cdnDomain` then serves the public images).
+2. **Access keys (secret)** — in the ⚙️ Settings vault of that site (write-only,
+   masked): `R2_ACCESS_KEY_ID` + `R2_SECRET_ACCESS_KEY`.
+
+**Guide to send to the client:**
+
+1. Create the bucket: Cloudflare dashboard → **R2 → Create bucket** (e.g. `client-a-media`).
+2. Attach the CDN domain: bucket → **Settings → Custom Domains** → `cdn.client-a.ch`
+   (+ enable **Public access**).
+3. Create a scoped token: **My Profile → API Tokens → Create Token** → template
+   **« R2 Bucket — Object Read & Write »** → restrict to the single bucket.
+4. Send the Access Key ID + Secret to the webmaster (→ ⚙️ Settings vault).
+
+**Fallback:** a site without per-site R2 config (or without vault keys) falls
+back to your global bucket (`R2_ACCOUNT_ID` / `R2_BUCKET_NAME` + vault/global
+keys) served from `R2_PUBLIC_URL`. Migration is therefore progressive.
+
+> ⚠️ A per-site bucket NEVER mixes with global credentials: without the client's
+> vault keys, uploads go to the global bucket (never to the client bucket with
+> the wrong keys).
 
 ### 3. Secrets (via `wrangler secret put`) & vars
 

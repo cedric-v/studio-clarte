@@ -991,6 +991,15 @@ button {
   color: var(--text-faint);
 }
 
+.field-divider {
+  margin: 4px 0 14px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--border-color-strong);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
 .modal-actions {
   margin-top: 20px;
   display: flex;

@@ -152,6 +152,14 @@ const fr: Dictionary = {
   'settings.placeholderGithub': 'github_pat_… (écrire une nouvelle valeur pour remplacer)',
   'settings.hintDeepseek': 'Utilisée pour générer la structure de contenu du site.',
   'settings.hintGithub': 'PAT avec scope repo : création des branches draft/* et des PR.',
+  'settings.sectionR2': '🖼️ Images — stockage R2 du client',
+  'settings.fieldR2AccessKey': 'Cloudflare R2 — Access Key ID',
+  'settings.fieldR2Secret': 'Cloudflare R2 — Secret Access Key',
+  'settings.placeholderR2Key': '… (écrire une nouvelle valeur pour remplacer)',
+  'settings.hintR2AccessKey':
+    "Token API R2 du client, restreint à SON bucket (Object Read & Write). Nécessite r2AccountId/r2Bucket dans la config du site.",
+  'settings.hintR2Secret':
+    'Partie secrète du token R2 du client — stockée chiffrée, write-only.',
   'settings.notConfigured': 'non configurée',
   'settings.configured': 'configurée (write-only)',
   'settings.save': '💾 Enregistrer les clés',
@@ -266,6 +274,14 @@ const en: Dictionary = {
   'settings.placeholderGithub': 'github_pat_… (type a new value to replace)',
   'settings.hintDeepseek': 'Used to generate the site content structure.',
   'settings.hintGithub': 'PAT with repo scope: draft/* branch and PR creation.',
+  'settings.sectionR2': '🖼️ Images — client R2 storage',
+  'settings.fieldR2AccessKey': 'Cloudflare R2 — Access Key ID',
+  'settings.fieldR2Secret': 'Cloudflare R2 — Secret Access Key',
+  'settings.placeholderR2Key': '… (type a new value to replace)',
+  'settings.hintR2AccessKey':
+    'Client R2 API token, scoped to THEIR bucket (Object Read & Write). Requires r2AccountId/r2Bucket in the site config.',
+  'settings.hintR2Secret':
+    'Secret part of the client R2 token — stored encrypted, write-only.',
   'settings.notConfigured': 'not configured',
   'settings.configured': 'configured (write-only)',
   'settings.save': '💾 Save keys',

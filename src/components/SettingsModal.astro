@@ -21,6 +21,18 @@ const FIELDS = [
     placeholderKey: 'settings.placeholderGithub',
     hintKey: 'settings.hintGithub',
   },
+  {
+    name: 'R2_ACCESS_KEY_ID',
+    labelKey: 'settings.fieldR2AccessKey',
+    placeholderKey: 'settings.placeholderR2Key',
+    hintKey: 'settings.hintR2AccessKey',
+  },
+  {
+    name: 'R2_SECRET_ACCESS_KEY',
+    labelKey: 'settings.fieldR2Secret',
+    placeholderKey: 'settings.placeholderR2Key',
+    hintKey: 'settings.hintR2Secret',
+  },
 ] as const;
 ---
 
@@ -36,6 +48,9 @@ const FIELDS = [
     <form id="keys-form">
       {FIELDS.map((field) => (
         <label class="field" for={`key-${field.name}`}>
+          {field.name === 'R2_ACCESS_KEY_ID' && (
+            <div class="field-divider">{t(lang, 'settings.sectionR2')}</div>
+          )}
           <span class="field-label">
             {t(lang, field.labelKey)} <code>{field.name}</code>
           </span>
@@ -77,6 +92,8 @@ const FIELDS = [
   const FIELDS = [
     { name: 'DEEPSEEK_API_KEY', labelKey: 'settings.fieldDeepseek' },
     { name: 'GITHUB_PAT', labelKey: 'settings.fieldGithub' },
+    { name: 'R2_ACCESS_KEY_ID', labelKey: 'settings.fieldR2AccessKey' },
+    { name: 'R2_SECRET_ACCESS_KEY', labelKey: 'settings.fieldR2Secret' },
   ] as const;
 
   function toast(message: string, type: 'info' | 'success' | 'error' = 'info') {

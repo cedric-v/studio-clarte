@@ -14,7 +14,12 @@ import type { CloudflareEnv, KVNamespace } from '../env';
 const VAULT_PREFIX = 'vault:';
 const IV_BYTES = 12;
 
-export const SECRET_KEYS = ['DEEPSEEK_API_KEY', 'GITHUB_PAT'] as const;
+export const SECRET_KEYS = [
+  'DEEPSEEK_API_KEY',
+  'GITHUB_PAT',
+  'R2_ACCESS_KEY_ID',
+  'R2_SECRET_ACCESS_KEY',
+] as const;
 export type SecretName = (typeof SECRET_KEYS)[number];
 
 const encoder = new TextEncoder();

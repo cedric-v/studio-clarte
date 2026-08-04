@@ -40,6 +40,14 @@ export const SiteConfigSchema = z.object({
   /** If true → the webmaster's own site: Super-Admin mode is active on its domain. */
   isAgency: z.boolean().default(false),
   /**
+   * Per-site R2 storage (non-secret identifiers): when set, images are
+   * uploaded to the CLIENT's own Cloudflare bucket (account id + bucket name),
+   * with the access keys stored in the write-only vault. The site's `cdnDomain`
+   * then serves as the public CDN. Falls back to the global R2 vars otherwise.
+   */
+  r2AccountId: z.string().optional(),
+  r2Bucket: z.string().optional(),
+  /**
    * Resolved at runtime from `AGENCY_DOMAIN` / `SITE_DOMAINS`.
    * Always undefined in the seed config — never hardcoded.
    */
