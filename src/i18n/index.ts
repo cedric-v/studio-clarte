@@ -154,6 +154,19 @@ const fr: Dictionary = {
   'settings.hintDeepseek': 'Utilisée pour générer la structure de contenu du site.',
   'settings.hintGithub': 'PAT avec scope repo : création des branches draft/* et des PR.',
   'settings.sectionR2': '🖼️ Images — stockage R2 du client',
+  'settings.r2GuideTitle': 'Comment configurer le stockage R2 du client',
+  'settings.r2StatusConfigured': 'R2 client configuré — upload direct',
+  'settings.r2StatusNoKeys': 'R2 configuré mais clés manquantes — mode Git actif',
+  'settings.r2StatusGit': 'Mode Git actif — images commitées dans le repo',
+  'settings.r2Step1': 'Sur le compte Cloudflare du CLIENT : créez le bucket R2 (ex. client-a-media).',
+  'settings.r2Step2':
+    "Attachez son domaine CDN (bucket → Settings → Custom Domains) et activez l'accès public.",
+  'settings.r2Step3':
+    'Créez un token API « R2 Bucket — Object Read & Write » limité à ce bucket, puis collez les deux valeurs ci-dessous.',
+  'settings.r2Step4':
+    'Renseignez r2AccountId et r2Bucket dans la config du site (SITE_OVERRIDES) — les clés sont chiffrées ici, write-only.',
+  'settings.r2Step5':
+    'Sans R2, les images sont commitées dans le repo (mode Git) — aucun coût Cloudflare.',
   'settings.fieldR2AccessKey': 'Cloudflare R2 — Access Key ID',
   'settings.fieldR2Secret': 'Cloudflare R2 — Secret Access Key',
   'settings.placeholderR2Key': '… (écrire une nouvelle valeur pour remplacer)',
@@ -277,6 +290,19 @@ const en: Dictionary = {
   'settings.hintDeepseek': 'Used to generate the site content structure.',
   'settings.hintGithub': 'PAT with repo scope: draft/* branch and PR creation.',
   'settings.sectionR2': '🖼️ Images — client R2 storage',
+  'settings.r2GuideTitle': 'How to configure client R2 storage',
+  'settings.r2StatusConfigured': 'Client R2 configured — direct upload',
+  'settings.r2StatusNoKeys': 'R2 configured but keys missing — Git mode active',
+  'settings.r2StatusGit': 'Git mode active — images committed to the repo',
+  'settings.r2Step1': "On the CLIENT's Cloudflare account: create the R2 bucket (e.g. client-a-media).",
+  'settings.r2Step2':
+    'Attach their CDN domain (bucket → Settings → Custom Domains) and enable public access.',
+  'settings.r2Step3':
+    "Create an 'R2 Bucket — Object Read & Write' API token restricted to this bucket, then paste both values below.",
+  'settings.r2Step4':
+    'Set r2AccountId and r2Bucket in the site config (SITE_OVERRIDES) — keys are encrypted here, write-only.',
+  'settings.r2Step5':
+    'Without R2, images are committed to the repo (Git mode) — no Cloudflare cost.',
   'settings.fieldR2AccessKey': 'Cloudflare R2 — Access Key ID',
   'settings.fieldR2Secret': 'Cloudflare R2 — Secret Access Key',
   'settings.placeholderR2Key': '… (type a new value to replace)',

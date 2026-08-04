@@ -1,12 +1,17 @@
 ---
 import { t } from '../i18n';
+import type { SiteConfig } from '../config/sites';
 
 interface Props {
-  siteName: string;
+  site: SiteConfig;
 }
 
-const { siteName } = Astro.props;
+const { site } = Astro.props;
 const { lang } = Astro.locals;
+const siteName = site.name;
+// Server-side storage state: does this site have a per-site R2 target?
+// (Keys presence is resolved client-side after loadMasked.)
+const r2Configured = Boolean(site.r2AccountId && site.r2Bucket);
 
 const FIELDS = [
   {
@@ -34,9 +39,12 @@ const FIELDS = [
     hintKey: 'settings.hintR2Secret',
   },
 ] as const;
+
+const GENERAL_FIELDS = FIELDS.slice(0, 2);
+const R2_FIELDS = FIELDS.slice(2);
 ---
 
-<div class="modal-backdrop" id="settings-modal" hidden>
+<div class="modal-backdrop" id="settings-modal" hidden data-r2-configured={String(r2Configured)}>
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="settings-title">
     <div class="modal-header">
       <h2 id="settings-title">{t(lang, 'settings.title', siteName)}</h2>
@@ -46,11 +54,51 @@ const FIELDS = [
     <div class="modal-note">{t(lang, 'settings.note')}</div>
 
     <form id="keys-form">
-      {FIELDS.map((field) => (
+      {GENERAL_FIELDS.map((field) => (
         <label class="field" for={`key-${field.name}`}>
-          {field.name === 'R2_ACCESS_KEY_ID' && (
-            <div class="field-divider">{t(lang, 'settings.sectionR2')}</div>
-          )}
+          <span class="field-label">
+            {t(lang, field.labelKey)} <code>{field.name}</code>
+          </span>
+          <div class="masked-row">
+            <span class="masked-value" id={`masked-${field.name}`}>—</span>
+            <span class="badge badge-muted" id={`badge-${field.name}`}>{t(lang, 'settings.notConfigured')}</span>
+          </div>
+          <input
+            id={`key-${field.name}`}
+            class="input"
+            type="password"
+            name={field.name}
+            placeholder={t(lang, field.placeholderKey)}
+            autocomplete="new-password"
+            spellcheck="false"
+          />
+          <span class="field-hint">{t(lang, field.hintKey)}</span>
+        </label>
+      ))}
+
+      <div class="field-divider">🖼️ {t(lang, 'settings.sectionR2')}</div>
+
+      <!-- Live storage state (updated client-side once the vault is read) -->
+      <div class="r2-status" role="status" aria-live="polite">
+        <span class="badge badge-muted" id="r2-mode-badge">
+          {t(lang, r2Configured ? 'settings.r2StatusConfigured' : 'settings.r2StatusGit')}
+        </span>
+      </div>
+
+      <!-- Progressive-disclosure mini-guide (2026 UX: contextual, collapsible) -->
+      <details class="r2-guide">
+        <summary>{t(lang, 'settings.r2GuideTitle')}</summary>
+        <ol class="r2-steps">
+          <li>{t(lang, 'settings.r2Step1')}</li>
+          <li>{t(lang, 'settings.r2Step2')}</li>
+          <li>{t(lang, 'settings.r2Step3')}</li>
+          <li>{t(lang, 'settings.r2Step4')}</li>
+          <li class="r2-note">{t(lang, 'settings.r2Step5')}</li>
+        </ol>
+      </details>
+
+      {R2_FIELDS.map((field) => (
+        <label class="field" for={`key-${field.name}`}>
           <span class="field-label">
             {t(lang, field.labelKey)} <code>{field.name}</code>
           </span>
@@ -88,6 +136,7 @@ const FIELDS = [
   const modal = document.getElementById('settings-modal') as HTMLElement;
   const form = document.getElementById('keys-form') as HTMLFormElement;
   const saveBtn = document.getElementById('keys-save') as HTMLButtonElement;
+  const r2Badge = document.getElementById('r2-mode-badge') as HTMLElement | null;
 
   const FIELDS = [
     { name: 'DEEPSEEK_API_KEY', labelKey: 'settings.fieldDeepseek' },
@@ -98,6 +147,26 @@ const FIELDS = [
 
   function toast(message: string, type: 'info' | 'success' | 'error' = 'info') {
     window.dispatchEvent(new CustomEvent('sc:toast', { detail: { message, type } }));
+  }
+
+  /** Live storage state: config (server) + keys presence (vault) → badge. */
+  function updateR2Status(keysConfigured: boolean) {
+    if (!r2Badge) return;
+    const configured = modal.dataset.r2Configured === 'true';
+    let text: string;
+    let cls: string;
+    if (configured && keysConfigured) {
+      text = t(lang, 'settings.r2StatusConfigured');
+      cls = 'badge badge-success';
+    } else if (configured) {
+      text = t(lang, 'settings.r2StatusNoKeys');
+      cls = 'badge badge-warning';
+    } else {
+      text = t(lang, 'settings.r2StatusGit');
+      cls = 'badge badge-muted';
+    }
+    r2Badge.textContent = text;
+    r2Badge.className = cls;
   }
 
   function open() {
@@ -135,6 +204,9 @@ const FIELDS = [
           badge.classList.toggle('badge-muted', !value);
         }
       }
+      updateR2Status(
+        Boolean(data.configured?.R2_ACCESS_KEY_ID && data.configured?.R2_SECRET_ACCESS_KEY),
+      );
     } catch {
       toast(t(lang, 'settings.toastReadFailed'), 'error');
     }

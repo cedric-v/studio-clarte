@@ -1000,6 +1000,66 @@ button {
   color: var(--text-main);
 }
 
+.badge-warning {
+  background: color-mix(in srgb, var(--color-warning) 18%, transparent);
+  color: var(--color-warning);
+}
+
+/* R2 storage status + progressive-disclosure mini-guide */
+.r2-status {
+  display: flex;
+  margin-bottom: 12px;
+}
+
+.r2-guide {
+  margin: 0 0 16px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-app);
+  overflow: hidden;
+}
+.r2-guide summary {
+  cursor: pointer;
+  padding: 10px 12px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+  user-select: none;
+  list-style: none;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+.r2-guide summary::-webkit-details-marker {
+  display: none;
+}
+.r2-guide summary::before {
+  content: 'ℹ️ ';
+}
+.r2-guide summary:hover {
+  background: var(--bg-surface-elevated);
+  color: var(--text-main);
+}
+.r2-guide[open] summary {
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-main);
+}
+.r2-steps {
+  margin: 0;
+  padding: 12px 14px 12px 34px;
+  font-size: 12.5px;
+  color: var(--text-muted);
+  line-height: 1.6;
+  display: grid;
+  gap: 8px;
+}
+.r2-steps li::marker {
+  color: var(--brand-primary);
+  font-weight: 700;
+}
+.r2-steps .r2-note {
+  color: var(--text-faint);
+  font-style: italic;
+}
+
 .modal-actions {
   margin-top: 20px;
   display: flex;

@@ -69,7 +69,7 @@ const sites = isAgency ? listSites(Astro.locals.env) : [];
         </section>
       </main>
 
-      <SettingsModal siteName={siteConfig.name} />
+      <SettingsModal site={siteConfig} />
       <ToastContainer />
 
       <footer class="app-footer">
