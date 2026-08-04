@@ -142,6 +142,26 @@ const fr: Dictionary = {
   'workflow.toastCreateFailed': 'Création de la PR échouée',
   'workflow.toastMergeFailed': 'Fusion impossible',
 
+  // ── Rollback (time machine / undo publish) ────────────────────────
+  'rollback.title': '🕘 Historique & Rollback',
+  'rollback.sub': "Revenez à une version précédente en cas d'erreur.",
+  'rollback.note': (branch: string) =>
+    `La restauration crée un nouveau commit « revert » sur ${branch} : rien n'est supprimé ni réécrit, la production est reconstruite automatiquement.`,
+  'rollback.loading': 'Chargement de l’historique…',
+  'rollback.empty': 'Aucune version publiée sur cette branche.',
+  'rollback.error': '⚠️ Impossible de charger l’historique (nouvel essai…).',
+  'rollback.current': 'Version actuelle',
+  'rollback.restore': '↩️ Restaurer',
+  'rollback.confirm': '⚠️ Confirmer la restauration ?',
+  'rollback.restoring': '⏳ Restauration…',
+  'rollback.restored': (sha: string) =>
+    `✅ Version ${sha} restaurée — production reconstruite.`,
+  'rollback.failed': 'Restauration impossible',
+  'rollback.undo': 'Annuler',
+  'rollback.mergedUndo': '🚀 Publié en production',
+  'rollback.undone': '↩️ Publication annulée — version précédente restaurée.',
+  'rollback.authorYou': 'vous',
+
   // ── Settings (vault) ─────────────────────────────────────────────
   'settings.title': (name: string) => `🔐 Coffre-fort des clés API — ${name}`,
   'settings.close': 'Fermer',
@@ -278,6 +298,25 @@ const en: Dictionary = {
   'workflow.toastMerged': '🚀 Content published to production!',
   'workflow.toastCreateFailed': 'PR creation failed',
   'workflow.toastMergeFailed': 'Merge failed',
+
+  'rollback.title': '🕘 History & Rollback',
+  'rollback.sub': 'Go back to a previous version if something went wrong.',
+  'rollback.note': (branch: string) =>
+    `Restoring creates a new “revert” commit on ${branch}: nothing is deleted or rewritten, production is rebuilt automatically.`,
+  'rollback.loading': 'Loading history…',
+  'rollback.empty': 'No published versions on this branch yet.',
+  'rollback.error': '⚠️ Unable to load the history (retrying…).',
+  'rollback.current': 'Current version',
+  'rollback.restore': '↩️ Restore',
+  'rollback.confirm': '⚠️ Confirm restore?',
+  'rollback.restoring': '⏳ Restoring…',
+  'rollback.restored': (sha: string) =>
+    `✅ Version ${sha} restored — production rebuilt.`,
+  'rollback.failed': 'Restore failed',
+  'rollback.undo': 'Undo',
+  'rollback.mergedUndo': '🚀 Published to production',
+  'rollback.undone': '↩️ Publish undone — previous version restored.',
+  'rollback.authorYou': 'you',
 
   'settings.title': (name: string) => `🔐 API key vault — ${name}`,
   'settings.close': 'Close',

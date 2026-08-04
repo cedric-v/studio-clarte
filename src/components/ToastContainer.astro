@@ -3,22 +3,63 @@
 <script>
   // Toast notifications — listens to 'sc:toast' Custom Events.
   // Messages are already localized by the emitter.
+  //
+  // UX 2026: toasts can carry a single action button (e.g. "Undo publish").
+  // Actionable toasts stay on screen longer (20 s window — the Gmail "Undo
+  // send" pattern) and the action is the PRIMARY dismissal: clicking the
+  // button runs it, clicking elsewhere dismisses it.
   const container = document.getElementById('toast-container') as HTMLElement;
+
+  interface ToastAction {
+    label: string;
+    onClick: () => void;
+  }
 
   interface ToastDetail {
     message: string;
     type: 'info' | 'success' | 'error';
+    action?: ToastAction;
   }
 
+  const ACTION_TTL = 20000; // undo window (ms)
+  const PLAIN_TTL = 4500;
+
   window.addEventListener('sc:toast', ((event: CustomEvent<ToastDetail>) => {
-    const { message, type = 'info' } = event.detail ?? {};
+    const { message, type = 'info', action } = event.detail ?? {};
     if (!message) return;
+
     const toast = document.createElement('div');
     toast.className = `toast toast-${type}`;
-    toast.textContent = message;
-    container.appendChild(toast);
-    const remove = () => toast.remove();
+
+    const label = document.createElement('span');
+    label.className = 'toast-msg';
+    label.textContent = message;
+    toast.appendChild(label);
+
+    let timer: number;
+    const remove = () => {
+      clearTimeout(timer);
+      toast.remove();
+    };
+
+    if (action) {
+      toast.classList.add('toast-actionable');
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'toast-action';
+      button.textContent = action.label;
+      button.addEventListener('click', (event) => {
+        event.stopPropagation();
+        remove();
+        action.onClick();
+      });
+      toast.appendChild(button);
+      timer = window.setTimeout(remove, ACTION_TTL);
+    } else {
+      timer = window.setTimeout(remove, PLAIN_TTL);
+    }
+
     toast.addEventListener('click', remove);
-    setTimeout(remove, 4500);
+    container.appendChild(toast);
   }) as EventListener);
 </script>

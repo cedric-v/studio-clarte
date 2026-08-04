@@ -65,7 +65,7 @@ const sites = isAgency ? listSites(Astro.locals.env) : [];
         <!-- Column 2: Workspace (multi-file preview + CI/CD stepper) -->
         <section class="pane pane-workspace" aria-label={t(lang, 'tabs.workspace')}>
           <PayloadPreview />
-          <WorkflowTracker siteId={siteId} siteName={siteConfig.name} />
+          <WorkflowTracker siteId={siteId} siteName={siteConfig.name} branch={siteConfig.defaultBranch} />
         </section>
       </main>
 

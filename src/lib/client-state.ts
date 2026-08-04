@@ -59,8 +59,18 @@ export function on(name: string, handler: (detail: any) => void): void {
   window.addEventListener(name, ((event: CustomEvent) => handler(event.detail)) as EventListener);
 }
 
-export function toast(message: string, type: 'info' | 'success' | 'error' = 'info'): void {
-  emit('sc:toast', { message, type });
+/** Optional action rendered as a button inside a toast (e.g. "Undo"). */
+export interface ToastAction {
+  label: string;
+  onClick: () => void;
+}
+
+export function toast(
+  message: string,
+  type: 'info' | 'success' | 'error' = 'info',
+  action?: ToastAction,
+): void {
+  emit('sc:toast', { message, type, action });
 }
 
 /** Mobile switch: shows the "Preview & Deploy" tab. */

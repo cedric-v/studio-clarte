@@ -266,6 +266,37 @@ Expected local checks:
 5. « 💾 Créer la branche draft/* + PR » → PR created in ~1-2 s (GitHub link).
 6. Wait for step 3 (Cloudflare preview) → open « Voir la Preview ↗ ».
 7. « 🚀 Valider & Fusionner en Prod » → squash & merge to `main`, branch deleted.
+8. **In case of error** → « 🕘 Historique & Rollback » (below the stepper): restore
+   any previous production version in one click, or press **« Annuler »** in the
+   toast that follows a merge (20 s window, Gmail-style undo).
+
+### ↩️ Rollback — safety net (UX 2026)
+
+Every merge to production is recoverable in seconds, without touching Git history:
+
+- **« Annuler » (Undo toast)** — after « Valider & Fusionner en Prod », an
+  actionable toast offers to revert the merge for 20 s (the Gmail *undo send*
+  pattern). `/api/restore` with `{revert: <mergeSha>}` restores the previous version.
+- **« 🕘 Historique & Rollback »** — progressive-disclosure panel below the
+  stepper listing the last 10 production commits (message, author, relative
+  time, `Version actuelle` badge). Click **« ↩️ Restaurer »** → the button arms
+  into a 6 s staged confirmation (⚠️ red) → second click executes.
+- **Non-destructive by design** — the restore creates a NEW `revert:` commit
+  (target tree, parented on HEAD, fast-forward via `git.updateRef`): history is
+  never rewritten, nothing is deleted, and the rollback itself can be undone.
+  Cloudflare Pages rebuilds production automatically on the push to `main`.
+- **Ancestor guard** — `/api/restore` only accepts versions present in the
+  branch's past (`compareCommits`), so a foreign SHA is rejected.
+
+| Endpoint | Body | Effect |
+|---|---|---|
+| `GET /api/history` | — | List last 10 commits of `defaultBranch` (read-only) |
+| `POST /api/restore` | `{sha}` | Restore branch content to that exact version |
+| `POST /api/restore` | `{revert}` | Undo that single commit (restore to its parent) |
+
+Both endpoints resolve the Git credentials exactly like `/api/merge` (site vault
+`GITHUB_PAT` → global `GITHUB_PAT` → OAuth token) and are protected by the
+middleware auth guard.
 
 ### Quality checks
 
@@ -298,7 +329,7 @@ src/
 │   ├── index.astro    Two-column layout (desktop) / tabs (mobile)
 │   ├── login.astro    GitHub OAuth login (optional whitelist)
 │   └── api/           chat · upload-url · commit-draft · status/[site]/[pr] · merge ·
-│                      settings/keys · auth/{login,callback,logout}
+│                      history · restore · settings/keys · auth/{login,callback,logout}
 ├── styles/global.css  Vanilla CSS design system (dark-first, dynamic brand)
 └── i18n/              FR/EN dictionary + locale helpers (server & client)
 ```
@@ -312,6 +343,8 @@ src/
 | `/api/commit-draft` | POST | `draft/*` branch + PR in ~1-2 s (Direct Git API) |
 | `/api/status/:siteId/:prNumber` | GET | Cloudflare Pages preview polling |
 | `/api/merge` | POST | Squash & merge → `main` + branch deletion |
+| `/api/history` | GET | Production version history (recent commits on `main`) |
+| `/api/restore` | POST | Emergency rollback: restore a previous version (`sha`) or undo one commit (`revert`) |
 | `/api/settings/keys` | GET/POST | Write-only vault (masked `sk-••••••••1234`) |
 | `/api/auth/*` | GET/POST | GitHub OAuth, callback, logout |
 

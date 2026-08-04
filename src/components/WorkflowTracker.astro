@@ -4,9 +4,11 @@ import { t } from '../i18n';
 interface Props {
   siteId: string;
   siteName: string;
+  /** Target branch for PRs / rollbacks (e.g. "main"). */
+  branch: string;
 }
 
-const { siteId, siteName } = Astro.props;
+const { siteId, siteName, branch } = Astro.props;
 const { lang } = Astro.locals;
 ---
 
@@ -71,6 +73,26 @@ const { lang } = Astro.locals;
       </div>
     </li>
   </ol>
+
+  <!--
+    Time machine / Rollback (UX 2026):
+    - progressive disclosure (collapsed by default, discoverable);
+    - one-click restore with STAGED confirmation (arm → confirm, 6 s window);
+    - non-destructive: the restore is a new revert commit, never a rewrite;
+    - the "Undo publish" toast after a merge reuses the same engine.
+  -->
+  <details class="rollback-panel" id="rollback-panel">
+    <summary>
+      <span class="rollback-summary-label">{t(lang, 'rollback.title')}</span>
+      <span class="rollback-summary-sub">{t(lang, 'rollback.sub')}</span>
+    </summary>
+    <div class="rollback-body">
+      <p class="rollback-note">{t(lang, 'rollback.note', branch)}</p>
+      <p class="rollback-loading" id="history-loading">{t(lang, 'rollback.loading')}</p>
+      <p class="rollback-error" id="history-error" hidden></p>
+      <ul class="history-list" id="history-list" hidden></ul>
+    </div>
+  </details>
 </div>
 
 <script>
@@ -243,12 +265,227 @@ const { lang } = Astro.locals;
       btnMerge.textContent = t(lang, 'workflow.mergedDone');
       previewHint.textContent = t(lang, 'workflow.mergedNote', workflow.prNumber);
       stopPolling();
-      toast(t(lang, 'workflow.toastMerged'), 'success');
+      void refreshHistory();
+
+      // UX 2026 — "Undo publish" window (Gmail pattern): the toast carries an
+      // action that reverts the merge to the previous production version.
+      toast(
+        t(lang, 'rollback.mergedUndo'),
+        'success',
+        data.sha
+          ? { label: t(lang, 'rollback.undo'), onClick: () => void undoPublish(data.sha as string) }
+          : undefined,
+      );
     } catch (error) {
       console.error('[merge]', error);
       toast(error instanceof Error ? error.message : t(lang, 'workflow.toastMergeFailed'), 'error');
       btnMerge.disabled = false;
       btnMerge.textContent = t(lang, 'workflow.merge');
     }
+  });
+
+  // ─────────────────────────────────────────────────────────────────
+  // ROLLBACK — version history + restore + undo publish
+  // ─────────────────────────────────────────────────────────────────
+
+  const rollbackPanel = document.getElementById('rollback-panel') as HTMLDetailsElement;
+  const historyList = document.getElementById('history-list') as HTMLElement;
+  const historyLoading = document.getElementById('history-loading') as HTMLElement;
+  const historyError = document.getElementById('history-error') as HTMLElement;
+
+  let confirmingSha: string | null = null;
+  let confirmTimer: number | null = null;
+  let historyLoaded = false;
+
+  interface HistoryCommit {
+    sha: string;
+    shortSha: string;
+    message: string;
+    date: string;
+    author: string;
+  }
+
+  /** Localized relative time (Intl.RelativeTimeFormat, no extra dependency). */
+  function relativeTime(iso: string): string {
+    const date = new Date(iso);
+    if (Number.isNaN(date.getTime())) return iso;
+    const locale = lang === 'fr' ? 'fr' : 'en';
+    const diffSec = Math.round((date.getTime() - Date.now()) / 1000);
+    const abs = Math.abs(diffSec);
+    if (abs < 60) return new Intl.RelativeTimeFormat(locale, { numeric: 'auto' }).format(diffSec, 'second');
+    if (abs < 3600) return new Intl.RelativeTimeFormat(locale, { numeric: 'auto' }).format(Math.round(diffSec / 60), 'minute');
+    if (abs < 86400) return new Intl.RelativeTimeFormat(locale, { numeric: 'auto' }).format(Math.round(diffSec / 3600), 'hour');
+    if (abs < 604800) return new Intl.RelativeTimeFormat(locale, { numeric: 'auto' }).format(Math.round(diffSec / 86400), 'day');
+    return new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(date);
+  }
+
+  async function loadHistory() {
+    historyLoaded = true;
+    historyLoading.hidden = false;
+    historyError.hidden = true;
+    historyList.hidden = true;
+    try {
+      const res = await fetch('/api/history');
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? 'History unavailable');
+      renderHistory(data.commits ?? [], data.head ?? null);
+    } catch (error) {
+      console.error('[rollback]', error);
+      historyLoading.hidden = true;
+      historyError.hidden = false;
+      historyError.textContent = t(lang, 'rollback.error');
+      // Allow a retry on the next open/close of the panel.
+      historyLoaded = false;
+    }
+  }
+
+  function refreshHistory(): void {
+    void loadHistory();
+  }
+
+  function renderHistory(commits: HistoryCommit[], head: string | null) {
+    historyLoading.hidden = true;
+    historyList.hidden = false;
+    historyList.textContent = '';
+
+    if (!commits.length) {
+      const empty = document.createElement('li');
+      empty.className = 'history-empty';
+      empty.textContent = t(lang, 'rollback.empty');
+      historyList.appendChild(empty);
+      return;
+    }
+
+    for (const commit of commits) {
+      const isCurrent = commit.sha === head;
+      const item = document.createElement('li');
+      item.className = 'history-item' + (isCurrent ? ' current' : '');
+      item.dataset.sha = commit.sha;
+
+      const dot = document.createElement('span');
+      dot.className = 'hist-dot';
+      dot.setAttribute('aria-hidden', 'true');
+
+      const info = document.createElement('div');
+      info.className = 'hist-info';
+      const msg = document.createElement('div');
+      msg.className = 'hist-msg';
+      msg.textContent = commit.message; // textContent auto-escapes (XSS-safe)
+      const meta = document.createElement('div');
+      meta.className = 'hist-meta';
+      const code = document.createElement('code');
+      code.textContent = commit.shortSha;
+      meta.append(code, document.createTextNode(` · ${relativeTime(commit.date)} · ${commit.author}`));
+      info.append(msg, meta);
+
+      const actions = document.createElement('div');
+      actions.className = 'hist-actions';
+      if (isCurrent) {
+        const badge = document.createElement('span');
+        badge.className = 'badge badge-success';
+        badge.textContent = t(lang, 'rollback.current');
+        actions.appendChild(badge);
+      } else {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'btn btn-sm btn-ghost hist-restore';
+        button.textContent = t(lang, 'rollback.restore');
+        actions.appendChild(button);
+      }
+
+      item.append(dot, info, actions);
+      historyList.appendChild(item);
+    }
+  }
+
+  function resetConfirm() {
+    confirmingSha = null;
+    if (confirmTimer) {
+      clearTimeout(confirmTimer);
+      confirmTimer = null;
+    }
+    historyList.querySelectorAll('.history-item.confirming').forEach((item) => {
+      item.classList.remove('confirming');
+      const button = item.querySelector<HTMLButtonElement>('.hist-restore');
+      if (button) {
+        button.classList.remove('btn-danger', 'confirming');
+        button.textContent = t(lang, 'rollback.restore');
+      }
+    });
+  }
+
+  // Staged confirmation (UX 2026): first click ARMS the restore, second click
+  // (within 6 s) executes it. No modal wall, no accidental click.
+  historyList.addEventListener('click', (event) => {
+    const button = (event.target as HTMLElement).closest<HTMLButtonElement>('.hist-restore');
+    if (!button || button.disabled) return;
+    const item = button.closest<HTMLElement>('.history-item');
+    const sha = item?.dataset.sha;
+    if (!item || !sha) return;
+
+    if (confirmingSha !== sha) {
+      resetConfirm();
+      confirmingSha = sha;
+      item.classList.add('confirming');
+      button.classList.add('btn-danger', 'confirming');
+      button.textContent = t(lang, 'rollback.confirm');
+      confirmTimer = window.setTimeout(resetConfirm, 6000);
+      return;
+    }
+
+    resetConfirm();
+    void restoreVersion(sha, item);
+  });
+
+  async function restoreVersion(sha: string, item: HTMLElement) {
+    const button = item.querySelector<HTMLButtonElement>('.hist-restore');
+    if (button) {
+      button.disabled = true;
+      button.textContent = t(lang, 'rollback.restoring');
+    }
+    try {
+      const res = await fetch('/api/restore', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ sha }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.restored) throw new Error(data.error ?? 'Restore failed');
+      toast(t(lang, 'rollback.restored', data.shortSha), 'success');
+      await loadHistory();
+    } catch (error) {
+      console.error('[rollback]', error);
+      toast(error instanceof Error ? error.message : t(lang, 'rollback.failed'), 'error');
+      if (button) {
+        button.disabled = false;
+        button.textContent = t(lang, 'rollback.restore');
+      }
+    }
+  }
+
+  /** Undo publish: revert the merge commit → production is back to the previous version. */
+  async function undoPublish(sha: string) {
+    try {
+      const res = await fetch('/api/restore', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ revert: sha }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.restored) throw new Error(data.error ?? 'Undo failed');
+
+      activateStep(4, true);
+      previewHint.textContent = t(lang, 'rollback.undone');
+      toast(t(lang, 'rollback.undone'), 'info');
+      await loadHistory();
+    } catch (error) {
+      console.error('[undo-publish]', error);
+      toast(error instanceof Error ? error.message : t(lang, 'rollback.failed'), 'error');
+    }
+  }
+
+  // Lazy-load the history on first open of the panel (progressive disclosure).
+  rollbackPanel.addEventListener('toggle', () => {
+    if (rollbackPanel.open && !historyLoaded) void loadHistory();
   });
 </script>

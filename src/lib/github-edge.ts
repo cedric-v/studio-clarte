@@ -269,6 +269,136 @@ export interface MergeResult {
   message: string | null;
 }
 
+// ─────────────────────────────────────────────────────────────────────
+// ROLLBACK ENGINE — "time machine" for production versions.
+//
+// UX 2026 principles implemented here:
+//   • NON-DESTRUCTIVE: a rollback is a NEW commit (tree = target version),
+//     history is never rewritten, nothing is deleted. The revert itself is
+//     versioned and can itself be reverted.
+//   • FAST RECOVERY: the revert commit is written directly to `main`
+//     (human-confirmed action) so Cloudflare Pages rebuilds production
+//     immediately — no PR cycle while the site is down.
+//   • AUDITABLE: the commit message records the restored version SHA.
+// ─────────────────────────────────────────────────────────────────────
+
+export interface BranchCommit {
+  sha: string;
+  shortSha: string;
+  /** First line of the commit message. */
+  message: string;
+  /** ISO timestamp of the authoring date. */
+  date: string;
+  author: string;
+}
+
+/** Recent commits on a branch (newest first) — powers the version history list. */
+export async function getBranchHistory(
+  octokit: Octokit,
+  repo: string,
+  branch: string,
+  limit = 10,
+): Promise<BranchCommit[]> {
+  const { owner, repoName } = splitRepo(repo);
+  const { data } = await octokit.repos.listCommits({
+    owner,
+    repo: repoName,
+    sha: branch,
+    per_page: limit,
+  });
+  return data.map((commit) => ({
+    sha: commit.sha,
+    shortSha: commit.sha.slice(0, 7),
+    message: (commit.commit?.message ?? '').split('\n')[0].trim() || '(no message)',
+    date: commit.commit?.author?.date ?? commit.commit?.committer?.date ?? '',
+    author: commit.author?.login ?? commit.commit?.author?.name ?? 'unknown',
+  }));
+}
+
+export interface RestoreResult {
+  sha: string;
+  shortSha: string;
+  message: string;
+}
+
+/**
+ * Restores the branch content to the state of a previous version.
+ *
+ * The target must be an ancestor of the current HEAD (a version that is
+ * actually in this branch's past) — verified via `compareCommits`.
+ * The branch then points to a NEW commit whose tree is exactly the target
+ * version's tree: content restored in one step, history preserved.
+ */
+export async function restoreToCommit(
+  octokit: Octokit,
+  repo: string,
+  targetSha: string,
+  branch: string,
+): Promise<RestoreResult> {
+  const { owner, repoName } = splitRepo(repo);
+  const { data: ref } = await octokit.git.getRef({
+    owner,
+    repo: repoName,
+    ref: `heads/${branch}`,
+  });
+  const headSha = ref.object.sha;
+
+  if (targetSha === headSha) {
+    throw new Error('This version is already the current one');
+  }
+
+  // Safety: the target must belong to this branch's history (ancestor check).
+  const { data: comparison } = await octokit.repos.compareCommits({
+    owner,
+    repo: repoName,
+    base: targetSha,
+    head: headSha,
+  });
+  if (comparison.behind_by !== 0) {
+    throw new Error('Target version is not in the history of this branch');
+  }
+
+  const { data: target } = await octokit.git.getCommit({
+    owner,
+    repo: repoName,
+    commit_sha: targetSha,
+  });
+  const originalTitle = (target.message ?? '').split('\n')[0].trim();
+  const message = `revert: restore to ${targetSha.slice(0, 7)} — ${originalTitle}`;
+
+  // New commit with the TARGET tree, parented on the current HEAD
+  // (fast-forward update — no history rewrite, no force push).
+  const { data: commit } = await octokit.git.createCommit({
+    owner,
+    repo: repoName,
+    message,
+    tree: target.tree.sha,
+    parents: [headSha],
+  });
+  await octokit.git.updateRef({
+    owner,
+    repo: repoName,
+    ref: `heads/${branch}`,
+    sha: commit.sha,
+    force: false,
+  });
+
+  return { sha: commit.sha, shortSha: commit.sha.slice(0, 7), message };
+}
+
+/** First parent SHA of a commit (the version it was based on). */
+export async function getParentSha(octokit: Octokit, repo: string, sha: string): Promise<string> {
+  const { owner, repoName } = splitRepo(repo);
+  const { data: commit } = await octokit.git.getCommit({
+    owner,
+    repo: repoName,
+    commit_sha: sha,
+  });
+  const parent = commit.parents[0]?.sha;
+  if (!parent) throw new Error('Root commit cannot be reverted');
+  return parent;
+}
+
 /** Squash & merge to `main`, then deletes the temporary `draft/*` branch. */
 export async function mergePR(
   octokit: Octokit,
