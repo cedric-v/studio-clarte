@@ -636,16 +636,16 @@ button {
 }
 .composer-row textarea {
   flex: 1;
-  min-height: 42px;
-  max-height: 160px;
+  min-height: 76px;
+  max-height: 200px;
   resize: none;
-  padding: 11px 12px;
+  padding: 12px 14px;
   border-radius: var(--radius-md);
   border: 1px solid var(--border-color);
   background: var(--bg-app);
   color: var(--text-main);
   font-size: 14px;
-  line-height: 1.4;
+  line-height: 1.5;
 }
 .composer-row textarea:focus {
   outline: none;

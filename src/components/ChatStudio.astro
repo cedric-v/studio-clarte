@@ -33,7 +33,7 @@ const SUGGESTION_KEYS = ['chat.suggestion1', 'chat.suggestion2', 'chat.suggestio
       <button class="icon-btn" id="btn-attach" type="button" title={t(lang, 'chat.attach')}>🖼️</button>
       <textarea
         id="chat-input"
-        rows="1"
+        rows="2"
         placeholder={t(lang, 'chat.placeholder')}
         aria-label={t(lang, 'chat.placeholder')}
       ></textarea>
@@ -224,7 +224,9 @@ const SUGGESTION_KEYS = ['chat.suggestion1', 'chat.suggestion2', 'chat.suggestio
     if (start === -1 || end <= start) return null;
     try {
       const obj = JSON.parse(candidate.slice(start, end + 1));
-      if (obj && typeof obj === 'object' && Array.isArray(obj.files) && obj.files.length) {
+      // Accept the JSON envelope even with an empty files[]: the caller
+      // decides whether it is a real payload or a conversational summary.
+      if (obj && typeof obj === 'object' && Array.isArray(obj.files)) {
         return obj as { title: string; summary: string; files: unknown[] };
       }
     } catch {
@@ -305,14 +307,24 @@ const SUGGESTION_KEYS = ['chat.suggestion1', 'chat.suggestion2', 'chat.suggestio
       }
 
       const payload = extractPayload(acc);
+
+      // Conversational reply (JSON envelope without files) → show the summary
+      // instead of the raw JSON.
+      let display = acc.trim() || '(empty response)';
+      if (payload && !payload.files.length) {
+        display = payload.summary || payload.title || display;
+        bubble.innerHTML = renderMarkdown(display);
+        scrollBottom();
+      }
+
       const assistantMessage: ChatMessage = {
         role: 'assistant',
-        content: acc.trim() || '(empty response)',
-        payload: Boolean(payload),
+        content: display,
+        payload: Boolean(payload && payload.files.length),
       };
       state.messages.push(assistantMessage);
 
-      if (payload) {
+      if (payload && payload.files.length) {
         const files = payload.files.filter(
           (file): file is { path: string; content: string } =>
             typeof file === 'object' &&
@@ -331,7 +343,9 @@ const SUGGESTION_KEYS = ['chat.suggestion1', 'chat.suggestion2', 'chat.suggestio
         } else {
           toast(t(lang, 'chat.invalidPayload'), 'error');
         }
-      } else {
+      } else if (payload) {
+        // JSON envelope without files → conversational reply, already displayed.
+      } else if (!display || display === '(empty response)') {
         toast(t(lang, 'chat.noPayload'), 'info');
       }
     } catch (error) {
