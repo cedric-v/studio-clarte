@@ -48,6 +48,13 @@
   padding: 0;
 }
 
+/* The `hidden` attribute must always win over component display rules
+   (e.g. .modal-backdrop { display: grid }) — otherwise modals/panels
+   stay permanently visible and cannot be closed. */
+[hidden] {
+  display: none !important;
+}
+
 html,
 body {
   height: 100%;
