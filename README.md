@@ -202,9 +202,11 @@ wrangler secret put DEEPSEEK_API_KEY
 wrangler secret put GITHUB_PAT
 ```
 
-Vars (already in `wrangler.jsonc`, placeholders to replace) :
-`AGENCY_DOMAIN`, `DEFAULT_SITE_ID`, `SITE_DOMAINS`, `SITE_OVERRIDES`,
-`SESSION_TTL_SECONDS=604800`. No R2 vars: storage is per-site (vault) or Git.
+Vars — **set in the Cloudflare DASHBOARD only** (Workers → `studio-clarte` →
+Settings → Variables and Secrets): `AGENCY_DOMAIN`, `DEFAULT_SITE_ID`,
+`SITE_DOMAINS`, `SITE_OVERRIDES`. `SESSION_TTL_SECONDS` stays in
+`wrangler.jsonc`. Keeping the private vars out of the public file prevents
+`wrangler deploy` from overwriting them (dashboard vars persist across deploys).
 
 ### 4. GitHub OAuth App (per `studio.*` domain)
 
