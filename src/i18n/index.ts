@@ -88,6 +88,8 @@ const fr: Dictionary = {
   'chat.toastGitMode': 'Image prête pour le commit Git (R2 non configuré pour ce site)',
   'chat.toastUploadFailed': 'Échec du téléversement R2',
   'chat.noPayload': 'Réponse générée sans payload structuré — précisez la demande',
+  'chat.noPayloadNote':
+    "Aucun fichier structuré détecté. Pour générer du contenu, précisez une demande claire (ex: « génère la page Offres ») ou relancez la génération.",
   'chat.invalidPayload': 'Payload reçu mais aucun fichier exploitable',
   'chat.filesReady': (n: number) => `${n} fichier(s) généré(s) ✓ — prêt pour le draft PR`,
   'chat.streamError': '⚠️ Erreur réseau lors du streaming',
@@ -252,6 +254,8 @@ const en: Dictionary = {
   'chat.toastUploadFailed': 'R2 upload failed',
   'chat.noPayload':
     'Response generated without a structured payload — please be more specific',
+  'chat.noPayloadNote':
+    'No structured files detected. To generate content, give a clear request (e.g. "generate the Services page") or retry the generation.',
   'chat.invalidPayload': 'Payload received but no usable files',
   'chat.filesReady': (n: number) => `${n} file(s) generated ✓ — ready for the draft PR`,
   'chat.streamError': '⚠️ Network error while streaming',

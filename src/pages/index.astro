@@ -62,6 +62,16 @@ const sites = isAgency ? listSites(Astro.locals.env) : [];
           <ChatStudio site={siteConfig} />
         </section>
 
+        <!-- Resizable divider (desktop only) -->
+        <div
+          class="pane-divider"
+          id="pane-divider"
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="Chat width"
+          tabindex="0"
+        ></div>
+
         <!-- Column 2: Workspace (multi-file preview + CI/CD stepper) -->
         <section class="pane pane-workspace" aria-label={t(lang, 'tabs.workspace')}>
           <PayloadPreview />
@@ -80,3 +90,50 @@ const sites = isAgency ? listSites(Astro.locals.env) : [];
     </div>
   </body>
 </html>
+
+<script>
+  // Resizable chat panel (desktop). Width persisted in localStorage.
+  // Keyboard: focus the divider and use ← → arrow keys.
+  const layout = document.querySelector('.layout') as HTMLElement;
+  const divider = document.getElementById('pane-divider') as HTMLElement;
+  const CHAT_KEY = 'sc:chat-width';
+  const MIN = 320;
+  const MAX_RATIO = 0.7;
+
+  function applyWidth(px: number) {
+    const max = Math.round(window.innerWidth * MAX_RATIO);
+    const width = Math.min(max, Math.max(MIN, px));
+    layout.style.setProperty('--chat-width', `${width}px`);
+    localStorage.setItem(CHAT_KEY, String(width));
+  }
+
+  // Restore the saved width on load.
+  const saved = Number(localStorage.getItem(CHAT_KEY));
+  if (saved) layout.style.setProperty('--chat-width', `${saved}px`);
+
+  if (divider) {
+    let dragging = false;
+    divider.addEventListener('pointerdown', (event) => {
+      dragging = true;
+      divider.setPointerCapture(event.pointerId);
+      document.body.classList.add('resizing');
+      event.preventDefault();
+    });
+    divider.addEventListener('pointermove', (event) => {
+      if (!dragging) return;
+      const rect = layout.getBoundingClientRect();
+      applyWidth(event.clientX - rect.left);
+    });
+    divider.addEventListener('pointerup', () => {
+      dragging = false;
+      document.body.classList.remove('resizing');
+    });
+    divider.addEventListener('keydown', (event) => {
+      if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+      event.preventDefault();
+      const current =
+        Number.parseFloat(getComputedStyle(layout).getPropertyValue('--chat-width')) || 460;
+      applyWidth(current + (event.key === 'ArrowRight' ? 24 : -24));
+    });
+  }
+</script>
