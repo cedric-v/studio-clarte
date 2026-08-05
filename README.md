@@ -171,14 +171,20 @@ Browser → WebP compression → PUT (presigned URL) → CLIENT bucket (their ac
 2. **Access keys (secret)** — in the ⚙️ Settings vault of that site (write-only,
    masked): `R2_ACCESS_KEY_ID` + `R2_SECRET_ACCESS_KEY`.
 
-**Guide to send to the client:**
+**Guide to send to the client (official Cloudflare flow):**
 
 1. Create the bucket: Cloudflare dashboard → **R2 → Create bucket** (e.g. `client-a-media`).
 2. Attach the CDN domain: bucket → **Settings → Custom Domains** → `cdn.client-a.ch`
    (+ enable **Public access**).
-3. Create a scoped token: **My Profile → API Tokens → Create Token** → template
-   **« R2 Bucket — Object Read & Write »** → restrict to the single bucket.
-4. Send the Access Key ID + Secret to the webmaster (→ ⚙️ Settings vault).
+3. Create the R2 API token: **R2 → Overview → Account Details → Manage → API Tokens →
+   Create Account API token** → permission **Object Read & Write** →
+   **Apply to specific buckets only** → select the bucket.
+4. On the confirmation screen, copy the **Access Key ID** + **Secret Access Key**
+   (may be labeled **Client ID** / **Client Secret** — same pair). The **Secret is
+   shown only once**; there is no way to retrieve it afterwards. The endpoint is
+   `https://<ACCOUNT_ID>.r2.cloudflarestorage.com` (handled automatically by the app
+   via `r2AccountId`).
+5. Send the Access Key ID + Secret to the webmaster (→ ⚙️ Settings vault).
 
 > ⚠️ A per-site bucket NEVER mixes with other credentials: without the client's
 > vault keys, the site falls back to GIT mode (never to another bucket).

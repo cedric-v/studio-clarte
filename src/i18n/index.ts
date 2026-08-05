@@ -182,7 +182,7 @@ const fr: Dictionary = {
   'settings.r2Step2':
     "Attachez son domaine CDN (bucket → Settings → Custom Domains) et activez l'accès public.",
   'settings.r2Step3':
-    'Créez un token API « R2 Bucket — Object Read & Write » limité à ce bucket, puis collez les deux valeurs ci-dessous.',
+    'Créez un Account API token R2 (R2 → Overview → Manage → API Tokens) avec la permission « Object Read & Write » limitée à ce bucket, puis collez les deux valeurs ci-dessous (le Secret n\'est affiché qu\'une fois).',
   'settings.r2Step4':
     'Renseignez r2AccountId et r2Bucket dans la config du site (SITE_OVERRIDES) — les clés sont chiffrées ici, write-only.',
   'settings.r2Step5':
@@ -337,7 +337,7 @@ const en: Dictionary = {
   'settings.r2Step2':
     'Attach their CDN domain (bucket → Settings → Custom Domains) and enable public access.',
   'settings.r2Step3':
-    "Create an 'R2 Bucket — Object Read & Write' API token restricted to this bucket, then paste both values below.",
+    "Create an R2 Account API token (R2 → Overview → Manage → API Tokens) with the 'Object Read & Write' permission restricted to this bucket, then paste both values below (the Secret is shown only once).",
   'settings.r2Step4':
     'Set r2AccountId and r2Bucket in the site config (SITE_OVERRIDES) — keys are encrypted here, write-only.',
   'settings.r2Step5':
