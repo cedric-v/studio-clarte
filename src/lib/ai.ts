@@ -77,8 +77,13 @@ export function buildPlanPrompt(site: SiteConfig): string {
  * Single-file prompt — used by the generator for EACH file, so the output
  * always fits within the model token limit (one complete file per call).
  */
-export function buildFilePrompt(site: SiteConfig, path: string, description: string): string {
-  return [
+export function buildFilePrompt(
+  site: SiteConfig,
+  path: string,
+  description: string,
+  originalContent?: string,
+): string {
+  const prompt = [
     buildBasePrompt(site),
     '',
     `## Ta tâche : générer UN fichier — « ${path} »`,
@@ -91,5 +96,21 @@ export function buildFilePrompt(site: SiteConfig, path: string, description: str
     '}',
     '- Le JSON doit être strictement valide : échappe les guillemets et retours à la ligne (\\n).',
     '- Ne tronque JAMAIS le contenu : tu as toute la place pour ce seul fichier.',
-  ].join('\n');
+  ];
+
+  if (originalContent) {
+    prompt.push(
+      '',
+      '## Le fichier existe déjà — ÉDITION MINIMALE OBLIGATOIRE',
+      `Voici le contenu ACTUEL de « ${path} » :`,
+      '---',
+      originalContent,
+      '---',
+      '- Renvoie ce fichier COMPLET en ne modifiant QUE ce qui est demandé (ex: une date).',
+      '- Conserve à l\'identité : le frontmatter (layout, permalink, locale, title, description…), la structure et tout le reste du contenu.',
+      '- Ne réécris PAS le fichier de zéro, ne supprime pas de champs frontmatter, ne change pas les chemins ni les permalinks.',
+    );
+  }
+
+  return prompt.join('\n');
 }

@@ -83,6 +83,12 @@ export interface GenerationOptions {
   messages: ModelMessage[];
   /** Repo read tools (listFiles / readFile) for the plan step. */
   tools?: Record<string, Tool>;
+  /**
+   * Reads the current content of an existing file (for MINIMAL edits).
+   * When provided and the file exists, the generation prompt receives the
+   * original content so the model preserves frontmatter/structure.
+   */
+  readExisting?: (path: string) => Promise<{ content: string; size: number } | null>;
 }
 
 export async function* runGeneration(
@@ -150,12 +156,24 @@ export async function* runGeneration(
     const target = targets[i];
     yield `\n\n**${i + 1}/${targets.length}** — \`${target.path}\``;
 
+    // Existing file → pass its current content so the model edits minimally
+    // (preserving frontmatter, permalinks, structure) instead of rewriting.
+    let originalContent: string | undefined;
+    if (opts.readExisting) {
+      try {
+        const existing = await opts.readExisting(target.path);
+        if (existing) originalContent = existing.content;
+      } catch (error) {
+        console.warn(`[generator] unable to read ${target.path}:`, error);
+      }
+    }
+
     let ok = false;
     for (let attempt = 0; attempt < MAX_RETRIES && !ok; attempt++) {
       try {
         const result = await generateText({
           model,
-          system: buildFilePrompt(site, target.path, target.description),
+          system: buildFilePrompt(site, target.path, target.description, originalContent),
           messages: [{ role: 'user', content: userText }] as never,
           temperature: 0.3,
           maxOutputTokens: 8192,

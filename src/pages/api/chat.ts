@@ -83,6 +83,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
         for await (const chunk of runGeneration(createDeepSeek(apiKey), site, {
           messages,
           tools,
+          // For MINIMAL edits of existing files: the generator fetches the
+          // current content and instructs the model to preserve it.
+          readExisting: octokit
+            ? (path) => getFileContent(octokit, site.repo, path, site.defaultBranch)
+            : undefined,
         })) {
           controller.enqueue(chunk);
         }
