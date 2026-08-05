@@ -1,24 +1,12 @@
 # ═══════════════════════════════════════════════════════════════════
-# Preview deploys for Studio Clarté draft PRs
+# Preview deploys for Studio Clarté draft PRs — site cedricv.com
 #
-# Copy this file into the CLIENT repo (.github/workflows/preview.yml),
-# adjust PAGES_PROJECT / build command / output directory, add the two
-# secrets below, then MERGE the workflow to main ONCE.
+# Install: copy to .github/workflows/preview.yml in the CLIENT repo,
+# merge to main ONCE. Every PR (incl. Studio draft/* branches) builds
+# and deploys a preview to the EXISTING Pages project (direct upload,
+# production untouched — prod stays main-only after tests).
 #
-# How it works:
-#   1. every PR (including the draft/* branches created by Studio Clarté)
-#      builds the site and deploys a preview to Cloudflare Pages via Direct
-#      Upload (no Git integration needed, production deploy untouched) ;
-#   2. the preview URL is reported as a GitHub Deployment with environment
-#      'preview' — Studio Clarté's status polling picks it up and shows
-#      « Voir la Preview ↗ », then enables the merge button.
-#
-# Client prerequisites:
-#   - a Cloudflare Pages project (create once): `npx wrangler pages project create <name>`
-#   - repository secrets:
-#       CLOUDFLARE_API_TOKEN   (Pages: Edit permission)
-#       CLOUDFLARE_ACCOUNT_ID
-#   - repository variable:  CF_PAGES_PROJECT = <project name>
+# Preview URL: https://preview-<PR>.cedric-v.pages.dev
 # ═══════════════════════════════════════════════════════════════════
 name: Preview (draft PR)
 
@@ -34,31 +22,36 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  deploy-preview:
+  build-preview:
     runs-on: ubuntu-latest
     env:
-      PAGES_PROJECT: ${{ vars.CF_PAGES_PROJECT }}
+      PAGES_PROJECT: cedric-v
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
-          node-version: 20
-          cache: npm
+          node-version: '24'
+          cache: 'npm'
 
-      - run: npm ci
-      # - run: npm test          # optional: same tests as production
+      - name: Install dependencies
+        run: npm ci
 
-      # ⚠️ MIRROR YOUR PRODUCTION BUILD exactly (command, env secrets,
-      # output directory) — the preview must reflect what prod will be.
-      # Example (Eleventy, see docs/preview-cedricv.yml for the full version):
-      - run: npm run build
+      # Same build as production (Eleventy), with the same env secrets.
+      - name: Build
+        run: ELEVENTY_ENV=prod npm run build
         env:
-          SOME_SECRET: ${{ secrets.SOME_SECRET }}
+          FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
+          FIREBASE_AUTH_DOMAIN: ${{ secrets.FIREBASE_AUTH_DOMAIN }}
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+          FIREBASE_STORAGE_BUCKET: ${{ secrets.FIREBASE_STORAGE_BUCKET }}
+          FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}
+          FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
+          FIREBASE_MEASUREMENT_ID: ${{ secrets.FIREBASE_MEASUREMENT_ID }}
 
       - name: Deploy preview to Cloudflare Pages (Direct Upload)
         run: |
-          npx wrangler pages deploy dist \
+          npx wrangler pages deploy _site \
             --project-name="$PAGES_PROJECT" \
             --branch="preview-${{ github.event.pull_request.number }}"
         env:

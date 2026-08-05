@@ -71,16 +71,14 @@ npx wrangler pages project create client-a-com   # nom = convention ci-dessus
    curl -O https://raw.githubusercontent.com/cedric-v/studio-clarte/main/docs/preview-github-actions.yml
    mv preview-github-actions.yml .github/workflows/preview.yml
    ```
-2. **Adapter** au besoin :
-   - commande de build (`npm run build`, `npx @11ty/eleventy`…) ;
-   - dossier de sortie (défaut `dist`) ;
+2. **Adapter** au besoin — le build de preview doit **refléter exactement le build de prod** :
+   - même commande (ex. `ELEVENTY_ENV=prod npm run build`) et **mêmes secrets d'env** que le workflow de prod ;
+   - même dossier de sortie (`_site`, `dist`…) ;
+   - réutiliser le **même nom de projet Pages** que la prod (`--project-name=<projet existant>`) — les previews passent par l'alias de branche `preview-N.<projet>.pages.dev`, la prod n'est jamais touchée.
    - *(optionnel)* décommenter `npm test` pour les mêmes tests que la prod.
 3. **Secrets / variables du repo** (GitHub → Settings → Secrets and variables → Actions) :
-   | Type | Nom | Valeur |
-   |---|---|---|
-   | Secret | `CLOUDFLARE_API_TOKEN` | token Cloudflare du client, permission **Pages: Edit** |
-   | Secret | `CLOUDFLARE_ACCOUNT_ID` | account id du client |
-   | Variable | `CF_PAGES_PROJECT` | nom du projet (étape 3) |
+   - si la prod déploie déjà via Actions → `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID` existent déjà ; sinon les créer (token **Pages: Edit**) ;
+   - `CF_PAGES_PROJECT` : nom du projet (ou hardcoder `--project-name` dans le workflow).
 4. **Merger le workflow sur `main` une fois.** Toutes les PR `draft/*` suivantes déclencheront la preview automatiquement.
 
 ---
