@@ -132,6 +132,8 @@ const fr: Dictionary = {
   'workflow.previewBuilding': 'Build de prévisualisation en cours…',
   'workflow.previewPending': 'Build de prévisualisation en attente…',
   'workflow.statusError': '⚠️ Impossible de récupérer le statut (nouvel essai…).',
+  'workflow.noPreviewHint':
+    "Preview introuvable : vérifiez que le dépôt est connecté à Cloudflare Pages avec les PR Previews activées, ou suivez le build depuis la PR.",
   'workflow.step4Hint':
     'Squash & merge vers main, puis suppression de la branche temporaire.',
   'workflow.merge': '🚀 Valider & Fusionner en Prod',
@@ -298,6 +300,8 @@ const en: Dictionary = {
   'workflow.previewBuilding': 'Preview build in progress…',
   'workflow.previewPending': 'Preview build pending…',
   'workflow.statusError': '⚠️ Unable to fetch the status (retrying…).',
+  'workflow.noPreviewHint':
+    'Preview not found: make sure the repo is connected to Cloudflare Pages with PR Previews enabled, or follow the build from the PR.',
   'workflow.step4Hint': 'Squash & merge to main, then deletion of the temporary branch.',
   'workflow.merge': '🚀 Validate & Merge to Prod',
   'workflow.merging': '⏳ Merging…',

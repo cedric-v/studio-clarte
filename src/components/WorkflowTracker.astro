@@ -119,6 +119,7 @@ const { lang } = Astro.locals;
   let payload: GeneratedPayload | null = null;
   let polling: ReturnType<typeof setInterval> | null = null;
   let pollingStarted = false;
+  let polls = 0;
 
   function activateStep(step: number, done = false) {
     for (let i = 1; i <= 4; i++) {
@@ -200,8 +201,15 @@ const { lang } = Astro.locals;
     polling = setInterval(async () => {
       try {
         const res = await fetch(`/api/status/${workflow.siteId}/${workflow.prNumber}`);
-        const status = await res.json();
-        if (!res.ok) throw new Error(status.error ?? 'Status unavailable');
+        const status = await res.json().catch(() => null);
+        if (!res.ok || !status) {
+          // Surface the real server error (diagnostic), then keep retrying.
+          const detail = status?.error;
+          previewHint.textContent = detail
+            ? `⚠️ ${detail}`
+            : t(lang, 'workflow.statusError');
+          return;
+        }
 
         if (status.merged) {
           activateStep(4, true);
@@ -230,10 +238,13 @@ const { lang } = Astro.locals;
           return;
         }
 
+        polls++;
         previewHint.textContent =
-          status.state === 'in_progress'
-            ? t(lang, 'workflow.previewBuilding')
-            : t(lang, 'workflow.previewPending');
+          polls > 5
+            ? t(lang, 'workflow.noPreviewHint')
+            : status.state === 'in_progress'
+              ? t(lang, 'workflow.previewBuilding')
+              : t(lang, 'workflow.previewPending');
       } catch (error) {
         console.error('[polling]', error);
         previewHint.textContent = t(lang, 'workflow.statusError');
