@@ -4,6 +4,7 @@ node_modules/
 # Builds
 dist/
 .wrangler/
+wrangler.jsonc
 .astro/
 
 # Secrets locaux — NE JAMAIS COMMITER

@@ -202,11 +202,17 @@ wrangler secret put DEEPSEEK_API_KEY
 wrangler secret put GITHUB_PAT
 ```
 
-Vars — **set in the Cloudflare DASHBOARD only** (Workers → `studio-clarte` →
-Settings → Variables and Secrets): `AGENCY_DOMAIN`, `DEFAULT_SITE_ID`,
-`SITE_DOMAINS`, `SITE_OVERRIDES`. `SESSION_TTL_SECONDS` stays in
-`wrangler.jsonc`. Keeping the private vars out of the public file prevents
-`wrangler deploy` from overwriting them (dashboard vars persist across deploys).
+Vars — **edit your LOCAL `wrangler.jsonc`** (gitignored): `AGENCY_DOMAIN`,
+`DEFAULT_SITE_ID`, `SITE_DOMAINS`, `SITE_OVERRIDES`, `SESSION_TTL_SECONDS`.
+The repo ships a `wrangler.jsonc.example` template; copy it to `wrangler.jsonc`
+and fill in your values. Because the real file is never committed:
+- `git pull` never overwrites it (no more lost config on redeploys) ;
+- every `wrangler deploy` uses YOUR values consistently ;
+- nothing private is exposed in this public repo.
+
+> Alternative: dashboard-only vars also work, but NEVER put placeholder vars
+> in the committed file — a deploy would overwrite the dashboard values
+> (the pitfall that broke `studio.cedricv.com` once).
 
 ### 4. GitHub OAuth App (per `studio.*` domain)
 
