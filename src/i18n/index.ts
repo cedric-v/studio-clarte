@@ -200,6 +200,7 @@ const fr: Dictionary = {
   'settings.envHint':
     'Les clés globales (secrets Worker) ne servent de fallback que pour le site de l\'agence. Les clients doivent saisir leurs propres clés ici — aucun frais API ne leur est facturé à votre place.',
   'settings.save': '💾 Enregistrer les clés',
+  'settings.cancel': 'Fermer',
   'settings.saving': '⏳ Chiffrement…',
   'settings.toastReadFailed': 'Impossible de lire les clés configurées',
   'settings.toastEmpty': 'Saisissez au moins une clé à enregistrer',
@@ -358,6 +359,7 @@ const en: Dictionary = {
   'settings.envHint':
     'Global keys (Worker secrets) only fall back for the AGENCY site. Clients must enter their own keys here — no API costs are ever paid on their behalf.',
   'settings.save': '💾 Save keys',
+  'settings.cancel': 'Close',
   'settings.saving': '⏳ Encrypting…',
   'settings.toastReadFailed': 'Unable to read the configured keys',
   'settings.toastEmpty': 'Enter at least one key to save',

@@ -121,6 +121,9 @@ const R2_FIELDS = FIELDS.slice(2);
       ))}
 
       <div class="modal-actions">
+        <button class="btn btn-ghost" type="button" id="settings-cancel">
+          {t(lang, 'settings.cancel')}
+        </button>
         <button class="btn btn-primary" type="submit" id="keys-save">
           {t(lang, 'settings.save')}
         </button>
@@ -181,6 +184,7 @@ const R2_FIELDS = FIELDS.slice(2);
 
   window.addEventListener('sc:open-settings', open);
   document.getElementById('settings-close')?.addEventListener('click', close);
+  document.getElementById('settings-cancel')?.addEventListener('click', close);
   modal.addEventListener('click', (event) => {
     if (event.target === modal) close();
   });
