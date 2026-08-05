@@ -101,7 +101,10 @@ const { lang } = Astro.locals;
   import { getClientLocale, t } from '../i18n';
 
   const lang = getClientLocale();
-  const siteId = '{siteId}';
+  // Site id is passed via a data attribute (frontmatter variables are not
+  // interpolated inside Astro <script> blocks).
+  const siteId =
+    document.querySelector<HTMLElement>('[data-site-id]')?.dataset.siteId ?? '';
   const state = getState();
 
   // URLs come from GitHub (repos/PRs) → only allow http(s).
