@@ -222,13 +222,23 @@ GitHub → **Settings → Developer settings → OAuth Apps** :
 - **Callback URL : `https://studio.cedricv.com/api/auth/callback`** (one per studio domain)
 - Scope : `read:user` + `repo` (required for the Git Engine fallback)
 
-### 5. Cloudflare Pages (PR previews) — per client repo
+### 5. PR previews — per client repo
 
-Each client repo (`client-a-site`) must be connected to a **Cloudflare Pages** project:
+Two options (pick the one that fits the client's CD/CI):
 
-- Build command : `npm run build` · Output : `dist/`
-- Enable **PR Previews** : every `draft/*` branch triggers an automatic preview build
-  when the PR is created.
+**Option A — Cloudflare Pages Git integration (simplest):**
+connect the client repo to a **Cloudflare Pages** project (Build: `npm run build`, Output: `dist/`) and enable **PR Previews**. Every `draft/*` branch then triggers an automatic preview build.
+
+**Option B — GitHub Actions (when the client already owns the CD/CI):** the repo is NOT connected to Pages — production is deployed by GitHub Actions on `main` (tests required). Add the provided workflow to the client repo:
+
+```bash
+# template to copy into the CLIENT repo as .github/workflows/preview.yml
+cat docs/preview-github-actions.yml
+```
+
+It builds every PR, deploys the preview to Cloudflare Pages via **Direct Upload** (`preview-N.<project>.pages.dev`), and reports the URL as a GitHub **Deployment** with environment `preview`. Studio Clarté picks it up automatically (its polling reads Deployments/Check Runs) — no code change needed.
+
+Client prerequisites for Option B: a Pages project (`npx wrangler pages project create <name>`), repo secrets `CLOUDFLARE_API_TOKEN` (Pages: Edit) + `CLOUDFLARE_ACCOUNT_ID`, and the repo variable `CF_PAGES_PROJECT`. Merge the workflow to `main` once — subsequent `draft/*` PRs trigger it.
 
 ### 6. Deploy
 

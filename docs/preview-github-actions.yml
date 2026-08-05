@@ -1,0 +1,88 @@
+# ═══════════════════════════════════════════════════════════════════
+# Preview deploys for Studio Clarté draft PRs
+#
+# Copy this file into the CLIENT repo (.github/workflows/preview.yml),
+# adjust PAGES_PROJECT / build command / output directory, add the two
+# secrets below, then MERGE the workflow to main ONCE.
+#
+# How it works:
+#   1. every PR (including the draft/* branches created by Studio Clarté)
+#      builds the site and deploys a preview to Cloudflare Pages via Direct
+#      Upload (no Git integration needed, production deploy untouched) ;
+#   2. the preview URL is reported as a GitHub Deployment with environment
+#      'preview' — Studio Clarté's status polling picks it up and shows
+#      « Voir la Preview ↗ », then enables the merge button.
+#
+# Client prerequisites:
+#   - a Cloudflare Pages project (create once): `npx wrangler pages project create <name>`
+#   - repository secrets:
+#       CLOUDFLARE_API_TOKEN   (Pages: Edit permission)
+#       CLOUDFLARE_ACCOUNT_ID
+#   - repository variable:  CF_PAGES_PROJECT = <project name>
+# ═══════════════════════════════════════════════════════════════════
+name: Preview (draft PR)
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+  deployments: write # required to report the GitHub Deployment
+
+concurrency:
+  group: preview-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  deploy-preview:
+    runs-on: ubuntu-latest
+    env:
+      PAGES_PROJECT: ${{ vars.CF_PAGES_PROJECT }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+      # - run: npm test          # optional: same tests as production
+
+      # Adjust to your site's build (same as production):
+      - run: npm run build
+        # e.g. eleventy:  - run: npx @11ty/eleventy
+        # output dir below must match (default: dist)
+
+      - name: Deploy preview to Cloudflare Pages (Direct Upload)
+        run: |
+          npx wrangler pages deploy dist \
+            --project-name="$PAGES_PROJECT" \
+            --branch="preview-${{ github.event.pull_request.number }}"
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Report the preview URL as a GitHub Deployment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const sha = context.payload.pull_request.head.sha;
+            const url = `https://preview-${context.payload.pull_request.number}.${process.env.PAGES_PROJECT}.pages.dev`;
+            const { data: dep } = await github.rest.repos.createDeployment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: sha,
+              environment: 'preview',
+              auto_merge: false,
+              required_contexts: [],
+            });
+            await github.rest.repos.createDeploymentStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              deployment_id: dep.id,
+              state: 'success',
+              environment_url: url,
+              description: `Preview: ${url}`,
+            });
+            console.log(`Preview: ${url}`);
