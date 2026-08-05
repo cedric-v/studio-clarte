@@ -23,7 +23,14 @@ export const GET: APIRoute = async ({ params, locals }) => {
   const site = getSiteById(siteId, locals.env);
   const prNumber = Number(params.prNumber);
   if (!site || !Number.isInteger(prNumber) || prNumber <= 0) {
-    return json({ error: 'Invalid parameters' }, 400);
+    // Diagnostic: echo the received values so the UI can surface them.
+    console.error('[status] invalid parameters', { siteId, prNumber, resolved: site?.id ?? null });
+    return json(
+      {
+        error: `Invalid parameters (siteId=${JSON.stringify(params.siteId)}, prNumber=${JSON.stringify(params.prNumber)})`,
+      },
+      400,
+    );
   }
 
   // Multi-tenant isolation: locked sites cannot poll other sites' PRs.
