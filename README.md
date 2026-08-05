@@ -82,6 +82,10 @@ runtime via Cloudflare vars (`wrangler.jsonc` / dashboard):
 | Var | Role | Example (this webmaster) |
 |---|---|---|
 | `AGENCY_DOMAIN` | Webmaster's studio subdomain → Super-Admin + default site | `studio.cedricv.com` |
+
+> 🧭 **Onboarding of a new client site** (Pages project, preview workflow,
+> R2 storage, DNS, vault keys…): follow the step-by-step guide in
+> [`docs/client-onboarding.md`](docs/client-onboarding.md).
 | `DEFAULT_SITE_ID` | Site opened by default on the agency domain | `agence` |
 | `SITE_DOMAINS` | JSON map siteId → client custom domain | `{"client-a":"studio.client-a.ch"}` |
 | `SITE_OVERRIDES` | JSON map siteId → partial overrides (repo, cdnDomain, name, r2AccountId, r2Bucket…) | `{"agence":{"repo":"cedric-v/cedricv.com","cdnDomain":"https://cdn.cedricv.com"}}` |
