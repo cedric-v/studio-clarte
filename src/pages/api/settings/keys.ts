@@ -1,15 +1,19 @@
 import type { APIRoute } from 'astro';
-import { readVaultDisplay, writeSecrets, type SecretName } from '../../../lib/vault';
+import { maskKey, readVaultDisplay, writeSecrets, type SecretName } from '../../../lib/vault';
 import { SECRET_KEYS } from '../../../lib/vault';
 
 /**
  * Client API key vault — WRITE-ONLY.
  *
- * GET  /api/settings/keys  → lists the configured keys in MASKED form
- *                            (`sk-••••••••1234`). Plaintext is NEVER returned.
+ * GET  /api/settings/keys  → lists the EFFECTIVE configuration in MASKED form
+ *                            (`sk-••••••••1234`). Precedence: site vault first,
+ *                            then the global env fallback (Worker secret).
+ *                            Each key reports its `source` ('vault' | 'env').
+ *                            Plaintext is NEVER returned.
  * POST /api/settings/keys  → encrypts (AES-256-GCM) and stores the provided
  *                            keys (absent values are left untouched, partial
- *                            update). Returns only the masked versions.
+ *                            update). A vault key overrides the global one.
+ *                            Returns only the masked versions.
  */
 
 function json(data: unknown, status = 200): Response {
@@ -24,7 +28,22 @@ export const GET: APIRoute = async ({ locals }) => {
   if (!site) return json({ error: 'Unknown site' }, 404);
 
   const display = await readVaultDisplay(locals.env, site.id);
-  return json({ siteId: site.id, configured: display });
+  const configured: Record<string, string> = {};
+  const sources: Record<string, 'vault' | 'env'> = {};
+  const env = locals.env as Record<string, string | undefined>;
+
+  for (const name of SECRET_KEYS) {
+    if (display[name]) {
+      configured[name] = display[name]!;
+      sources[name] = 'vault';
+    } else if (env[name]) {
+      // Global fallback (Worker secret / var): shown masked, source 'env'.
+      configured[name] = maskKey(env[name]!);
+      sources[name] = 'env';
+    }
+  }
+
+  return json({ siteId: site.id, configured, sources });
 };
 
 export const POST: APIRoute = async ({ request, locals }) => {

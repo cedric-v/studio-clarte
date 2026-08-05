@@ -52,6 +52,7 @@ const R2_FIELDS = FIELDS.slice(2);
     </div>
 
     <div class="modal-note">{t(lang, 'settings.note')}</div>
+    <p class="field-hint modal-env-hint">{t(lang, 'settings.envHint')}</p>
 
     <form id="keys-form">
       {GENERAL_FIELDS.map((field) => (
@@ -193,15 +194,23 @@ const R2_FIELDS = FIELDS.slice(2);
       const data = await res.json();
       for (const field of FIELDS) {
         const value = data.configured?.[field.name];
+        const source = data.sources?.[field.name] as 'vault' | 'env' | undefined;
         const el = document.getElementById(`masked-${field.name}`);
         const badge = document.getElementById(`badge-${field.name}`);
         if (el) el.textContent = value || '—';
         if (badge) {
-          badge.textContent = value
-            ? t(lang, 'settings.configured')
-            : t(lang, 'settings.notConfigured');
-          badge.classList.toggle('badge-success', Boolean(value));
-          badge.classList.toggle('badge-muted', !value);
+          if (!value) {
+            badge.textContent = t(lang, 'settings.notConfigured');
+            badge.classList.add('badge-muted');
+            badge.classList.remove('badge-success');
+          } else {
+            badge.textContent =
+              source === 'env'
+                ? t(lang, 'settings.configuredEnv')
+                : t(lang, 'settings.configured');
+            badge.classList.add('badge-success');
+            badge.classList.remove('badge-muted');
+          }
         }
       }
       updateR2Status(

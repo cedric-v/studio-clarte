@@ -196,6 +196,9 @@ const fr: Dictionary = {
     'Partie secrète du token R2 du client — stockée chiffrée, write-only.',
   'settings.notConfigured': 'non configurée',
   'settings.configured': 'configurée (write-only)',
+  'settings.configuredEnv': 'configurée (fallback global)',
+  'settings.envHint':
+    'Les clés définies en fallback global (secrets Worker) s\'affichent « configurée (fallback global) » ; une clé saisie ici prend le dessus pour ce site.',
   'settings.save': '💾 Enregistrer les clés',
   'settings.saving': '⏳ Chiffrement…',
   'settings.toastReadFailed': 'Impossible de lire les clés configurées',
@@ -351,6 +354,9 @@ const en: Dictionary = {
     'Secret part of the client R2 token — stored encrypted, write-only.',
   'settings.notConfigured': 'not configured',
   'settings.configured': 'configured (write-only)',
+  'settings.configuredEnv': 'configured (global fallback)',
+  'settings.envHint':
+    'Keys set as global fallbacks (Worker secrets) show as “configured (global fallback)”; a key entered here overrides them for this site.',
   'settings.save': '💾 Save keys',
   'settings.saving': '⏳ Encrypting…',
   'settings.toastReadFailed': 'Unable to read the configured keys',
