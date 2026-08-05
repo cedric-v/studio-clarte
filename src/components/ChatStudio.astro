@@ -397,6 +397,13 @@ const SUGGESTION_KEYS = ['chat.suggestion1', 'chat.suggestion2', 'chat.suggestio
             files: [...files, ...gitImages.map((img) => gitImageFile(img))],
           });
           toast(t(lang, 'chat.filesReady', files.length + gitImages.length), 'success');
+          // Replace the raw JSON dump with a clean summary + payload note.
+          const note = document.createElement('div');
+          note.className = 'payload-note';
+          note.textContent = t(lang, 'chat.payloadNote');
+          bubble.innerHTML = renderMarkdown(payload.summary || '✅');
+          bubble.appendChild(note);
+          scrollBottom();
         } else {
           toast(t(lang, 'chat.invalidPayload'), 'error');
         }

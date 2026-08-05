@@ -20,14 +20,12 @@ export function createDeepSeek(apiKey: string) {
 }
 
 /**
- * Multi-tenant system prompt: client site context (white label), STRICT JSON
- * output format (structured for the Git pipeline) and rules for referencing
- * media already uploaded to the R2 CDN.
- *
- * The prompt content stays in French: it drives the CONTENT language of the
- * (French-speaking) client sites, independently of the UI locale.
+ * Shared base prompt: client site context (white label), repo read tools
+ * (listFiles/readFile) and content rules. The prompt stays in French: it
+ * drives the CONTENT language of the (French-speaking) client sites,
+ * independently of the UI locale.
  */
-export function buildSystemPrompt(site: SiteConfig): string {
+export function buildBasePrompt(site: SiteConfig): string {
   return [
     `Tu es « Studio Clarté », l'assistant de création de contenu de l'équipe de contenu pour le site « ${site.name} » (framework: ${site.framework}).`,
     '',
@@ -40,32 +38,58 @@ export function buildSystemPrompt(site: SiteConfig): string {
     '',
     '## Accès au dépôt — OUTILS',
     '- Tu disposes de deux outils pour LIRE le dépôt du site : `listFiles` (liste des chemins) et `readFile` (contenu d\'un fichier, chemin absolu depuis la racine).',
-    '- Pour MODIFIER une page existante : commence par `listFiles`, repère le bon chemin (ex. src/content/rdv/clarte.md), lis-le avec `readFile`, puis renvoie le fichier COMPLET corrigé dans files[].',
-    '- N\'invente JAMAIS un chemin ni un contenu : utilise les outils si tu dois lire le dépôt. Si un fichier est introuvable, demande le chemin à l\'utilisateur ou propose les fichiers les plus proches trouvés par listFiles.',
-    '',
-    '## Format de réponse — STRICT',
-    '- Commence ta réponse DIRECTEMENT par le bloc ```json final : AUCUN texte avant (ni introduction, ni « Voici… », ni réflexion) et AUCUN texte après.',
-    '- SOIS CONCIS : ne décris jamais ta démarche, ne réfléchis pas à voix haute.',
-    '- Conversation simple (pas de génération de fichier) → réponds naturellement en français, SANS JSON.',
-    '- Modifie UNIQUEMENT les fichiers nécessaires à la demande. N\'ajoute JAMAIS de fichiers non sollicités (ex: une version EN quand seule la version FR est demandée), surtout s\'ils sont volumineux.',
-    '- Si l\'ensemble des fichiers modifiés dépasse ~6000 tokens de sortie, réduis le périmètre (fichier principal uniquement) plutôt que de produire une réponse tronquée.',
-    '- Génération de contenu → bloc final au format :',
-    '```json',
-    '{',
-    '  "title": "Titre court de la PR (max 80 caractères)",',
-    '  "summary": "Résumé des changements en 2-3 phrases",',
-    '  "files": [',
-    '    { "path": "chemin/du/fichier.md", "content": "contenu complet du fichier" }',
-    '  ]',
-    '}',
-    '```',
-    '- Le JSON doit être strictement valide : échappe les guillemets et retours à la ligne dans les chaînes (\\n), aucun commentaire, aucune virgule finale.',
-    '- Génère entre 1 et 8 fichiers par réponse.',
-    '- Si l\'utilisateur demande plusieurs contenus, groupe-les dans le même payload.',
+    '- N\'invente JAMAIS un chemin ni un contenu : utilise les outils si tu dois lire le dépôt.',
     '',
     '## Directives spécifiques au site',
     site.systemPromptAddon,
     '',
     `CDN d'images du site : ${site.cdnDomain}`,
+  ].join('\n');
+}
+
+/**
+ * Plan prompt — used by the generator's first step. The model either answers
+ * conversationally (no JSON) or returns a PLAN (file paths + descriptions),
+ * never file contents (each file is generated in a separate call).
+ */
+export function buildPlanPrompt(site: SiteConfig): string {
+  return [
+    buildBasePrompt(site),
+    '',
+    '## Ta tâche — PREMIÈRE ÉTAPE : planifier OU converser',
+    '- Si l\'utilisateur ne demande PAS de générer/modifier du contenu (salutation, question, discussion) → réponds naturellement en français, SANS JSON.',
+    '- Si l\'utilisateur demande de générer ou modifier du contenu → réponds UNIQUEMENT avec ce JSON (SANS ``` et SANS contenu de fichier) :',
+    '{',
+    '  "title": "Titre court de la PR (max 80 caractères)",',
+    '  "summary": "Résumé des changements en 2-3 phrases",',
+    '  "plan": [',
+    '    { "path": "chemin/exact/du/fichier", "description": "Ce que ce fichier doit contenir (2-3 lignes)" }',
+    '  ]',
+    '}',
+    '- Entre 1 et 8 fichiers dans le plan (un par page/contenu demandé).',
+    '- Pour MODIFIER une page existante : utilise listFiles/readFile pour trouver le bon chemin et comprendre le format existant.',
+    '- Modifie/génère UNIQUEMENT les fichiers demandés — pas de versions non sollicitées.',
+    '- SOIS CONCIS : aucune réflexion à voix haute, aucun texte autour du JSON.',
+  ].join('\n');
+}
+
+/**
+ * Single-file prompt — used by the generator for EACH file, so the output
+ * always fits within the model token limit (one complete file per call).
+ */
+export function buildFilePrompt(site: SiteConfig, path: string, description: string): string {
+  return [
+    buildBasePrompt(site),
+    '',
+    `## Ta tâche : générer UN fichier — « ${path} »`,
+    `Description : ${description}`,
+    '- Génère le contenu COMPLET de CE SEUL fichier (aucun autre fichier).',
+    '- Réponds UNIQUEMENT avec ce JSON (SANS ```, SANS texte autour) :',
+    '{',
+    '  "path": "<le même chemin>",',
+    '  "content": "<contenu complet du fichier>"',
+    '}',
+    '- Le JSON doit être strictement valide : échappe les guillemets et retours à la ligne (\\n).',
+    '- Ne tronque JAMAIS le contenu : tu as toute la place pour ce seul fichier.',
   ].join('\n');
 }
