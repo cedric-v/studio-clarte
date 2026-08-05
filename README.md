@@ -353,7 +353,7 @@ src/
 
 | Endpoint | Method | Role |
 |---|---|---|
-| `/api/chat` | POST | DeepSeek streaming with the active site prompt |
+| `/api/chat` | POST | DeepSeek streaming with the active site prompt + **repo read tools** (`listFiles` / `readFile` executed server-side with the site Git token) |
 | `/api/upload-url` | POST | R2 presigned URL (direct browser PUT) |
 | `/api/commit-draft` | POST | `draft/*` branch + PR in ~1-2 s (Direct Git API) |
 | `/api/status/:siteId/:prNumber` | GET | Cloudflare Pages preview polling |

@@ -48,6 +48,63 @@ export function createOctokit(pat: string): Octokit {
   return new Octokit({ auth: pat });
 }
 
+/**
+ * Lists the tracked file paths of the repo (recursive tree, blob entries).
+ * Used by the AI `listFiles` tool so the model can locate files to edit.
+ */
+export async function listRepoFiles(
+  octokit: Octokit,
+  repo: string,
+  ref?: string,
+): Promise<string[]> {
+  const { owner, repoName } = splitRepo(repo);
+  const branch = ref ?? 'HEAD';
+  const { data: refData } = await octokit.git.getRef({
+    owner,
+    repo: repoName,
+    ref: `heads/${branch}`,
+  });
+  const { data: tree } = await octokit.git.getTree({
+    owner,
+    repo: repoName,
+    tree_sha: refData.object.sha,
+    recursive: '1',
+  });
+  return (tree.tree ?? [])
+    .filter((entry) => entry.type === 'blob' && entry.path)
+    .map((entry) => entry.path as string);
+}
+
+/**
+ * Reads a text file from the repo (default branch). Returns null when the
+ * file does not exist or is too large. Used by the AI `readFile` tool.
+ */
+export async function getFileContent(
+  octokit: Octokit,
+  repo: string,
+  path: string,
+  ref?: string,
+): Promise<{ content: string; size: number } | null> {
+  const { owner, repoName } = splitRepo(repo);
+  try {
+    const { data } = await octokit.repos.getContent({
+      owner,
+      repo: repoName,
+      path,
+      ref,
+    });
+    if (Array.isArray(data) || data.type !== 'file' || typeof data.content !== 'string') {
+      return null;
+    }
+    const binary = atob(data.content);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return { content: new TextDecoder().decode(bytes), size: data.size };
+  } catch {
+    return null;
+  }
+}
+
 function splitRepo(repo: string): { owner: string; repoName: string } {
   const [owner, repoName] = repo.split('/');
   if (!owner || !repoName) throw new Error(`Invalid repo: ${repo} (expected "owner/repo")`);

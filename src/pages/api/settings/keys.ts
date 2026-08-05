@@ -30,7 +30,7 @@ export const GET: APIRoute = async ({ locals }) => {
   const display = await readVaultDisplay(locals.env, site.id);
   const configured: Record<string, string> = {};
   const sources: Record<string, 'vault' | 'env'> = {};
-  const env = locals.env as Record<string, string | undefined>;
+  const env = locals.env as unknown as Record<string, string | undefined>;
 
   for (const name of SECRET_KEYS) {
     if (display[name]) {
