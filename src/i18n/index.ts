@@ -198,7 +198,7 @@ const fr: Dictionary = {
   'settings.configured': 'configurée (write-only)',
   'settings.configuredEnv': 'configurée (fallback global)',
   'settings.envHint':
-    'Les clés définies en fallback global (secrets Worker) s\'affichent « configurée (fallback global) » ; une clé saisie ici prend le dessus pour ce site.',
+    'Les clés globales (secrets Worker) ne servent de fallback que pour le site de l\'agence. Les clients doivent saisir leurs propres clés ici — aucun frais API ne leur est facturé à votre place.',
   'settings.save': '💾 Enregistrer les clés',
   'settings.saving': '⏳ Chiffrement…',
   'settings.toastReadFailed': 'Impossible de lire les clés configurées',
@@ -356,7 +356,7 @@ const en: Dictionary = {
   'settings.configured': 'configured (write-only)',
   'settings.configuredEnv': 'configured (global fallback)',
   'settings.envHint':
-    'Keys set as global fallbacks (Worker secrets) show as “configured (global fallback)”; a key entered here overrides them for this site.',
+    'Global keys (Worker secrets) only fall back for the AGENCY site. Clients must enter their own keys here — no API costs are ever paid on their behalf.',
   'settings.save': '💾 Save keys',
   'settings.saving': '⏳ Encrypting…',
   'settings.toastReadFailed': 'Unable to read the configured keys',

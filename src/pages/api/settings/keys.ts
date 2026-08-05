@@ -36,8 +36,9 @@ export const GET: APIRoute = async ({ locals }) => {
     if (display[name]) {
       configured[name] = display[name]!;
       sources[name] = 'vault';
-    } else if (env[name]) {
-      // Global fallback (Worker secret / var): shown masked, source 'env'.
+    } else if (site.isAgency && env[name]) {
+      // Global fallback (Worker secret / var) — AGENCY SITES ONLY.
+      // Clients never inherit global keys: they must provide their own.
       configured[name] = maskKey(env[name]!);
       sources[name] = 'env';
     }

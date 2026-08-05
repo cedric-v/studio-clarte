@@ -25,7 +25,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const messages = Array.isArray(body?.messages) ? body.messages : [];
   if (!messages.length) return json({ error: 'Parameter "messages" required' }, 400);
 
-  const apiKey = await resolveSecret(locals.env, site.id, 'DEEPSEEK_API_KEY');
+  const apiKey = await resolveSecret(locals.env, site, 'DEEPSEEK_API_KEY');
   if (!apiKey) {
     return json(
       { error: 'DeepSeek key not configured for this site — add it in ⚙️ Settings.' },

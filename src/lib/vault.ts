@@ -1,4 +1,5 @@
 import type { CloudflareEnv, KVNamespace } from '../env';
+import type { SiteConfig } from '../config/sites';
 
 /**
  * Write-only API key vault.
@@ -164,18 +165,26 @@ export async function writeSecrets(
 }
 
 /**
- * Resolves a key for a site: the client vault first, then the global
- * environment variable as a fallback.
+ * Resolves a key for a site: the site vault first, then — ONLY for the
+ * webmaster's own site (`isAgency`) — the global env fallback (Worker secret).
+ *
+ * Clients NEVER inherit global keys: each client must provide its own
+ * (no API costs are ever paid on their behalf).
  */
 export async function resolveSecret(
   env: CloudflareEnv,
-  siteId: string,
+  site: SiteConfig | null,
   name: SecretName,
 ): Promise<string | undefined> {
-  const vault = await decryptVault(env, siteId);
-  // Env fallback only exists for schema fields (DEEPSEEK_API_KEY / GITHUB_PAT);
-  // the R2 keys are vault-only (dedicated per-site storage).
-  return vault[name] ?? (env as unknown as Record<string, string | undefined>)[name];
+  if (!site) return undefined;
+  const vault = await decryptVault(env, site.id);
+  if (vault[name]) return vault[name];
+  if (site.isAgency) {
+    // Env fallback only exists for schema fields (DEEPSEEK_API_KEY / GITHUB_PAT);
+    // the R2 keys are vault-only (dedicated per-site storage).
+    return (env as unknown as Record<string, string | undefined>)[name];
+  }
+  return undefined;
 }
 
 /**

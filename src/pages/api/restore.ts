@@ -34,7 +34,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   const pat =
-    (await resolveSecret(locals.env, site.id, 'GITHUB_PAT')) ?? locals.user?.token ?? undefined;
+    (await resolveSecret(locals.env, site, 'GITHUB_PAT')) ?? locals.user?.token ?? undefined;
   if (!pat) return json({ error: 'GITHUB_PAT not configured for this site' }, 400);
 
   try {

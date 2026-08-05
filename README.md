@@ -196,7 +196,8 @@ wrangler secret put VAULT_MASTER_KEY        # AES-256 master key (≥16 chars, N
 wrangler secret put OAUTH_GITHUB_CLIENT_ID
 wrangler secret put OAUTH_GITHUB_CLIENT_SECRET
 wrangler secret put ALLOWED_GITHUB_LOGINS   # optional: allowed GitHub logins whitelist
-# Global fallbacks (otherwise configure per site in ⚙️ Settings):
+# Global fallbacks — AGENCY site only (clients must configure their own
+# keys in ⚙️ Settings; no API costs are ever paid on their behalf):
 wrangler secret put DEEPSEEK_API_KEY
 wrangler secret put GITHUB_PAT
 ```
