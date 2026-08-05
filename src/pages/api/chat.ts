@@ -47,7 +47,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     model: createDeepSeek(apiKey),
     system: buildSystemPrompt(site),
     messages: messages as never,
-    temperature: 0.6,
+    temperature: 0.4,
     maxOutputTokens: 8192,
     // Allow the tool loop (listFiles/readFile) to run for a few steps:
     // AI SDK v7 defaults to a single step (isStepCount(1)).

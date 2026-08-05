@@ -267,6 +267,31 @@ const SUGGESTION_KEYS = ['chat.suggestion1', 'chat.suggestion2', 'chat.suggestio
     return null;
   }
 
+  /**
+   * Heuristic truncation detection: the response ends inside an unclosed
+   * JSON structure, an unclosed string, or an open escape — typically when
+   * the model output exceeded its token limit.
+   */
+  function isTruncated(text: string): boolean {
+    const trimmed = text.trimEnd();
+    if (!trimmed) return false;
+    let depth = 0;
+    let inString = false;
+    let escaped = false;
+    for (const ch of trimmed) {
+      if (inString) {
+        if (escaped) escaped = false;
+        else if (ch === '\\') escaped = true;
+        else if (ch === '"') inString = false;
+        continue;
+      }
+      if (ch === '"') inString = true;
+      else if (ch === '{' || ch === '[') depth++;
+      else if (ch === '}' || ch === ']') depth--;
+    }
+    return depth > 0 || inString || escaped;
+  }
+
   /** Markdown reference of an image (CDN URL or relative repo path). */
   function imageMarkdown(img: { url?: string; ref?: string; alt: string }): string {
     return img.url ? `![${img.alt}](${img.url})` : `![${img.alt}](${img.ref ?? ''})`;
@@ -380,11 +405,14 @@ const SUGGESTION_KEYS = ['chat.suggestion1', 'chat.suggestion2', 'chat.suggestio
       } else if (!display || display === '(empty response)') {
         toast(t(lang, 'chat.noPayload'), 'info');
       } else {
-        // Plain text without a structured payload → gentle inline hint.
-        const hint = document.createElement('div');
-        hint.className = 'payload-note payload-note-warn';
-        hint.textContent = t(lang, 'chat.noPayloadNote');
-        bubble.appendChild(hint);
+        // Plain text without a structured payload: distinguish a truncated
+        // response (output limit) from a genuinely unstructured reply.
+        const note = document.createElement('div');
+        note.className = 'payload-note payload-note-warn';
+        note.textContent = isTruncated(display)
+          ? t(lang, 'chat.truncatedNote')
+          : t(lang, 'chat.noPayloadNote');
+        bubble.appendChild(note);
       }
     } catch (error) {
       console.error('[chat]', error);

@@ -90,6 +90,8 @@ const fr: Dictionary = {
   'chat.noPayload': 'Réponse générée sans payload structuré — précisez la demande',
   'chat.noPayloadNote':
     "Aucun fichier structuré détecté. Pour générer du contenu, précisez une demande claire (ex: « génère la page Offres ») ou relancez la génération.",
+  'chat.truncatedNote':
+    "⚠️ Réponse tronquée : le contenu demandé dépasse la limite de sortie du modèle. Scindez la demande (ex: un fichier à la fois) ou demandez un périmètre plus réduit.",
   'chat.invalidPayload': 'Payload reçu mais aucun fichier exploitable',
   'chat.filesReady': (n: number) => `${n} fichier(s) généré(s) ✓ — prêt pour le draft PR`,
   'chat.streamError': '⚠️ Erreur réseau lors du streaming',
@@ -256,6 +258,8 @@ const en: Dictionary = {
     'Response generated without a structured payload — please be more specific',
   'chat.noPayloadNote':
     'No structured files detected. To generate content, give a clear request (e.g. "generate the Services page") or retry the generation.',
+  'chat.truncatedNote':
+    '⚠️ Truncated response: the requested content exceeds the model output limit. Split the request (e.g. one file at a time) or ask for a smaller scope.',
   'chat.invalidPayload': 'Payload received but no usable files',
   'chat.filesReady': (n: number) => `${n} file(s) generated ✓ — ready for the draft PR`,
   'chat.streamError': '⚠️ Network error while streaming',
