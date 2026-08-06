@@ -10,7 +10,7 @@
     "preview": "astro preview",
     "check": "astro check",
     "typecheck": "astro check --minimumSeverity error",
-    "deploy": "wrangler deploy",
+    "deploy": "astro build && node scripts/verify-deploy.mjs && wrangler deploy && node scripts/verify-deploy.mjs --smoke",
     "prepare": "bash scripts/install-hooks.sh",
     "secrets:install": "bash scripts/install-hooks.sh",
     "secrets:scan": "gitleaks git --no-banner",

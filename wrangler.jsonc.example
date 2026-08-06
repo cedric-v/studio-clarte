@@ -8,15 +8,21 @@
   // YOUR values. Why: this repo is PUBLIC, and `git pull` must never
   // overwrite your local config.
   //
-  // ⚠️ SPLIT OF RESPONSIBILITIES — the single source of truth matters:
-  //   • THIS FILE (local, gitignored): ONLY the KV namespace id and
-  //     SESSION_TTL_SECONDS — everything that `wrangler deploy` needs.
-  //   • THE CLOUDFLARE DASHBOARD (Workers → studio-clarte → Settings →
-  //     Variables and Secrets): the PRIVATE deployment vars —
-  //     AGENCY_DOMAIN, DEFAULT_SITE_ID, SITE_DOMAINS, SITE_OVERRIDES.
+  // ⚠️ SPLIT OF RESPONSIBILITIES — this is the single source of truth:
+  //   • THIS FILE (local, gitignored): ALL plain vars — the KV namespace id,
+  //     SESSION_TTL_SECONDS, AND the deployment vars (AGENCY_DOMAIN,
+  //     DEFAULT_SITE_ID, SITE_DOMAINS, SITE_OVERRIDES).
+  //   • `wrangler secret put <NAME>` (or the dashboard SECRETS section):
+  //     secrets only — VAULT_MASTER_KEY, DEEPSEEK_API_KEY, GITHUB_PAT,
+  //     OAUTH_GITHUB_CLIENT_ID/SECRET, ALLOWED_GITHUB_LOGINS.
   //
-  // NEVER put those private vars in this file: `wrangler deploy` would push
-  // the file values and OVERWRITE your dashboard configuration.
+  // ⚠️ WHY plain vars MUST be here and NOT in the dashboard:
+  // Cloudflare's Workers "Versions & Deployments" model bakes plain vars
+  // into each VERSION. Every `wrangler deploy` rebuilds the version from
+  // THIS file — vars set ONLY in the dashboard are silently DROPPED on the
+  // next deploy (this exact bug broke studio.cedricv.com TWICE, returning
+  // "Domain not configured" 404s). Secrets are worker-level and DO survive
+  // deploys, which is why they are the only thing kept in the dashboard.
   // ═══════════════════════════════════════════════════════════════════
   "kv_namespaces": [
     {
@@ -25,25 +31,25 @@
     }
   ],
   "vars": {
+    // ── Plain deployment vars — MUST live here (gitignored), never the dashboard ──
+    // Studio subdomain (Super-Admin mode + default working site).
+    "AGENCY_DOMAIN": "studio.yourdomain.com",
+    // Site opened by default on the agency domain.
+    "DEFAULT_SITE_ID": "agence",
+    // JSON map siteId → client custom domain, e.g. {"client-a":"studio.client-a.ch"}
+    "SITE_DOMAINS": "{}",
+    // JSON map siteId → partial site overrides (repo, cdnDomain, r2…).
+    // e.g. {"agence":{"repo":"your-org/your-site","cdnDomain":"https://cdn.your-domain.com"}}
+    "SITE_OVERRIDES": "{}",
     "SESSION_TTL_SECONDS": 604800
   }
-  // ── Private vars — set in the DASHBOARD ONLY (never here) ──────────
-  //   AGENCY_DOMAIN  → your studio subdomain (e.g. studio.yourdomain.com)
-  //   DEFAULT_SITE_ID → site opened by default on the agency domain (agence)
-  //   SITE_DOMAINS   → {"client-a":"studio.client-a.ch", ...}
-  //   SITE_OVERRIDES → {"client-a":{"repo":"your-org/your-site",
-  //                      "cdnDomain":"https://cdn.your-domain.com",
-  //                      "r2AccountId":"...","r2Bucket":"..."}}
-  //                    (any entry without a seed = a NEW client site)
+  // ── Secrets — `npx wrangler secret put <NAME>` (or dashboard Secrets) ─────────
+  //   VAULT_MASTER_KEY, DEEPSEEK_API_KEY, GITHUB_PAT, OAUTH_GITHUB_CLIENT_ID,
+  //   OAUTH_GITHUB_CLIENT_SECRET, ALLOWED_GITHUB_LOGINS
   //
   // Storage model: DEDICATED per-site R2, no webmaster bucket.
   // Per site, either:
   //   • own R2 → r2AccountId/r2Bucket in SITE_OVERRIDES + the site's
   //     R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY in the vault (⚙️ Settings);
   //   • Git fallback → images are committed into the site repo.
-  //
-  // Secrets to create via `wrangler secret put <NAME>` (or dashboard) :
-  //   VAULT_MASTER_KEY, OAUTH_GITHUB_CLIENT_ID, OAUTH_GITHUB_CLIENT_SECRET,
-  //   ALLOWED_GITHUB_LOGINS, DEEPSEEK_API_KEY / GITHUB_PAT (global fallback,
-  //   AGENCY site only — clients configure their own keys in ⚙️)
 }

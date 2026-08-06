@@ -139,16 +139,23 @@ The repo is **public** → real values never live in it. **One source of truth
 per kind of value** to avoid `wrangler deploy` overwriting your config:
 
 - **Local `wrangler.jsonc`** (gitignored, template committed as
-  `wrangler.jsonc.example`): only the **KV namespace id** and
-  `SESSION_TTL_SECONDS` — everything the deploy needs. Because the file is
+  `wrangler.jsonc.example`): **ALL plain vars** — the KV namespace id,
+  `SESSION_TTL_SECONDS`, and the deployment vars `AGENCY_DOMAIN`,
+  `DEFAULT_SITE_ID`, `SITE_DOMAINS`, `SITE_OVERRIDES`. Because the file is
   ignored, `git pull` never touches it.
-- **Cloudflare dashboard vars** (Workers → `studio-clarte` → Settings →
-  Variables and Secrets): the **private deployment vars** — `AGENCY_DOMAIN`,
-  `DEFAULT_SITE_ID`, `SITE_DOMAINS`, `SITE_OVERRIDES`. ⚠️ **Never put these
-  in `wrangler.jsonc`**: a deploy would push the file values and overwrite
-  the dashboard (the classic pitfall that broke `studio.cedricv.com` once).
+
+  ⚠️ **Why plain vars MUST be in the file, not the dashboard**: in the Workers
+  **Versions & Deployments** model, plain vars are baked into each *version*.
+  Every `wrangler deploy` rebuilds the version from this file, so vars set
+  only in the dashboard are **silently dropped on the next deploy** — this
+  exact bug broke `studio.cedricv.com` twice ("Domain not configured" 404s).
 - **Secrets** (`VAULT_MASTER_KEY`, GitHub OAuth…) go through
-  `wrangler secret put` or the dashboard.
+  `wrangler secret put <NAME>` or the dashboard Secrets section. Secrets are
+  **worker-level** and DO survive deploys, so they stay out of the file.
+
+  > Safety net: `npm run deploy` = `astro build` → **config check**
+  > (`scripts/verify-deploy.mjs`) → `wrangler deploy` → **live smoke test**
+  > (fails if the site answers "Domain not configured").
 
 ### Deploy
 

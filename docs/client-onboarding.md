@@ -100,12 +100,15 @@ alourdit le repo). Le stockage R2 chez le client est le modèle recommandé :
 
 ## 6. Configuration webmaster (Studio) — add a NEW client (no code change)
 
-A brand-new client is added **purely via dashboard vars** — the registry treats
+A brand-new client is added **purely via config vars** — the registry treats
 any `SITE_OVERRIDES` entry whose id has no seed as a new site (`name`, `repo`,
-`framework`, `cdnDomain`, optional `theme`). **No redeploy needed for the config**
-(the dashboard vars apply immediately).
+`framework`, `cdnDomain`, optional `theme`). **A redeploy is required** (one
+command: `npm run deploy`).
 
-In the Cloudflare dashboard → `studio-clarte` → Settings → Variables and Secrets:
+⚠️ **In the gitignored local `wrangler.jsonc`** (NOT the dashboard — see the
+⚠️ note in [`wrangler.jsonc.example`](../wrangler.jsonc.example): dashboard-only
+plain vars are silently dropped by the next `wrangler deploy` because the
+Workers Versions model bakes vars into each version). Edit the `vars` section:
 
 **`SITE_DOMAINS`** (JSON string):
 ```json

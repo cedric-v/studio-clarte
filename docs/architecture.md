@@ -31,7 +31,7 @@ Publish ──▶ /api/commit-draft ──▶ branch draft/* + PR (never main)
 |---|---|---|
 | **Generator** | plan → one DeepSeek call per file, patch mode, final payload | `src/lib/generator.ts`, `ai.ts` |
 | **GitHub hands** | read/write site files, PRs, status | Octokit v22 (REST/GraphQL, edge) |
-| **Registry** | multi-tenant sites from env vars (`SITE_DOMAINS`, `SITE_OVERRIDES`) | `src/config/sites.ts` — new clients = dashboard vars only |
+| **Registry** | multi-tenant sites from env vars (`SITE_DOMAINS`, `SITE_OVERRIDES`) | `src/config/sites.ts` — new clients = vars in the gitignored `wrangler.jsonc` |
 | **Vault** | per-site keys, encrypted, write-only | AES-256-GCM, `VAULT_MASTER_KEY` |
 | **Storage** | images → client's R2 (or git fallback) | presigned uploads, R2 |
 | **State** | in-memory draft persisted in `sessionStorage` (C1) | `src/lib/client-state.ts` |
@@ -49,10 +49,14 @@ Publish ──▶ /api/commit-draft ──▶ branch draft/* + PR (never main)
    per-tenant isolation, reviewability, zero shared compute.
 3. **Zero direct commits on `main`.** Every change goes through a branch
    `draft/*` + a single final PR. The client validates and merges.
-4. **Configuration split (single source of truth).** Local `wrangler.jsonc`
-   (gitignored) holds only the KV id and `SESSION_TTL_SECONDS`; the private
-   deployment vars (`AGENCY_DOMAIN`, `SITE_DOMAINS`, `SITE_OVERRIDES`) live in
-   the **Cloudflare dashboard only** — a deploy never overwrites them.
+4. **Configuration split (single source of truth).** The gitignored local
+   `wrangler.jsonc` holds **all plain vars** (KV id, `SESSION_TTL_SECONDS`,
+   `AGENCY_DOMAIN`, `SITE_DOMAINS`, `SITE_OVERRIDES`); secrets live at the
+   worker level via `wrangler secret put`. ⚠️ In the Workers **Versions**
+   model, plain vars are part of each version: vars set only in the dashboard
+   are silently dropped on the next `wrangler deploy` (broke
+   `studio.cedricv.com` twice with "Domain not configured" 404s) — hence
+   vars live in the config file, secrets live in the dashboard.
 5. **No webmaster bucket.** Storage is per-client (their own R2, or git).
    Global keys fall back only for the agency site.
 6. **One final PR per session** (Approach A), not stacked per-change PRs.
