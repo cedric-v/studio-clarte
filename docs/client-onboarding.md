@@ -127,7 +127,7 @@ Puis :
 
 1. Ouvrir `https://studio.client-a.ch` → se connecter (ou basculer en Super-Admin).
 2. Générer un contenu → « Fichiers générés » rempli.
-3. « 💾 Créer la branche draft/* + PR » → PR créée (~1-2 s) → workflow de preview lancé.
+3. « 👁️ Créer la pré-visualisation » → PR + build de preview lancés (~1-2 s).
 4. « Voir la Preview ↗ » apparaît → valider visuellement.
 5. « 🚀 Valider & Fusionner en Prod » → squash & merge → la prod du client se déploie (après ses tests).
 
