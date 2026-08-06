@@ -102,13 +102,14 @@ export function buildFilePrompt(
     prompt.push(
       '',
       '## Le fichier existe déjà — ÉDITION MINIMALE OBLIGATOIRE',
-      `Voici le contenu ACTUEL de « ${path} » :`,
-      '---',
+      `Voici le contenu ACTUEL de « ${path} » (entre les deux marqueurs) :`,
+      '[DEBUT DU CONTENU EXISTANT]',
       originalContent,
-      '---',
+      '[FIN DU CONTENU EXISTANT]',
       '- Renvoie ce fichier COMPLET en ne modifiant QUE ce qui est demandé (ex: une date).',
       '- Conserve à l\'identité : le frontmatter (layout, permalink, locale, title, description…), la structure et tout le reste du contenu.',
       '- Ne réécris PAS le fichier de zéro, ne supprime pas de champs frontmatter, ne change pas les chemins ni les permalinks.',
+      '- N\'ajoute JAMAIS de ligne « --- » en plus : le frontmatter d\'origine doit rester exactement tel quel (un seul « --- » d\'ouverture, un seul de fermeture).',
     );
   }
 

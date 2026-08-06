@@ -193,10 +193,16 @@ export async function* runGeneration(
           typeof obj.content === 'string' &&
           obj.content.length > 0
         ) {
+          // Safety net: if the model duplicated the frontmatter opener
+          // (`---\n---` at the start), strip the extra line — otherwise
+          // Eleventy ignores the permalink and the build may conflict.
+          const content = obj.content.startsWith('---\n---\n')
+            ? obj.content.replace(/^---\n---\n/, '')
+            : obj.content;
           // `original` carries the pre-edit repo content so the client can
           // render a Diff view (what changed) for existing files.
           files.push(
-            originalContent ? { path: obj.path, content: obj.content, original: originalContent } : { path: obj.path, content: obj.content },
+            originalContent ? { path: obj.path, content, original: originalContent } : { path: obj.path, content },
           );
           ok = true;
         }
