@@ -172,6 +172,10 @@ example at [`docs/preview-cedricv.yml`](docs/preview-cedricv.yml) (this one is t
 ### Adding a client site
 
 Follow the step-by-step guide:
+**[`docs/architecture.md`](docs/architecture.md)** — system architecture,
+key decisions (ADR-lite) and **future evolutions** (visual preview
+verification, `@cloudflare/computer`…).
+
 **[`docs/client-onboarding.md`](docs/client-onboarding.md)** — naming conventions,
 Pages project, preview workflow, per-client R2 storage, DNS, vault keys, final test.
 
@@ -214,7 +218,7 @@ src/
 ├── middleware.ts     Host-based router · Super-Admin switcher · auth guard · headers
 ├── pages/            index (2 columns / mobile tabs) · login · api/*
 └── i18n/             FR/EN dictionary
-docs/                 client-onboarding.md · preview workflows (Pages / GitHub Actions)
+docs/                 architecture.md · client-onboarding.md · iteration-strategy.md · preview workflows
 ```
 
 ## 🔒 Security notes

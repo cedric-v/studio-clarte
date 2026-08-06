@@ -113,6 +113,9 @@ context) and C3 (KV snapshot) only if:
 
 ## C5 — Visual verification of previews (candidate, not yet needed)
 
+> Architecture-level view: see **E1/E2 in [`architecture.md`](architecture.md)** —
+> this section keeps the iteration-workflow angle.
+
 **Gap today**: the Studio detects that a preview *built* (GitHub check runs /
 `buildUrl`) but cannot *see* the rendered page. The agent never looks at the
 actual output.
