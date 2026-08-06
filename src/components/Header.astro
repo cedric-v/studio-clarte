@@ -73,6 +73,11 @@ const { lang } = Astro.locals;
 </header>
 
 <script>
+  import { getState, resetState, toast } from '../lib/client-state';
+  import { getClientLocale, t } from '../i18n';
+
+  const lang = getClientLocale();
+
   // Super-Admin site switcher: navigating to /?site=<id> sets the sc_site
   // cookie (middleware) and reloads with the new active site.
   document.getElementById('site-select')?.addEventListener('change', (event) => {
@@ -82,5 +87,45 @@ const { lang } = Astro.locals;
 
   document.getElementById('btn-open-settings')?.addEventListener('click', () => {
     window.dispatchEvent(new CustomEvent('sc:open-settings'));
+  });
+
+  // Session reset — progressive confirmation (click → confirm within 3.5 s).
+  // UX: no native confirm(); the button itself becomes the confirmation state.
+  const btnReset = document.getElementById('btn-reset') as HTMLButtonElement;
+  const resetLabel = document.getElementById('reset-label') as HTMLElement | null;
+  let confirmTimer: number | undefined;
+
+  function armReset() {
+    btnReset.classList.add('confirming');
+    if (resetLabel) resetLabel.textContent = t(lang, 'header.resetConfirm');
+    toast(
+      getState().workflow ? t(lang, 'toast.resetWarnPr') : t(lang, 'toast.resetWarn'),
+      'info',
+    );
+    confirmTimer = window.setTimeout(() => {
+      confirmTimer = undefined;
+      btnReset.classList.remove('confirming');
+      if (resetLabel) resetLabel.textContent = t(lang, 'header.reset');
+    }, 3500);
+  }
+
+  btnReset.addEventListener('click', () => {
+    if (confirmTimer !== undefined) {
+      // Second click → reset for real.
+      window.clearTimeout(confirmTimer);
+      confirmTimer = undefined;
+      btnReset.classList.remove('confirming');
+      if (resetLabel) resetLabel.textContent = t(lang, 'header.reset');
+      resetState();
+      window.dispatchEvent(new CustomEvent('sc:reset'));
+      toast(t(lang, 'toast.resetDone'), 'success');
+      return;
+    }
+    const state = getState();
+    if (!state.messages.length && !state.payload) {
+      toast(t(lang, 'toast.nothingToReset'), 'info');
+      return;
+    }
+    armReset();
   });
 </script>
