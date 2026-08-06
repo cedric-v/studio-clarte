@@ -126,7 +126,7 @@ Puis :
 ## 7. Test final
 
 1. Ouvrir `https://studio.client-a.ch` → se connecter (ou basculer en Super-Admin).
-2. Générer un contenu → « Fichiers générés » rempli.
+2. Générer un contenu → « Fichiers concernés » rempli.
 3. « 👁️ Créer la pré-visualisation » → PR + build de preview lancés (~1-2 s).
 4. « Voir la Preview ↗ » apparaît → valider visuellement.
 5. « 🚀 Valider & Fusionner en Prod » → squash & merge → la prod du client se déploie (après ses tests).
