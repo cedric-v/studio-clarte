@@ -70,6 +70,7 @@ export function buildPlanPrompt(site: SiteConfig): string {
     '- Pour MODIFIER une page existante : utilise listFiles/readFile pour trouver le bon chemin et comprendre le format existant.',
     '- Modifie/génère UNIQUEMENT les fichiers demandés — pas de versions non sollicitées.',
     '- SOIS CONCIS : aucune réflexion à voix haute, aucun texte autour du JSON.',
+    '- Si un « BROUILLON EN COURS » est fourni dans les messages, travaille sur CES fichiers (et non sur la version publiée du repo).',
   ].join('\n');
 }
 
@@ -96,6 +97,7 @@ export function buildFilePrompt(
     '}',
     '- Le JSON doit être strictement valide : échappe les guillemets et retours à la ligne (\\n).',
     '- Ne tronque JAMAIS le contenu : tu as toute la place pour ce seul fichier.',
+    '- Si tu modifies une DATE, corrige aussi le jour de la semaine correspondant (ex: le 28 août 2026 est un vendredi).',
   ];
 
   if (originalContent) {

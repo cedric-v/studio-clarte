@@ -292,6 +292,16 @@ const SUGGESTION_KEYS = ['chat.suggestion1', 'chat.suggestion2', 'chat.suggestio
     return depth > 0 || inString || escaped;
   }
 
+  /** Current draft as context so the AI iterates on it (not on main). */
+  function buildDraftContext(files: { path: string; content: string }[]): string {
+    return (
+      '[BROUILLON EN COURS — NON PUBLIÉ]\n' +
+      "Ce sont les fichiers du brouillon actuel (pas encore publié). Si l'utilisateur demande des ajustements, applique-les sur CES fichiers et renvoie-les COMPLETS.\n\n" +
+      files.map((file) => `### ${file.path}\n${file.content}`).join('\n\n') +
+      '\n[FIN DU BROUILLON]'
+    );
+  }
+
   /** Markdown reference of an image (CDN URL or relative repo path). */
   function imageMarkdown(img: { url?: string; ref?: string; alt: string }): string {
     return img.url ? `![${img.alt}](${img.url})` : `![${img.alt}](${img.ref ?? ''})`;
@@ -328,6 +338,15 @@ const SUGGESTION_KEYS = ['chat.suggestion1', 'chat.suggestion2', 'chat.suggestio
           : '') + message.content,
     }));
 
+    // Iteration support: attach the current un-published DRAFT so follow-up
+    // messages adjust THESE files (not the published repo version).
+    const draftContext = state.payload?.files?.length
+      ? buildDraftContext(state.payload.files)
+      : '';
+    const sendHistory = draftContext
+      ? [...history.slice(-11), { role: 'user', content: draftContext }]
+      : history.slice(-12);
+
     streaming = true;
     sendBtn.disabled = true;
     sendBtn.textContent = '…';
@@ -341,7 +360,7 @@ const SUGGESTION_KEYS = ['chat.suggestion1', 'chat.suggestion2', 'chat.suggestio
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ messages: history.slice(-12) }),
+        body: JSON.stringify({ messages: sendHistory, draft: state.payload?.files ?? [] }),
       });
       if (!res.ok) {
         const error = (await res.json().catch(() => null)) as { error?: string } | null;

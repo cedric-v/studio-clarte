@@ -96,6 +96,11 @@ export interface GenerationOptions {
    * original content so the model preserves frontmatter/structure.
    */
   readExisting?: (path: string) => Promise<{ content: string; size: number } | null>;
+  /**
+   * Current un-published DRAFT files (from the chat). Follow-up messages
+   * iterate on THESE files instead of the published repo version.
+   */
+  draft?: { path: string; content: string; original?: string }[];
 }
 
 export async function* runGeneration(
@@ -163,13 +168,21 @@ export async function* runGeneration(
     const target = targets[i];
     yield `\n\n**${i + 1}/${targets.length}** — \`${target.path}\``;
 
-    // Existing file → pass its current content so the model edits minimally
-    // (preserving frontmatter, permalinks, structure) instead of rewriting.
-    let originalContent: string | undefined;
-    if (opts.readExisting) {
+    // Edit base: the current DRAFT (follow-up messages) if present,
+    // otherwise the repo original. The diff base stays the REPO version.
+    let baseContent: string | undefined;
+    let originalForDiff: string | undefined;
+    const draftFile = opts.draft?.find((file) => file.path === target.path);
+    if (draftFile) {
+      baseContent = draftFile.content;
+      originalForDiff = draftFile.original;
+    } else if (opts.readExisting) {
       try {
         const existing = await opts.readExisting(target.path);
-        if (existing) originalContent = existing.content;
+        if (existing) {
+          baseContent = existing.content;
+          originalForDiff = existing.content;
+        }
       } catch (error) {
         console.warn(`[generator] unable to read ${target.path}:`, error);
       }
@@ -180,7 +193,7 @@ export async function* runGeneration(
       try {
         const result = await generateText({
           model,
-          system: buildFilePrompt(site, target.path, target.description, originalContent),
+          system: buildFilePrompt(site, target.path, target.description, baseContent),
           messages: [{ role: 'user', content: userText }] as never,
           temperature: 0.3,
           maxOutputTokens: 8192,
@@ -202,7 +215,7 @@ export async function* runGeneration(
           // `original` carries the pre-edit repo content so the client can
           // render a Diff view (what changed) for existing files.
           files.push(
-            originalContent ? { path: obj.path, content, original: originalContent } : { path: obj.path, content },
+            originalForDiff ? { path: obj.path, content, original: originalForDiff } : { path: obj.path, content },
           );
           ok = true;
         }

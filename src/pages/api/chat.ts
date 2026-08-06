@@ -33,6 +33,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   const body = (await request.json().catch(() => null)) as {
     messages?: ModelMessage[];
+    draft?: { path: string; content: string; original?: string }[];
   } | null;
   const messages = Array.isArray(body?.messages) ? body.messages : [];
   if (!messages.length) return json({ error: 'Parameter "messages" required' }, 400);
@@ -83,6 +84,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
         for await (const chunk of runGeneration(createDeepSeek(apiKey), site, {
           messages,
           tools,
+          draft: Array.isArray(body?.draft)
+            ? body.draft.filter((f) => typeof f.path === 'string' && typeof f.content === 'string')
+            : undefined,
           // For MINIMAL edits of existing files: the generator fetches the
           // current content and instructs the model to preserve it.
           readExisting: octokit
