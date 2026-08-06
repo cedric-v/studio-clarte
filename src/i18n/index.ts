@@ -75,8 +75,7 @@ const fr: Dictionary = {
   'chat.attach': 'Joindre une image',
   'chat.placeholder': 'Décrivez le contenu à créer… (Ctrl+V pour coller une image)',
   'chat.send': 'Envoyer ↵',
-  'chat.composerHint':
-    "Zero-Click Upload · WebP ≤1920px · DeepSeek génère l'alt text accessible",
+  'chat.composerHint': 'Collez ici les images que vous souhaitez intégrer',
   'chat.imageAlt': (name: string) => `Image téléversée — ${name}`,
   'chat.attachedImage': '(image jointe)',
   'chat.payloadNote':
@@ -247,8 +246,7 @@ const en: Dictionary = {
   'chat.attach': 'Attach an image',
   'chat.placeholder': 'Describe the content to create… (Ctrl+V to paste an image)',
   'chat.send': 'Send ↵',
-  'chat.composerHint':
-    'Zero-Click Upload · WebP ≤1920px · DeepSeek generates accessible alt text',
+  'chat.composerHint': 'Paste here the images you want to include',
   'chat.imageAlt': (name: string) => `Uploaded image — ${name}`,
   'chat.attachedImage': '(attached image)',
   'chat.payloadNote':
