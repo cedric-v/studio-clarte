@@ -202,9 +202,9 @@ button {
   grid-column: 3;
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: 16px;
-  overflow-y: auto;
+  gap: 12px;
+  padding: 12px;
+  overflow-y: auto; /* fallback when the panels' min-heights exceed the pane */
 }
 
 body.resizing {
@@ -705,12 +705,17 @@ body.resizing * {
 }
 
 .panel-preview {
-  flex: 1 1 auto;
-  min-height: 280px;
+  /* The preview shares the column with the publish panel: it scrolls
+     internally (file view / editor) instead of swallowing the whole height. */
+  flex: 1 1 55%;
+  min-height: 240px;
+  max-height: 70%;
 }
 
 .panel-workflow {
   flex: 0 1 auto;
+  min-height: 240px;
+  overflow-y: auto;
 }
 
 .panel-header {
@@ -718,8 +723,9 @@ body.resizing * {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 14px 16px;
+  padding: 12px 14px;
   border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
 }
 .panel-header h2 {
   font-size: 15px;
@@ -747,12 +753,21 @@ body.resizing * {
 }
 
 /* File tabs */
+.preview-root {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
 .file-tabs {
   display: flex;
   gap: 4px;
-  padding: 10px 12px 0;
+  padding: 8px 12px 0;
   overflow-x: auto;
   border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
 }
 .file-tab {
   display: flex;
@@ -786,9 +801,10 @@ body.resizing * {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 12px;
+  padding: 8px 12px;
   border-bottom: 1px solid var(--border-color);
   flex-wrap: wrap;
+  flex-shrink: 0;
 }
 .file-path {
   margin-left: auto;
@@ -1618,11 +1634,12 @@ body.resizing * {
     padding: 12px;
   }
   .panel-preview {
-    min-height: 0;
     flex: 1 1 60%;
+    min-height: 240px;
   }
   .panel-workflow {
-    flex: 0 1 40%;
+    flex: 0 1 auto;
+    min-height: 220px;
   }
 }
 
