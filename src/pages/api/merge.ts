@@ -1,6 +1,5 @@
 import type { APIRoute } from 'astro';
 import { createOctokit, mergePR } from '../../lib/github-edge';
-import { resolveSecret } from '../../lib/vault';
 
 /**
  * POST /api/merge — Final validation: squash & merge to `main`,
@@ -25,12 +24,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return json({ error: 'Parameter "prNumber" required' }, 400);
   }
 
-  const pat =
-    locals.user?.token ?? (await resolveSecret(locals.env, site, 'GITHUB_PAT'));
-  if (!pat) return json({ error: 'GITHUB_PAT not configured for this site' }, 400);
+  const gitToken = locals.user?.token;
+  if (!gitToken) {
+    return json({ error: 'Authentification requise — reconnectez-vous pour valider le merge.' }, 401);
+  }
 
   try {
-    const result = await mergePR(createOctokit(pat), site.repo, prNumber, 'squash');
+    const result = await mergePR(createOctokit(gitToken), site.repo, prNumber, 'squash');
     return json(result);
   } catch (error) {
     console.error('[merge]', error);

@@ -1,6 +1,5 @@
 import type { APIRoute } from 'astro';
 import { createDraftPR, createOctokit, type DraftFile } from '../../lib/github-edge';
-import { resolveSecret } from '../../lib/vault';
 
 /**
  * POST /api/commit-draft — Runs on Cloudflare Compute.
@@ -55,12 +54,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return json({ error: 'Payload too large' }, 413);
   }
 
-  const pat =
-    locals.user?.token ?? (await resolveSecret(locals.env, site, 'GITHUB_PAT'));
-  if (!pat) {
+  // Every git action runs with the logged-in collaborator's own OAuth token
+  // (no GITHUB_PAT — legacy shared identity that broke attribution).
+  const gitToken = locals.user?.token;
+  if (!gitToken) {
     return json(
-      { error: 'GITHUB_PAT not configured for this site — add it in ⚙️ Settings.' },
-      400,
+      { error: 'Authentification requise — reconnectez-vous pour créer la preview.' },
+      401,
     );
   }
 
@@ -72,7 +72,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const checklist = files.map((file) => `- [ ] \`${file.path}\``).join('\n');
 
   try {
-    const draft = await createDraftPR(createOctokit(pat), site.repo, files, {
+    const draft = await createDraftPR(createOctokit(gitToken), site.repo, files, {
       title,
       base: site.defaultBranch,
       body: [

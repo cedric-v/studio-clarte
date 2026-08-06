@@ -17,7 +17,6 @@ const IV_BYTES = 12;
 
 export const SECRET_KEYS = [
   'DEEPSEEK_API_KEY',
-  'GITHUB_PAT',
   'R2_ACCESS_KEY_ID',
   'R2_SECRET_ACCESS_KEY',
   // Per-site GitHub OAuth (client self-login on their own subdomain).
@@ -186,7 +185,7 @@ export async function resolveSecret(
   const vault = await decryptVault(env, site.id);
   if (vault[name]) return vault[name];
   if (site.isAgency) {
-    // Env fallback only exists for schema fields (DEEPSEEK_API_KEY / GITHUB_PAT);
+    // Env fallback only exists for schema fields (DEEPSEEK_API_KEY);
     // the R2 keys are vault-only (dedicated per-site storage).
     return (env as unknown as Record<string, string | undefined>)[name];
   }

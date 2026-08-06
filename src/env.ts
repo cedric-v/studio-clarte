@@ -18,7 +18,6 @@ export const EnvSchema = z.object({
 
   // ── Global fallbacks (site not configured in the vault) ──────────
   DEEPSEEK_API_KEY: z.string().optional(),
-  GITHUB_PAT: z.string().optional(),
 
   // ── GitHub OAuth (collaborator authentication) ───────────────────
   OAUTH_GITHUB_CLIENT_ID: z.string().optional(),

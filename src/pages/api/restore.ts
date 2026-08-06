@@ -1,6 +1,5 @@
 import type { APIRoute } from 'astro';
 import { createOctokit, getParentSha, restoreToCommit } from '../../lib/github-edge';
-import { resolveSecret } from '../../lib/vault';
 
 /**
  * POST /api/restore — Emergency rollback to a previous production version.
@@ -33,12 +32,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return json({ error: 'Parameter "sha" (restore to a version) or "revert" (undo a commit) required' }, 400);
   }
 
-  const pat =
-    locals.user?.token ?? (await resolveSecret(locals.env, site, 'GITHUB_PAT'));
-  if (!pat) return json({ error: 'GITHUB_PAT not configured for this site' }, 400);
+  const gitToken = locals.user?.token;
+  if (!gitToken) {
+    return json({ error: 'Authentification requise — reconnectez-vous pour agir sur le dépôt.' }, 401);
+  }
 
   try {
-    const octokit = createOctokit(pat);
+    const octokit = createOctokit(gitToken);
     const target = sha ?? (revert ? await getParentSha(octokit, site.repo, revert) : null);
     if (!target) return json({ error: 'Invalid target version' }, 400);
 

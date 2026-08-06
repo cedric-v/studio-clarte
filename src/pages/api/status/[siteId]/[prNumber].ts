@@ -1,7 +1,6 @@
 import type { APIRoute } from 'astro';
 import { canAccessSite, getSiteById } from '../../../../config/sites';
 import { createOctokit, getPRStatus } from '../../../../lib/github-edge';
-import { resolveSecret } from '../../../../lib/vault';
 
 /**
  * GET /api/status/[siteId]/[prNumber] — Polls the Cloudflare Pages preview
@@ -38,12 +37,13 @@ export const GET: APIRoute = async ({ params, locals }) => {
     return json({ error: 'Forbidden' }, 403);
   }
 
-  const pat =
-    locals.user?.token ?? (await resolveSecret(locals.env, site, 'GITHUB_PAT'));
-  if (!pat) return json({ error: 'GITHUB_PAT not configured for this site' }, 400);
+  const gitToken = locals.user?.token;
+  if (!gitToken) {
+    return json({ error: 'Authentification requise — reconnectez-vous pour agir sur le dépôt.' }, 401);
+  }
 
   try {
-    const status = await getPRStatus(createOctokit(pat), site.repo, prNumber);
+    const status = await getPRStatus(createOctokit(gitToken), site.repo, prNumber);
     return json(status);
   } catch (error) {
     console.error('[status]', error);

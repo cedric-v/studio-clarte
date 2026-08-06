@@ -189,11 +189,8 @@ const fr: Dictionary = {
   'settings.note':
     'Clés chiffrées en AES-256-GCM (Cloudflare KV) et stockées en write-only : une fois enregistrées, elles ne peuvent jamais être relues, affichées en clair ni copiées.',
   'settings.fieldDeepseek': 'DeepSeek (moteur IA)',
-  'settings.fieldGithub': 'GitHub (Git Engine)',
   'settings.placeholderDeepseek': 'sk-… (écrire une nouvelle valeur pour remplacer)',
-  'settings.placeholderGithub': 'github_pat_… (écrire une nouvelle valeur pour remplacer)',
   'settings.hintDeepseek': 'Utilisée pour générer la structure de contenu du site.',
-  'settings.hintGithub': 'PAT avec scope repo : création des branches draft/* et des PR.',
   'settings.sectionR2': '🖼️ Images — stockage R2 du client',
   'settings.r2GuideTitle': 'Comment configurer le stockage R2 du client',
   'settings.r2StatusConfigured': 'R2 client configuré — upload direct',
@@ -377,11 +374,8 @@ const en: Dictionary = {
   'settings.note':
     'Keys are encrypted with AES-256-GCM (Cloudflare KV) and stored write-only: once saved, they can never be read back, displayed in plaintext, or copied.',
   'settings.fieldDeepseek': 'DeepSeek (AI engine)',
-  'settings.fieldGithub': 'GitHub (Git Engine)',
   'settings.placeholderDeepseek': 'sk-… (type a new value to replace)',
-  'settings.placeholderGithub': 'github_pat_… (type a new value to replace)',
   'settings.hintDeepseek': 'Used to generate the site content structure.',
-  'settings.hintGithub': 'PAT with repo scope: draft/* branch and PR creation.',
   'settings.sectionR2': '🖼️ Images — client R2 storage',
   'settings.r2GuideTitle': 'How to configure client R2 storage',
   'settings.r2StatusConfigured': 'Client R2 configured — direct upload',

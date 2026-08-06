@@ -1,6 +1,5 @@
 import type { APIRoute } from 'astro';
 import { createOctokit, getBranchHistory } from '../../lib/github-edge';
-import { resolveSecret } from '../../lib/vault';
 
 /**
  * GET /api/history — Production version history (recent commits on the
@@ -19,12 +18,16 @@ export const GET: APIRoute = async ({ locals }) => {
   const site = locals.siteConfig;
   if (!site) return json({ error: 'Unknown site' }, 404);
 
-  const pat =
-    locals.user?.token ?? (await resolveSecret(locals.env, site, 'GITHUB_PAT'));
-  if (!pat) return json({ error: 'GITHUB_PAT not configured for this site' }, 400);
+  // Every git action runs with the logged-in collaborator's own OAuth token:
+  // commits/PRs/merges are attributed to THEM (no GITHUB_PAT — it was a
+  // legacy shared identity that broke per-collaborator attribution).
+  const gitToken = locals.user?.token;
+  if (!gitToken) {
+    return json({ error: 'Authentification requise — reconnectez-vous pour agir sur le dépôt.' }, 401);
+  }
 
   try {
-    const commits = await getBranchHistory(createOctokit(pat), site.repo, site.defaultBranch, 10);
+    const commits = await getBranchHistory(createOctokit(gitToken), site.repo, site.defaultBranch, 10);
     return json({ branch: site.defaultBranch, head: commits[0]?.sha ?? null, commits });
   } catch (error) {
     console.error('[history]', error);

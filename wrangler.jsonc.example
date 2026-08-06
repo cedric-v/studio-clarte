@@ -13,7 +13,7 @@
   //     SESSION_TTL_SECONDS, AND the deployment vars (AGENCY_DOMAIN,
   //     DEFAULT_SITE_ID, SITE_DOMAINS, SITE_OVERRIDES).
   //   • `wrangler secret put <NAME>` (or the dashboard SECRETS section):
-  //     secrets only — VAULT_MASTER_KEY, DEEPSEEK_API_KEY, GITHUB_PAT,
+  //     secrets only — VAULT_MASTER_KEY, DEEPSEEK_API_KEY,
   //     OAUTH_GITHUB_CLIENT_ID/SECRET, ALLOWED_GITHUB_LOGINS.
   //
   // ⚠️ WHY plain vars MUST be here and NOT in the dashboard:
@@ -44,7 +44,7 @@
     "SESSION_TTL_SECONDS": 604800
   }
   // ── Secrets — `npx wrangler secret put <NAME>` (or dashboard Secrets) ─────────
-  //   VAULT_MASTER_KEY, DEEPSEEK_API_KEY, GITHUB_PAT, OAUTH_GITHUB_CLIENT_ID,
+  //   VAULT_MASTER_KEY, DEEPSEEK_API_KEY, OAUTH_GITHUB_CLIENT_ID,
   //   OAUTH_GITHUB_CLIENT_SECRET, ALLOWED_GITHUB_LOGINS
   //
   // Storage model: DEDICATED per-site R2, no webmaster bucket.
