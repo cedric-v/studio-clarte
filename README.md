@@ -73,12 +73,12 @@ neither gives you the *safe pipeline* in between. Studio Clarté connects both.
 - **Client-owned storage** — images go to **the client's own R2 bucket** (their
   account, their costs) via presigned URLs, or fall back to being committed in
   git. Your Worker never transits a single media byte.
-- **Write-only key vault** — client API keys (DeepSeek, GitHub PAT, R2) are
+- **Write-only key vault** — client API keys (DeepSeek, R2, GitHub OAuth) are
   encrypted (AES-256-GCM) and only ever displayed masked: `sk-••••••••1234`.
   Global fallbacks are reserved for the agency site — clients bring their own keys.
 - **Security-first** — Gitleaks pre-commit/pre-push hooks, security headers,
-  XSS-hardened rendering, path traversal protection, GitHub OAuth with optional
-  allow-list.
+  XSS-hardened rendering, path traversal protection, GitHub OAuth: authorization
+  = repo access (owner/collaborator), optional per-site allow-list.
 
 ---
 

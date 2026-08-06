@@ -99,7 +99,10 @@ not for text edits.
   vault keys; the Super-Admin switcher is the only cross-site view.
 - Vault is write-only (keys masked `sk-••••••••1234`); the master key is a
   Worker secret.
-- GitHub OAuth with an allowlist (`ALLOWED_GITHUB_LOGINS`).
+- GitHub OAuth: authorization = **repo access** (the account must be owner/
+  collaborator on the site repo, checked at login) ; an optional **per-site**
+  allow-list (`ALLOWED_GITHUB_LOGINS` in the site vault) can restrict further
+  (the global env var applies to the agency only).
 - Gitleaks pre-commit/pre-push hooks; security headers in middleware.
 - Previews never touch production; publishing is PR-gated by human validation.
 
