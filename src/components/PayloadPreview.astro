@@ -202,31 +202,34 @@ const { lang } = Astro.locals;
       }
     }
 
-    const changes: DiffLine[] = [];
+    // Group changes into hunks: a new hunk starts when unchanged lines were
+    // skipped between changes (a replace = del+add stays in ONE hunk).
+    const hunks: DiffLine[][] = [];
+    let gap = true;
+    const push = (line: DiffLine) => {
+      if (gap || !hunks.length) hunks.push([line]);
+      else hunks[hunks.length - 1].push(line);
+      gap = false;
+    };
+
     let i = 0;
     let j = 0;
     while (i < n && j < m) {
       if (A[i] === B[j]) {
         i++;
         j++;
+        gap = true;
       } else if (dp[i + 1][j] >= dp[i][j + 1]) {
-        changes.push({ type: 'del', oldLine: i + 1, newLine: null, text: A[i] });
+        push({ type: 'del', oldLine: i + 1, newLine: null, text: A[i] });
         i++;
       } else {
-        changes.push({ type: 'add', oldLine: null, newLine: j + 1, text: B[j] });
+        push({ type: 'add', oldLine: null, newLine: j + 1, text: B[j] });
         j++;
       }
     }
-    while (i < n) changes.push({ type: 'del', oldLine: i + 1, newLine: null, text: A[i++] });
-    while (j < m) changes.push({ type: 'add', oldLine: null, newLine: j + 1, text: B[j++] });
+    while (i < n) push({ type: 'del', oldLine: i + 1, newLine: null, text: A[i++] });
+    while (j < m) push({ type: 'add', oldLine: null, newLine: j + 1, text: B[j++] });
 
-    // Group consecutive changes into hunks (separator between hunks).
-    const hunks: DiffLine[][] = [];
-    for (const line of changes) {
-      const last = hunks[hunks.length - 1];
-      if (!last || last[last.length - 1].type !== line.type) hunks.push([line]);
-      else last.push(line);
-    }
     return hunks;
   }
 
