@@ -164,6 +164,11 @@ Follow the step-by-step guide:
 **[`docs/client-onboarding.md`](docs/client-onboarding.md)** — naming conventions,
 Pages project, preview workflow, per-client R2 storage, DNS, vault keys, final test.
 
+> 🧠 **Iteration architecture**: content is edited in an in-memory draft and
+> published as a **single PR** at the end. The alternative designs (PR per
+> change, persisted draft) are compared and documented in
+> [`docs/iteration-strategy.md`](docs/iteration-strategy.md).
+
 ---
 
 ## 🔌 API
