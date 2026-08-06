@@ -1,9 +1,10 @@
 # Studio Clarté — AI content studio for static sites
 
-> **Generate. Review. Preview. Publish.** — an open-source, multi-tenant, white-label
-> AI studio for teams that publish content on static sites (Astro, Eleventy, any
-> static stack). The AI does the heavy lifting, a human keeps the final say,
-> and every change goes through a safe preview → publish pipeline.
+> **Generate. Review. Preview. Publish.** — an open-source AI content studio for
+> static sites (Astro, Eleventy, any static stack). Built for **single site
+> owners** and for **agencies running a white-label service for many clients**
+> (multi-tenant by design). The AI does the heavy lifting, a human keeps the
+> final say, and every change goes through a safe preview → publish pipeline.
 
 **Stack** : Astro SSR on Cloudflare Workers · DeepSeek (`deepseek-chat`) ·
 Direct Git API (Octokit) · Cloudflare R2 · AES-256-GCM key vault · Vanilla CSS ·
@@ -26,8 +27,14 @@ i18n FR/EN. **License** : BSD 3-Clause.
 | Rollback / undo publish | ✅ | ❌ | ✅ restore any previous version |
 
 **In short** : CMS editors give you editing, chat AIs give you generation, but
-neither gives you the *safe pipeline* in between. Studio Clarté connects both —
-and it is designed to run **for an agency serving many clients**, not a single site.
+neither gives you the *safe pipeline* in between. Studio Clarté connects both.
+
+**It fits both use cases** :
+- a **single site owner** — run it for your own site (like a personal content
+  studio with AI generation + safe publishing) ;
+- an **agency serving many clients** — one deployment, one white-label studio
+  subdomain per client, with Super-Admin switching, per-client repos and
+  client-owned storage.
 
 ---
 
