@@ -1,5 +1,10 @@
 # Studio Clarté — AI content studio for static sites
 
+<p align="center">
+  <a href="https://studio-clarte.cedricv.com/"><img src="https://img.shields.io/badge/website-studio--clarte.cedricv.com-2563eb?style=flat-square" alt="Website"></a>
+  <a href="https://github.com/cedric-v/studio-clarte/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-BSD--3--Clause-green?style=flat-square" alt="License"></a>
+</p>
+
 > **Generate. Review. Preview. Publish.** — an open-source AI content studio for
 > static sites (Astro, Eleventy, any static stack). Built for **single site
 > owners** and for **agencies running a white-label service for many clients**
