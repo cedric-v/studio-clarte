@@ -46,9 +46,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
     );
   }
 
-  // Git token for the read tools (site vault > global fallback > session).
+  // Git token for the read tools: the logged-in collaborator's OAuth token
+  // first (per-user attribution), the site/global PAT as a fallback.
   const gitToken =
-    (await resolveSecret(locals.env, site, 'GITHUB_PAT')) ?? locals.user?.token ?? undefined;
+    locals.user?.token ?? (await resolveSecret(locals.env, site, 'GITHUB_PAT'));
   const octokit = gitToken ? createOctokit(gitToken) : null;
 
   const tools =

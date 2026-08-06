@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import type { SessionUser } from '../../../env';
+import { resolveOAuthCredentials } from '../../../lib/vault';
 
 /**
  * GET /api/auth/callback — Exchanges the OAuth code for a GitHub token,
@@ -32,7 +33,10 @@ export const GET: APIRoute = async ({ locals, cookies, redirect, url }) => {
   if (!storedRaw) return json({ error: 'Invalid or expired OAuth state' }, 400);
   if (kv) await kv.delete(`oauth:${state}`);
 
-  if (!env.OAUTH_GITHUB_CLIENT_ID || !env.OAUTH_GITHUB_CLIENT_SECRET) {
+  // Same resolution as /api/auth/login: the site's OWN OAuth app when
+  // configured in the vault, else the global env app (agency domain).
+  const oauth = await resolveOAuthCredentials(env, locals.siteConfig);
+  if (!oauth?.clientId || !oauth.clientSecret) {
     return json({ error: 'GitHub OAuth not configured' }, 500);
   }
 
@@ -41,8 +45,8 @@ export const GET: APIRoute = async ({ locals, cookies, redirect, url }) => {
     method: 'POST',
     headers: { 'content-type': 'application/json', accept: 'application/json' },
     body: JSON.stringify({
-      client_id: env.OAUTH_GITHUB_CLIENT_ID,
-      client_secret: env.OAUTH_GITHUB_CLIENT_SECRET,
+      client_id: oauth.clientId,
+      client_secret: oauth.clientSecret,
       code,
     }),
   });

@@ -139,8 +139,10 @@ Workers Versions model bakes vars into each version). Edit the `vars` section:
 
 Puis :
 - [ ] **Domaine custom** sur le Worker : `studio.client-a.ch` (Workers → studio-clarte → Domains & Routes).
-- [ ] **OAuth GitHub** (si le client se connecte lui-même) : callback `https://studio.client-a.ch/api/auth/callback` (ajouté dans l'OAuth App existante).
-- [ ] **Coffre-fort** du site : coller `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` du client (étape 5). Le client peut aussi y saisir sa propre clé DeepSeek et son `GITHUB_PAT` (aucun frais pour vous).
+- [ ] **OAuth GitHub** (si le client se connecte lui-même) : une OAuth App GitHub n'accepte qu'**une seule callback URL** — l'app globale ne fonctionne que sur le domaine de l'agence. Pour le self-login du client sur son sous-domaine : créer une **2ᵉ OAuth App** (callback `https://studio.client-a.ch/api/auth/callback`), puis saisir `OAUTH_GITHUB_CLIENT_ID` / `OAUTH_GITHUB_CLIENT_SECRET` dans le coffre-fort du site (⚙️ Paramètres, section « Connexion ») — sans changement de code depuis la v0.6 (résolution par site, fallback global).
+- [ ] **Coffre-fort** du site : coller `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` du client (étape 5). Le client peut aussi y saisir sa propre clé DeepSeek.
+  - **`GITHUB_PAT` : à laisser VIDE pour l'attribution par collaborateur** (chaque contributeur se connecte avec son compte GitHub, et les commits/PR/merges portent son nom).
+  - Ne renseigner un `GITHUB_PAT` que pour une **identité partagée** (compte de service) : dans ce cas TOUS les commits/PR/merges sont attribués au propriétaire du PAT, quel que soit le contributeur connecté.
 
 ---
 
