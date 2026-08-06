@@ -884,6 +884,61 @@ body.resizing * {
 }
 
 /* Coloration JSON (vue code) */
+/* Vue Différence */
+.diff-empty {
+  color: var(--text-muted);
+  padding: 12px 0;
+  font-size: 13px;
+}
+.diff-view {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+.diff-sep {
+  text-align: center;
+  color: var(--text-faint);
+  padding: 2px 0;
+  user-select: none;
+}
+.diff-line {
+  display: flex;
+  gap: 10px;
+  padding: 0 8px;
+  border-radius: 2px;
+}
+.diff-line code {
+  white-space: pre-wrap;
+  word-break: break-word;
+  flex: 1;
+}
+.diff-num {
+  color: var(--text-faint);
+  min-width: 3ch;
+  text-align: right;
+  user-select: none;
+  flex-shrink: 0;
+}
+.diff-sign {
+  flex-shrink: 0;
+  width: 1.2ch;
+  user-select: none;
+}
+.diff-add {
+  background: color-mix(in srgb, var(--color-success) 16%, transparent);
+  color: #a7f3d0;
+}
+.diff-add .diff-sign {
+  color: var(--color-success);
+}
+.diff-del {
+  background: color-mix(in srgb, var(--color-danger) 16%, transparent);
+  color: #fecaca;
+}
+.diff-del .diff-sign {
+  color: var(--color-danger);
+}
+
 .tok-key {
   color: #7dd3fc;
 }

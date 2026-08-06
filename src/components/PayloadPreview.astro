@@ -17,6 +17,9 @@ const { lang } = Astro.locals;
       <button type="button" role="tab" data-view="code" aria-selected="false">
         {t(lang, 'preview.code')}
       </button>
+      <button type="button" role="tab" data-view="diff" aria-selected="false">
+        {t(lang, 'preview.diff')}
+      </button>
     </div>
   </div>
 
@@ -83,8 +86,14 @@ const { lang } = Astro.locals;
 
   let files: PayloadFile[] = [];
   let active = 0;
-  let viewMode: 'visual' | 'code' = 'visual';
+  let viewMode: 'visual' | 'code' | 'diff' = 'visual';
   let editing = false;
+
+  // Base for the Diff view: repo original (existing files) or the snapshot
+  // taken before the first manual edit (new files).
+  const diffBaseOf = (file: PayloadFile): string | undefined =>
+    file.original ?? file.diffBase;
+  const canDiff = (file: PayloadFile): boolean => Boolean(diffBaseOf(file));
 
   const isMarkdown = (path: string) => /\.(md|mdx|markdown)$/i.test(path);
   const isJson = (path: string) => /\.json$/i.test(path);
@@ -135,6 +144,12 @@ const { lang } = Astro.locals;
     const file = files[active];
     if (!file) return;
     pathEl.textContent = file.path;
+    updateDiffToggle(file);
+
+    if (viewMode === 'diff') {
+      renderDiff(file);
+      return;
+    }
 
     // Git-fallback image: preview the base64 content directly.
     if (file.base64 && isImageFile(file.path)) {
@@ -165,6 +180,100 @@ const { lang } = Astro.locals;
     return src.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 
+  // ── Diff view ────────────────────────────────────────────────────
+  interface DiffLine {
+    type: 'add' | 'del';
+    oldLine: number | null;
+    newLine: number | null;
+    text: string;
+  }
+
+  /** Line diff (LCS): returns ONLY the changed lines, grouped into hunks. */
+  function diffLines(a: string, b: string): DiffLine[][] {
+    const A = a.split('\n');
+    const B = b.split('\n');
+    const n = A.length;
+    const m = B.length;
+
+    const dp: number[][] = Array.from({ length: n + 1 }, () => new Array<number>(m + 1).fill(0));
+    for (let i = n - 1; i >= 0; i--) {
+      for (let j = m - 1; j >= 0; j--) {
+        dp[i][j] = A[i] === B[j] ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1]);
+      }
+    }
+
+    const changes: DiffLine[] = [];
+    let i = 0;
+    let j = 0;
+    while (i < n && j < m) {
+      if (A[i] === B[j]) {
+        i++;
+        j++;
+      } else if (dp[i + 1][j] >= dp[i][j + 1]) {
+        changes.push({ type: 'del', oldLine: i + 1, newLine: null, text: A[i] });
+        i++;
+      } else {
+        changes.push({ type: 'add', oldLine: null, newLine: j + 1, text: B[j] });
+        j++;
+      }
+    }
+    while (i < n) changes.push({ type: 'del', oldLine: i + 1, newLine: null, text: A[i++] });
+    while (j < m) changes.push({ type: 'add', oldLine: null, newLine: j + 1, text: B[j++] });
+
+    // Group consecutive changes into hunks (separator between hunks).
+    const hunks: DiffLine[][] = [];
+    for (const line of changes) {
+      const last = hunks[hunks.length - 1];
+      if (!last || last[last.length - 1].type !== line.type) hunks.push([line]);
+      else last.push(line);
+    }
+    return hunks;
+  }
+
+  function updateDiffToggle(file: PayloadFile) {
+    const btn = document.querySelector('[data-view="diff"]') as HTMLButtonElement | null;
+    if (!btn) return;
+    const disabled = !canDiff(file);
+    btn.disabled = disabled;
+    if (disabled && viewMode === 'diff') {
+      viewMode = 'visual';
+      document.querySelector('[data-view="visual"]')?.classList.add('active');
+      btn.classList.remove('active');
+      document.querySelector('[data-view="visual"]')?.setAttribute('aria-selected', 'true');
+      btn.setAttribute('aria-selected', 'false');
+    }
+  }
+
+  function renderDiff(file: PayloadFile) {
+    const base = diffBaseOf(file);
+    if (base === undefined || base === file.content) {
+      viewEl.innerHTML = `<p class="diff-empty">${t(lang, 'preview.diffEmpty')}</p>`;
+      return;
+    }
+    const hunks = diffLines(base, file.content);
+    if (!hunks.length) {
+      viewEl.innerHTML = `<p class="diff-empty">${t(lang, 'preview.diffEmpty')}</p>`;
+      return;
+    }
+    viewEl.innerHTML =
+      `<div class="diff-view">` +
+      hunks
+        .map(
+          (hunk) =>
+            `<div class="diff-hunk">` +
+            hunk
+              .map((line) => {
+                const num = line.type === 'add' ? line.newLine : line.oldLine;
+                const sign = line.type === 'add' ? '+' : '-';
+                return `<div class="diff-line diff-${line.type}"><span class="diff-num">${num ?? ''}</span><span class="diff-sign">${sign}</span><code>${escapeHtml(line.text) || ' '}</code></div>`;
+              })
+              .join('') +
+            `</div>`,
+        )
+        .join('<div class="diff-sep">⋯</div>') +
+      `</div>`;
+  }
+
   // ── Manual editing (PagesCMS-style) ──────────────────────────────
   function exitEdit() {
     editing = false;
@@ -185,6 +294,8 @@ const { lang } = Astro.locals;
   editBtn.addEventListener('click', () => {
     const file = files[active];
     if (!file || (file.base64 && isImageFile(file.path))) return;
+    // Snapshot the pre-edit content so the Diff stays meaningful after saving.
+    if (!file.original && !file.diffBase) file.diffBase = file.content;
     editing = true;
     editorEl.value = file.content;
     editorEl.hidden = false;
@@ -229,11 +340,18 @@ const { lang } = Astro.locals;
     }
   });
 
-  // Visual / code toggle
+  // Visual / code / diff toggle
   document.getElementById('view-toggle')?.addEventListener('click', (event) => {
     const button = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-view]');
-    if (!button) return;
-    viewMode = button.dataset.view === 'code' ? 'code' : 'visual';
+    if (!button || button.disabled) return;
+    const next = button.dataset.view === 'code' ? 'code' : button.dataset.view === 'diff' ? 'diff' : 'visual';
+    if (next === 'diff' && !canDiff(files[active])) {
+      window.dispatchEvent(
+        new CustomEvent('sc:toast', { detail: { message: t(lang, 'preview.noDiff'), type: 'info' } }),
+      );
+      return;
+    }
+    viewMode = next;
     document.querySelectorAll('#view-toggle [data-view]').forEach((el) => {
       el.classList.toggle('active', el === button);
       el.setAttribute('aria-selected', String(el === button));

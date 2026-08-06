@@ -115,6 +115,9 @@ const fr: Dictionary = {
     `${n} fichier(s) · ${kb} Ko · ${title}`,
   'preview.copied': (path: string) => `« ${path} » copié ✓`,
   'preview.copyFailed': 'Copie impossible',
+  'preview.diff': 'Différence',
+  'preview.diffEmpty': 'Aucune modification',
+  'preview.noDiff': 'Ce fichier est nouveau — aucune différence à afficher',
 
   // ── Workflow (simplifié client) ─────────────────────────────────
   'workflow.title': '🚀 Publication',
@@ -286,6 +289,9 @@ const en: Dictionary = {
     `${n} file(s) · ${kb} KB · ${title}`,
   'preview.copied': (path: string) => `« ${path} » copied ✓`,
   'preview.copyFailed': 'Copy failed',
+  'preview.diff': 'Diff',
+  'preview.diffEmpty': 'No changes',
+  'preview.noDiff': 'This is a new file — nothing to diff',
 
   'workflow.title': '🚀 Publishing',
   'workflow.sub': 'Preview then safely publish your changes.',

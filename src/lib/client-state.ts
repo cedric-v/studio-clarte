@@ -13,6 +13,10 @@ export interface PayloadFile {
   base64?: boolean;
   /** True when the human manually edited the content in the preview panel. */
   modified?: boolean;
+  /** Pre-edit repo content (existing files) — powers the Diff view. */
+  original?: string;
+  /** Snapshot of the content before the first manual edit (new files). */
+  diffBase?: string;
 }
 
 export interface GeneratedPayload {

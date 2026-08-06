@@ -21,10 +21,17 @@ export interface FileTarget {
   description: string;
 }
 
+interface PayloadFile {
+  path: string;
+  content: string;
+  /** Pre-edit repo content (existing files) — powers the Diff view. */
+  original?: string;
+}
+
 interface Payload {
   title: string;
   summary: string;
-  files: { path: string; content: string }[];
+  files: PayloadFile[];
 }
 
 const MAX_FILES = 8;
@@ -149,7 +156,7 @@ export async function* runGeneration(
   }
 
   // ── Step 2: generate each file in its own call ────────────────────
-  const files: { path: string; content: string }[] = [];
+  const files: PayloadFile[] = [];
   yield `📄 Génération de ${targets.length} fichier(s)…`;
 
   for (let i = 0; i < targets.length; i++) {
@@ -186,7 +193,11 @@ export async function* runGeneration(
           typeof obj.content === 'string' &&
           obj.content.length > 0
         ) {
-          files.push({ path: obj.path, content: obj.content });
+          // `original` carries the pre-edit repo content so the client can
+          // render a Diff view (what changed) for existing files.
+          files.push(
+            originalContent ? { path: obj.path, content: obj.content, original: originalContent } : { path: obj.path, content: obj.content },
+          );
           ok = true;
         }
       } catch (error) {
