@@ -124,7 +124,25 @@ export function buildRegistry(env: CloudflareEnv): SiteRegistry {
   const overrides = safeJson<Record<string, Partial<SiteConfig>>>(env.SITE_OVERRIDES, {});
   const domainInput = safeJson<Record<string, string>>(env.SITE_DOMAINS, {});
 
-  const sites = SEED_SITES.map((seed) => ({ ...seed, ...(overrides[seed.id] ?? {}) }));
+  // Seed sites (overridable per deployment) + config-driven NEW client sites:
+  // any extra entry in SITE_OVERRIDES whose id is not a seed is a brand-new
+  // site — no code change or redeploy needed to onboard a client.
+  const sites: SiteConfig[] = [
+    ...SEED_SITES.map((seed) => ({ ...seed, ...(overrides[seed.id] ?? {}) })),
+    ...Object.entries(overrides)
+      .filter(([id]) => !SEED_SITES.some((seed) => seed.id === id))
+      .map(([id, override]) => ({
+        id,
+        name: override.name ?? id,
+        repo: override.repo ?? '',
+        framework: override.framework ?? 'generic',
+        systemPromptAddon: override.systemPromptAddon ?? '',
+        cdnDomain: override.cdnDomain ?? 'https://cdn.example.com',
+        defaultBranch: override.defaultBranch ?? 'main',
+        isAgency: false,
+        theme: override.theme,
+      })),
+  ];
 
   // Resolve domains (deployment config, never in code)
   for (const site of sites) {
