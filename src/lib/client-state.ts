@@ -52,9 +52,59 @@ declare global {
   }
 }
 
+const STORAGE_KEY = 'sc:state';
+
 export function getState(): ScState {
-  window.__sc ??= { messages: [], payload: null, workflow: null };
+  if (!window.__sc) {
+    window.__sc = { messages: [], payload: null, workflow: null };
+    restoreState(window.__sc);
+  }
   return window.__sc;
+}
+
+/**
+ * Persists the shared state to sessionStorage so a page REFRESH survives
+ * (draft files, chat history and the open PR). Per-tab by design — C3
+ * (server-side KV snapshot, cross-device) remains a documented future step.
+ */
+export function persistState(): void {
+  const state = window.__sc;
+  if (!state) return;
+  try {
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch {
+    // Quota exceeded (large data-URL image previews) → strip the previews
+    // and retry once (the payload itself stays intact).
+    try {
+      const slim: ScState = {
+        ...state,
+        messages: state.messages.map((message) => ({
+          ...message,
+          images: message.images?.map((img) => ({ url: img.url, ref: img.ref, alt: img.alt })),
+        })),
+      };
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(slim));
+    } catch {
+      // Give up silently (best effort).
+    }
+  }
+}
+
+function restoreState(target: ScState): void {
+  try {
+    const raw = sessionStorage.getItem(STORAGE_KEY);
+    if (!raw) return;
+    const parsed = JSON.parse(raw) as Partial<ScState>;
+    if (Array.isArray(parsed.messages)) target.messages = parsed.messages;
+    if (parsed.payload && Array.isArray(parsed.payload.files)) {
+      target.payload = parsed.payload as GeneratedPayload;
+    }
+    if (parsed.workflow && typeof parsed.workflow.prNumber === 'number') {
+      target.workflow = parsed.workflow as WorkflowState;
+    }
+  } catch {
+    // Corrupted storage → ignore.
+  }
 }
 
 export function emit(name: string, detail: unknown): void {

@@ -73,7 +73,7 @@ const { lang } = Astro.locals;
 </div>
 
 <script>
-  import { getState, on, switchToWorkspaceTab, toast } from '../lib/client-state';
+  import { getState, on, persistState, switchToWorkspaceTab, toast } from '../lib/client-state';
   import type { WorkflowState } from '../lib/client-state';
   import { getClientLocale, t } from '../i18n';
 
@@ -160,6 +160,7 @@ const { lang } = Astro.locals;
         prUrl: data.prUrl,
         branch: data.branch,
       } satisfies WorkflowState;
+      persistState();
 
       // Let the chat clear its pending Git-fallback images (now committed).
       window.dispatchEvent(new CustomEvent('sc:pr-created'));
@@ -181,6 +182,21 @@ const { lang } = Astro.locals;
       btnCreate.textContent = t(lang, 'workflow.createPreview');
     }
   });
+
+  // Refresh support: restore an open workflow (PR link + polling resumes).
+  (function restoreWorkflow() {
+    const workflow = state.workflow;
+    if (!workflow) return;
+    btnCreate.disabled = true;
+    activateStep(2);
+    prLink.href = safeHttpUrl(workflow.prUrl);
+    prLink.textContent = t(lang, 'workflow.prLink', workflow.prNumber, workflow.branch);
+    prLink.hidden = false;
+    prBranch.textContent = workflow.branch;
+    prBranch.hidden = false;
+    previewHint.textContent = t(lang, 'workflow.previewPending');
+    startPolling();
+  })();
 
   function startPolling() {
     const workflow = state.workflow;

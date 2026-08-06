@@ -46,7 +46,7 @@ const { lang } = Astro.locals;
 </div>
 
 <script>
-  import { getState, on } from '../lib/client-state';
+  import { getState, on, persistState } from '../lib/client-state';
   import type { PayloadFile } from '../lib/client-state';
   import { getClientLocale, t } from '../i18n';
   import { renderJson, renderMarkdown } from '../lib/markdown-lite';
@@ -355,6 +355,7 @@ const { lang } = Astro.locals;
     file.modified = true;
     // Keep the shared payload in sync (used by the deploy stepper).
     if (state.payload) state.payload.files[active] = file;
+    persistState();
     exitEdit();
     syncViewToggle(effectiveViewFor(file));
     renderFile();

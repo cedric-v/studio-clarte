@@ -45,7 +45,7 @@ const SUGGESTION_KEYS = ['chat.suggestion1', 'chat.suggestion2', 'chat.suggestio
 </div>
 
 <script>
-  import { emit, getState, on, toast, type ChatMessage } from '../lib/client-state';
+  import { emit, getState, on, persistState, toast, type ChatMessage } from '../lib/client-state';
   import { uploadImage } from '../lib/client-upload';
   import { getClientLocale, t } from '../i18n';
   import { renderMarkdown } from '../lib/markdown-lite';
@@ -323,6 +323,7 @@ const SUGGESTION_KEYS = ['chat.suggestion1', 'chat.suggestion2', 'chat.suggestio
       })),
     };
     state.messages.push(userMessage);
+    persistState();
     renderMessage(userMessage);
 
     inputEl.value = '';
@@ -399,6 +400,7 @@ const SUGGESTION_KEYS = ['chat.suggestion1', 'chat.suggestion2', 'chat.suggestio
         payload: Boolean(payload && payload.files.length),
       };
       state.messages.push(assistantMessage);
+      persistState();
 
       if (payload && payload.files.length) {
         const files = payload.files.filter(
@@ -418,6 +420,7 @@ const SUGGESTION_KEYS = ['chat.suggestion1', 'chat.suggestion2', 'chat.suggestio
           // Single source of truth: manual edits in the preview panel are
           // picked up from this shared state by the deploy stepper.
           state.payload = generated;
+          persistState();
           emit('sc:payload', generated);
           toast(t(lang, 'chat.filesReady', files.length + gitImages.length), 'success');
           // Replace the raw JSON dump with a clean summary + payload note.

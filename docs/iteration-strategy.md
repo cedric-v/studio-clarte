@@ -1,7 +1,8 @@
 # Content iteration strategy
 
-> **Status**: decision recorded — current approach in production; Option C is a
-> documented future evolution, **not implemented yet**.
+> **Status**: decision recorded — current approach in production. **C1 is
+> implemented** (sessionStorage draft persistence); C2–C4 remain documented
+> future steps.
 
 ## Context
 
@@ -48,13 +49,22 @@ To be activated **when** the in-memory draft becomes a real limitation (very
 large multi-page drafts, long editing sessions, refresh/crash resistance),
 without changing the publication workflow:
 
-### C1 — Persist the draft client-side
+### C1 — Persist the draft client-side ✅ *implemented*
 
-- Store `state.payload` in `sessionStorage` (survives refresh, cleared at end
-  of session) or `localStorage` (survives browser restarts) ;
-- Restore on load: `getState().payload` is hydrated before the chat renders,
-  the workspace shows the draft again and the stepper stays enabled ;
-- Cheap, no server change. `sessionStorage` is the recommended default.
+- The shared state (`messages`, `payload`, `workflow`) is persisted to
+  `sessionStorage` on every mutation (`persistState()`) and restored on load
+  (`getState()` hydrates it before the chat renders) ;
+- After a refresh: the chat history, the draft files (workspace + stepper stay
+  enabled) and an open PR are restored — the stepper resumes polling the
+  preview automatically ;
+- The PR button stays disabled once a PR exists (same as before a refresh), so
+  no duplicate PR is created accidentally ;
+- **Per-tab by design** (`sessionStorage`) — survives refresh, cleared when the
+  tab closes ; `localStorage` is not used (sharing across tabs would be C3) ;
+- **Best effort on quota**: if the storage limit is hit (large base64 image
+  previews), the message image previews are stripped and the write is retried ;
+  a draft with very large embedded base64 images may exceed the ~5 MB limit and
+  fall back to the current behavior (no persistence) — acceptable for now.
 
 ### C2 — Conditional draft context (token savings)
 
@@ -94,11 +104,12 @@ fallback today.
 
 ## Activation triggers
 
-Activate C1 always (trivial win). Activate C3/C4 only if:
+C1 is active (trivial win, no downside). Activate C2 (conditional draft
+context) and C3 (KV snapshot) only if:
 
-- editing sessions regularly exceed browser memory / chat context limits ;
-- refresh/crash data loss has been observed ;
-- collaborators need to see intermediate states in git.
+- editing sessions regularly exceed the chat context / browser memory limits ;
+- cross-tab or cross-device continuity is needed (C3) ;
+- collaborators need to see intermediate states in git (C4).
 
 ## Non-goals
 
