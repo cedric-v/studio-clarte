@@ -98,23 +98,41 @@ alourdit le repo). Le stockage R2 chez le client est le modèle recommandé :
 
 ---
 
-## 6. Configuration webmaster (Studio)
+## 6. Configuration webmaster (Studio) — add a NEW client (no code change)
 
-Dans les **vars du dashboard** (ou le `wrangler.jsonc` local gitignoré) :
+A brand-new client is added **purely via dashboard vars** — the registry treats
+any `SITE_OVERRIDES` entry whose id has no seed as a new site (`name`, `repo`,
+`framework`, `cdnDomain`, optional `theme`). **No redeploy needed for the config**
+(the dashboard vars apply immediately).
 
+In the Cloudflare dashboard → `studio-clarte` → Settings → Variables and Secrets:
+
+**`SITE_DOMAINS`** (JSON string):
+```json
+{ "client-a": "studio.client-a.ch", "instant-academie": "studio.instant-academie.com" }
+```
+
+**`SITE_OVERRIDES`** (JSON string):
 ```json
 {
-  "SITE_DOMAINS": "{ \"client-a\": \"studio.client-a.ch\" }",
-  "SITE_OVERRIDES": "{
-    \"client-a\": {
-      \"repo\": \"client-org/client-a-site\",
-      \"cdnDomain\": \"https://cdn.client-a.ch\",
-      \"r2AccountId\": \"<ACCOUNT-ID-CLIENT>\",
-      \"r2Bucket\": \"client-a-media\"
-    }
-  }"
+  "client-a": {
+    "repo": "client-org/client-a-site",
+    "cdnDomain": "https://cdn.client-a.ch",
+    "r2AccountId": "<ACCOUNT-ID-CLIENT>",
+    "r2Bucket": "client-a-media"
+  },
+  "instant-academie": {
+    "name": "Instant Académie",
+    "repo": "client-org/instant-academie",
+    "framework": "eleventy",
+    "cdnDomain": "https://cdn.instant-academie.com",
+    "systemPromptAddon": "… directives propres au site …"
+  }
 }
 ```
+
+> If the client uses R2 storage (recommended), add `r2AccountId` / `r2Bucket`
+> (step 5) and enter the client's keys in the site vault.
 
 Puis :
 - [ ] **Domaine custom** sur le Worker : `studio.client-a.ch` (Workers → studio-clarte → Domains & Routes).
