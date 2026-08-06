@@ -74,30 +74,6 @@ const SEED_SITES: SiteConfig[] = [
       'Site vitrine du webmaster : services, offres d\'accompagnement, témoignages clients. Ton expert et rassurant.',
     theme: { primaryColor: '#3b82f6' },
   },
-  {
-    id: 'client-a',
-    name: 'Client A',
-    repo: 'studio-clarte/client-a-site',
-    framework: 'astro',
-    cdnDomain: 'https://cdn.example.com', // override via SITE_OVERRIDES
-    defaultBranch: 'main',
-    isAgency: false,
-    systemPromptAddon:
-      'Site « Client A » : ton chaleureux et direct, tutoiement. Structure : src/content/offres/*.md (frontmatter title, description, price), src/data/config.json.',
-    theme: { primaryColor: '#8b5cf6' },
-  },
-  {
-    id: 'client-b',
-    name: 'Client B',
-    repo: 'studio-clarte/client-b-site',
-    framework: 'eleventy',
-    cdnDomain: 'https://cdn.example.com', // override via SITE_OVERRIDES
-    defaultBranch: 'main',
-    isAgency: false,
-    systemPromptAddon:
-      'Site « Client B » : ton formel, vouvoiement. Contenu dans content/ (Eleventy), pages Nunjucks à ne pas modifier.',
-    theme: { primaryColor: '#06b6d4' },
-  },
 ];
 
 export interface SiteRegistry {
