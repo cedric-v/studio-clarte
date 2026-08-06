@@ -111,8 +111,39 @@ context) and C3 (KV snapshot) only if:
 - cross-tab or cross-device continuity is needed (C3) ;
 - collaborators need to see intermediate states in git (C4).
 
+## C5 — Visual verification of previews (candidate, not yet needed)
+
+**Gap today**: the Studio detects that a preview *built* (GitHub check runs /
+`buildUrl`) but cannot *see* the rendered page. The agent never looks at the
+actual output.
+
+**Cheap step (recommended first)**: a screenshot utility that captures the
+preview URL with a headless browser (Cloudflare Browser Rendering API, or a
+small external screenshot service), stores the PNG in the site's R2 bucket,
+and shows a **thumbnail in the publication panel / Diff tab**. Workers are
+entirely sufficient for this — it is just a render-and-store job.
+
+**Heavier step (only if the agent must interact — clicks, forms, extracting
+rendered text)**: `@cloudflare/computer` (early preview, per-agent sandboxed
+runtime with filesystem/shell/packages). Considerations before adopting:
+
+- the project deliberately runs code on the **client's CI** (isolation,
+  reviewability, zero shared compute) — giving the agent a platform computer
+  adds a new execution surface, so scope it to *reading/verifying previews*
+  only, never to write directly to repos;
+- early-preview API stability and per-second pricing for many concurrent
+  client sessions need evaluation;
+- do **not** use it as a replacement for the GitHub-API hands (file writes
+  must stay reviewable via PRs).
+
+**Verdict**: Workers are sufficient for the current pipeline. Re-evaluate
+C5 when visual checks or browser interaction become a client-visible
+requirement.
+
 ## Non-goals
 
 - Stacked per-change PRs (Option B) — rejected.
 - A full CMS-backed content store (database) — the repo remains the single
   source of truth for content.
+- Running client builds inside the Studio (npm install per site/toolchain):
+  builds stay on the client's CI where they are already validated.
