@@ -18,17 +18,17 @@
   },
   "dependencies": {
     "@ai-sdk/openai": "^4.0.29",
-    "@astrojs/cloudflare": "^14.1.7",
     "@aws-sdk/client-s3": "^3.1102.0",
     "@aws-sdk/s3-request-presigner": "^3.1102.0",
     "@octokit/rest": "^22.0.1",
     "ai": "^7.0.51",
-    "astro": "^7.1.6",
     "zod": "^4.4.3"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.10",
+    "@astrojs/cloudflare": "14.1.7",
     "@cloudflare/workers-types": "^5.20260804.1",
+    "astro": "7.1.6",
     "tsx": "^4.23.5",
     "typescript": "^6.0.3",
     "wrangler": "^4.118.0"

@@ -386,11 +386,28 @@ const SUGGESTION_KEYS = ['chat.suggestion1', 'chat.suggestion2', 'chat.suggestio
         acc += decoder.decode();
       }
 
-      const payload = extractPayload(acc);
+      // Out-of-band delivery: the generator stores the payload server-side
+      // (KV, 2h TTL) and the stream carries a compact [[PAYLOAD:<uuid>]]
+      // marker — the chat response never ships the 15-30 KB JSON itself
+      // (that is what truncated in production). Fetch it, fall back to the
+      // inline JSON parser for legacy/fallback responses.
+      let payload: { title: string; summary: string; files: unknown[] } | null =
+        extractPayload(acc);
+      const marker = acc.match(
+        /\[\[PAYLOAD:([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\]\]/,
+      );
+      if (marker) {
+        try {
+          const res = await fetch(`/api/draft/${marker[1]}`);
+          if (res.ok) payload = (await res.json()) as typeof payload;
+          else console.error('[chat] draft fetch failed:', res.status);
+        } catch (error) {
+          console.error('[chat] draft fetch error:', error);
+        }
+      }
 
-      // Conversational reply (JSON envelope without files) → show the summary
-      // instead of the raw JSON.
-      let display = acc.trim() || '(empty response)';
+      // Display: strip the marker; show the summary instead of raw JSON.
+      let display = acc.replace(/\[\[PAYLOAD:[^\]]+\]\]/g, '').trim() || '(empty response)';
       if (payload && !payload.files.length) {
         display = payload.summary || payload.title || display;
         bubble.innerHTML = renderMarkdown(display);

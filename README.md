@@ -177,6 +177,9 @@ npm run deploy
   + build) is green ; **major updates stay manual PRs**.
 - `typescript` is capped at `< 7.0.0` (Renovate rule): TS 7 is the new
   native compiler, not yet supported by `@astrojs/check` (peer `^5 || ^6`).
+- `astro` / `@astrojs/cloudflare` are **exact-pinned** (7.1.6 / 14.1.7):
+  7.2.0 / 14.2.0 break `astro dev` (vite route-cache error) while CI stays
+  green — their updates stay manual PRs, verify `astro dev` before merging.
 - A **Dependency Dashboard** issue tracks all pending updates.
 
 ### PR previews — two options
@@ -213,6 +216,7 @@ Pages project, preview workflow, per-client R2 storage, DNS, vault keys, final t
 | Endpoint | Method | Role |
 |---|---|---|
 | `/api/chat` | POST | AI streaming: plan + one call per file; repo read tools (`listFiles`/`readFile`) |
+| `/api/draft/:token` | GET | Fetch a generated draft payload out of band (KV-backed, 2h TTL, unguessable token) |
 | `/api/upload-url` | POST | Upload target: client R2 presigned URL **or** git-mode path |
 | `/api/commit-draft` | POST | `draft/*` branch + PR in ~1-2 s (Direct Git API) |
 | `/api/status/:siteId/:prNumber` | GET | Preview build polling (Deployments / Check Runs) |

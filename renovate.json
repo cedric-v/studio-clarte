@@ -20,6 +20,11 @@
       "automerge": false
     },
     {
+      "description": "astro/@astrojs/cloudflare are EXACT-PINNED: 7.2.0/14.2.0 break `astro dev` (vite route-cache SSR error; CI only builds, so it would merge green). Updates stay manual PRs — verify `astro dev` locally before merging.",
+      "matchPackageNames": ["astro", "@astrojs/cloudflare"],
+      "automerge": false
+    },
+    {
       "description": "typescript 7.x is the new native compiler — NOT yet supported by the Astro/Volar toolchain (@astrojs/check peerDependencies: ^5 || ^6). Never propose it.",
       "matchPackageNames": ["typescript"],
       "allowedVersions": "<7.0.0"

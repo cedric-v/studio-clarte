@@ -17,9 +17,11 @@ Chat / editor  ──▶ /api/chat ──▶ generator loop ──▶ DeepSeek (
                                    ├─▶ patch mode: {search, replace} on existing files
                                    └─▶ stream: plan → per-file progress → final payload
                                           │
-Draft (sessionStorage) ◀─ payload ────────┘
+Draft (KV-backed, out-of-band) ◀─ payload marker ─┘
+   │                     (chat streams progress + [[PAYLOAD:token]] only)
    │
-Review (diff + editor) ──▶ preview ──▶ GitHub Actions/Pages (client infra)
+Review (diff + editor) ◀─ /api/draft/:token (full payload)
+   │       └── preview ──▶ GitHub Actions/Pages (client infra)
    │                                     └─ poll check runs / buildUrl
 Publish ──▶ /api/commit-draft ──▶ branch draft/* + PR (never main)
          ──▶ /api/merge ──▶ CI passes ──▶ merge ──▶ production build
@@ -34,7 +36,7 @@ Publish ──▶ /api/commit-draft ──▶ branch draft/* + PR (never main)
 | **Registry** | multi-tenant sites from env vars (`SITE_DOMAINS`, `SITE_OVERRIDES`) | `src/config/sites.ts` — new clients = vars in the gitignored `wrangler.jsonc` |
 | **Vault** | per-site keys, encrypted, write-only | AES-256-GCM, `VAULT_MASTER_KEY` |
 | **Storage** | images → client's R2 (or git fallback) | presigned uploads, R2 |
-| **State** | in-memory draft persisted in `sessionStorage` (C1) | `src/lib/client-state.ts` |
+| **State** | in-memory draft persisted in `sessionStorage` (C1) + KV-backed out-of-band payload delivery (`/api/draft/:token`) | `src/lib/client-state.ts`, `src/pages/api/draft/[token].ts` |
 | **Preview** | GitHub check runs → `buildUrl` polling | GitHub Actions / Pages (client repo) |
 | **i18n / UX** | FR/EN, stepper 2 étapes, diff-first, « Ouvrir » | vanilla, Astro SSR on Workers |
 
@@ -71,6 +73,25 @@ Publish ──▶ /api/commit-draft ──▶ branch draft/* + PR (never main)
    **majors stay manual PRs**. `typescript` is capped at `< 7`: TS 7 is the
    new native compiler, not yet supported by the Astro/Volar toolchain
    (`@astrojs/check` peer `^5 || ^6`).
+9. **Large payloads are delivered out of band (KV draft store).** The chat
+   stream carries progress + a compact `[[PAYLOAD:<uuid>]]` marker ; the full
+   payload (full file contents ≈ 15-30 KB) is stored in KV (2h TTL) and
+   fetched by the client via `/api/draft/:token` (unguessable UUID =
+   capability, same pattern as the presigned R2 URLs). Streaming a 30 KB JSON
+   through the long-lived chat response truncated in production ("Réponse
+   tronquée"); the marker is immune. The store is also a first step toward
+   C3 (cross-device draft persistence, `docs/iteration-strategy.md`).
+
+## Why not `@cloudflare/computer` for generation/iteration?
+
+`@cloudflare/computer` (a VM with filesystem/shell/browser for the agent) is
+candidate **E2** — but it does **not** address this failure class: the
+iteration problem was the **model output size + a giant JSON streamed through
+one chat response**, both independent of any runtime. The out-of-band draft
+store (ADR 9) fixes it without new infrastructure. A computer runtime would
+only earn its place for tasks that genuinely need one: rendering the preview
+headlessly, running client builds, or verifying visual regressions (E1/E2),
+not for text edits.
 
 ## Security model
 

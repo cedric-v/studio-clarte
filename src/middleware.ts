@@ -21,7 +21,9 @@ import { detectLocale, isLocale, type Locale } from './i18n';
  */
 
 const PUBLIC_PAGE = '/login';
-const PUBLIC_API_PREFIX = '/api/auth/';
+// Public API prefixes: OAuth endpoints + the out-of-band draft fetch
+// (unguessable UUID token = capability, like presigned R2 upload URLs).
+const PUBLIC_API_PREFIXES = ['/api/auth/', '/api/draft/'];
 const ASSET_RE = /\.(css|js|svg|png|jpe?g|webp|avif|gif|ico|woff2?|ttf|map|json|txt)$/i;
 
 /** Security headers applied to every response (OWASP best practices). */
@@ -120,7 +122,8 @@ export const onRequest = defineMiddleware(async (context, next) => {
     return context.redirect(url.pathname + url.search);
   }
 
-  const isPublic = url.pathname === PUBLIC_PAGE || url.pathname.startsWith(PUBLIC_API_PREFIX);
+  const isPublic =
+    url.pathname === PUBLIC_PAGE || PUBLIC_API_PREFIXES.some((prefix) => url.pathname.startsWith(prefix));
   const isAsset = ASSET_RE.test(url.pathname) || url.pathname.startsWith('/_astro/');
 
   // ── 6. Unknown domains → hard rejection ───────────────────────────

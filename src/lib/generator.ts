@@ -21,14 +21,14 @@ export interface FileTarget {
   description: string;
 }
 
-interface PayloadFile {
+export interface PayloadFile {
   path: string;
   content: string;
   /** Pre-edit repo content (existing files) — powers the Diff view. */
   original?: string;
 }
 
-interface Payload {
+export interface Payload {
   title: string;
   summary: string;
   files: PayloadFile[];
@@ -115,6 +115,15 @@ export interface GenerationOptions {
    * iterate on THESE files instead of the published repo version.
    */
   draft?: { path: string; content: string; original?: string }[];
+  /**
+   * When provided, the final payload is stored OUT OF BAND (server-side)
+   * and the stream carries a compact marker `[[PAYLOAD:<token>]]` instead of
+   * the full JSON. Large payloads (full file contents ≈ 15-30 KB) streamed
+   * through the long-lived chat response truncated in production — the
+   * marker is ~40 bytes and immune. The callback must return an unguessable
+   * token the client can use to fetch the payload (e.g. via /api/draft).
+   */
+  storeDraft?: (payload: Payload) => Promise<string>;
 }
 
 export async function* runGeneration(
@@ -218,15 +227,36 @@ export async function* runGeneration(
           maxOutputTokens: 8192,
           stopWhen: isStepCount(2),
         });
+        const lengthTruncated = result.finishReason === 'length';
         const obj = extractJsonObject(result.text) as
           | { path?: unknown; content?: unknown; patch?: unknown }
           | null;
+        // PATCH mode: tiny output, safe even if the model hit the cap.
         if (
+          baseContent &&
           obj &&
+          typeof obj.path === 'string' &&
+          Array.isArray(obj.patch) &&
+          obj.patch.length > 0
+        ) {
+          const applied = applyPatch(baseContent, obj.patch);
+          if (applied.ok && applied.content.length > 0) {
+            files.push(
+              originalForDiff
+                ? { path: obj.path, content: applied.content, original: originalForDiff }
+                : { path: obj.path, content: applied.content },
+            );
+            ok = true;
+          }
+        } else if (
+          obj &&
+          !lengthTruncated &&
           typeof obj.path === 'string' &&
           typeof obj.content === 'string' &&
           obj.content.length > 0
         ) {
+          // Full-content mode — REFUSED when the model hit the output cap
+          // (finishReason 'length'): the file would be silently cut.
           // Safety net: if the model duplicated the frontmatter opener
           // (`---\n---` at the start), strip the extra line — otherwise
           // Eleventy ignores the permalink and the build may conflict.
@@ -239,23 +269,10 @@ export async function* runGeneration(
             originalForDiff ? { path: obj.path, content, original: originalForDiff } : { path: obj.path, content },
           );
           ok = true;
-        } else if (
-          baseContent &&
-          obj &&
-          typeof obj.path === 'string' &&
-          Array.isArray(obj.patch) &&
-          obj.patch.length > 0
-        ) {
-          // Patch mode: apply the targeted replacements to the base content.
-          const applied = applyPatch(baseContent, obj.patch);
-          if (applied.ok && applied.content.length > 0) {
-            files.push(
-              originalForDiff
-                ? { path: obj.path, content: applied.content, original: originalForDiff }
-                : { path: obj.path, content: applied.content },
-            );
-            ok = true;
-          }
+        } else if (lengthTruncated) {
+          console.warn(
+            `[generator] ${target.path}: model output hit the token cap (finishReason=length), retrying…`,
+          );
         }
       } catch (error) {
         console.error(`[generator] file ${target.path} failed:`, error);
@@ -275,8 +292,24 @@ export async function* runGeneration(
     summary: plan.summary || '',
     files,
   };
-  // Stream the final JSON in chunks so large drafts (full file contents)
-  // are delivered reliably through the Worker, whatever the chunking.
+
+  if (opts.storeDraft) {
+    // Large payloads (full file contents ≈ 15-30 KB) are delivered OUT OF
+    // BAND: stored server-side (KV) under an unguessable token, and the chat
+    // stream only carries a compact `[[PAYLOAD:<token>]]` marker. Streaming
+    // a 30 KB JSON through the long-lived chat response is what truncated in
+    // production ("Réponse tronquée" — the client never received the full
+    // payload). The marker is ~40 bytes and immune to that class of bug.
+    try {
+      const token = await opts.storeDraft(payload);
+      yield `\n\n[[PAYLOAD:${token}]]\n`;
+      return;
+    } catch (error) {
+      console.error('[generator] draft store failed, falling back to inline JSON:', error);
+    }
+  }
+  // Fallback (no KV / store failure): stream the final JSON in chunks so
+  // large drafts are delivered as best we can.
   const finalJson = `\n\n\`\`\`json\n${JSON.stringify(payload)}\n\`\`\``;
   const CHUNK_SIZE = 8192;
   for (let i = 0; i < finalJson.length; i += CHUNK_SIZE) {

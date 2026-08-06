@@ -2,7 +2,10 @@
 
 > **Status**: decision recorded — current approach in production. **C1 is
 > implemented** (sessionStorage draft persistence); C2–C4 remain documented
-> future steps.
+> future steps. Note: the server-side KV draft store (delivery of large
+> payloads out of band via `/api/draft/<token>`) is also in production — it
+> is a *delivery* mechanism (see `docs/architecture.md` ADR 9), a first step
+> toward C3's cross-device persistence.
 
 ## Context
 

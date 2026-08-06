@@ -81,9 +81,26 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const stream = new ReadableStream<string>({
     async start(controller) {
       try {
+        // Out-of-band payload delivery: store the assembled draft in KV under
+        // an unguessable token (2h TTL) and stream only a compact marker. The
+        // client fetches the payload from /api/draft/<token>. Falls back to
+        // inline JSON if KV is unavailable.
+        const storeDraft = async (payload: {
+          title: string;
+          summary: string;
+          files: { path: string; content: string; original?: string }[];
+        }): Promise<string> => {
+          if (!locals.env.KV) throw new Error('KV binding unavailable');
+          const token = crypto.randomUUID();
+          await locals.env.KV.put(`draft:${token}`, JSON.stringify(payload), {
+            expirationTtl: 2 * 60 * 60,
+          });
+          return token;
+        };
         for await (const chunk of runGeneration(createDeepSeek(apiKey), site, {
           messages,
           tools,
+          storeDraft,
           draft: Array.isArray(body?.draft)
             ? body.draft.filter((f) => typeof f.path === 'string' && typeof f.content === 'string')
             : undefined,
