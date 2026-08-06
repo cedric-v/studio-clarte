@@ -159,10 +159,25 @@ per kind of value** to avoid `wrangler deploy` overwriting your config:
 
 ### Deploy
 
+One command, with built-in guards:
+
 ```bash
-npm run build && npx wrangler deploy
+npm run deploy
+# = astro build
+#   → config check (scripts/verify-deploy.mjs: the 4 required plain vars)
+#   → wrangler deploy
+#   → live smoke test (fails if the site answers "Domain not configured")
 # attach studio.<your-domain> as a Worker custom domain (auto DNS + TLS)
 ```
+
+### Dependency updates (Renovate)
+
+- [`renovate.json`](renovate.json): **minor & patch updates automerge**
+  (squash) as soon as the CI gate (`.github/workflows/ci.yml` — `astro check`
+  + build) is green ; **major updates stay manual PRs**.
+- `typescript` is capped at `< 7.0.0` (Renovate rule): TS 7 is the new
+  native compiler, not yet supported by `@astrojs/check` (peer `^5 || ^6`).
+- A **Dependency Dashboard** issue tracks all pending updates.
 
 ### PR previews — two options
 
@@ -240,12 +255,16 @@ docs/                 architecture.md · client-onboarding.md · iteration-strat
   rendering (escaped content, `http(s)`-only hrefs).
 - **Zero-commit guarantee** : publishing is a human action after a visual preview.
 
-## 🧪 Testing
+## 🧪 Testing & CI
+
+- **CI** (`.github/workflows/ci.yml`) : `npm run check` + `npm run build` on
+  every PR and every push to `main` — it also gates Renovate automerges.
+- Local:
 
 ```bash
 npm run check          # astro check — 0 errors / 0 warnings / 0 hints
 npm run build          # Cloudflare build
-npx wrangler deploy --dry-run
+npm run deploy         # build + config check + deploy + live smoke test
 ```
 
 Core libs (vault, git-edge, generator, storage) and API routes are testable in

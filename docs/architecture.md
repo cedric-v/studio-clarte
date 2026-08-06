@@ -56,12 +56,21 @@ Publish ──▶ /api/commit-draft ──▶ branch draft/* + PR (never main)
    model, plain vars are part of each version: vars set only in the dashboard
    are silently dropped on the next `wrangler deploy` (broke
    `studio.cedricv.com` twice with "Domain not configured" 404s) — hence
-   vars live in the config file, secrets live in the dashboard.
+   vars live in the config file, secrets at the worker level
+   (`wrangler secret put`). A deploy-time guard (`scripts/verify-deploy.mjs`,
+   wired into `npm run deploy`) fails loudly if the required vars are missing
+   or the live site answers "Domain not configured".
 5. **No webmaster bucket.** Storage is per-client (their own R2, or git).
    Global keys fall back only for the agency site.
 6. **One final PR per session** (Approach A), not stacked per-change PRs.
 7. **Draft iteration**: plan → patch per file → final payload; the draft is
    sent back on every message (C1 active).
+8. **Dependency maintenance (Renovate, automerged minors).**
+   `renovate.json` automerges **minor/patch** updates (deps + devDeps) once
+   the CI gate (`.github/workflows/ci.yml` — `astro check` + build) is green ;
+   **majors stay manual PRs**. `typescript` is capped at `< 7`: TS 7 is the
+   new native compiler, not yet supported by the Astro/Volar toolchain
+   (`@astrojs/check` peer `^5 || ^6`).
 
 ## Security model
 
