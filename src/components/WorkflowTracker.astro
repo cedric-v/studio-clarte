@@ -4,7 +4,6 @@ import { t } from '../i18n';
 interface Props {
   siteId: string;
   siteName: string;
-  /** Target branch for PRs / rollbacks (e.g. "main"). */
   branch: string;
 }
 
@@ -21,78 +20,51 @@ const { lang } = Astro.locals;
   </div>
 
   <ol class="stepper" id="stepper">
+    <!-- Étape 1 : Pré-visualisation -->
     <li class="step" data-step="1">
       <span class="step-num">1</span>
       <div class="step-content">
         <div class="step-head">{t(lang, 'workflow.step1')}</div>
         <div class="step-body">
-          <button class="btn btn-primary" type="button" id="btn-create-pr" disabled>
-            {t(lang, 'workflow.createPr')}
+          <button class="btn btn-primary btn-lg" type="button" id="btn-create-pr" disabled>
+            {t(lang, 'workflow.createPreview')}
           </button>
-          <span class="step-hint">{t(lang, 'workflow.step1Hint')}</span>
+          <span class="step-hint" id="preview-hint">{t(lang, 'workflow.step1Hint')}</span>
+          <a class="preview-link" id="preview-link" href="#" target="_blank" rel="noopener noreferrer" hidden>
+            {t(lang, 'workflow.viewPreview')}
+          </a>
+          <details class="tech-details">
+            <summary>{t(lang, 'workflow.techDetails')}</summary>
+            <p id="pr-tech">
+              <a id="pr-link" href="#" target="_blank" rel="noopener noreferrer" hidden></a>
+              <span class="tech-branch" id="pr-branch" hidden></span>
+            </p>
+            <p class="tech-line" id="pr-status-tech"></p>
+          </details>
         </div>
       </div>
     </li>
 
+    <!-- Étape 2 : Validation & déploiement -->
     <li class="step" data-step="2">
       <span class="step-num">2</span>
       <div class="step-content">
         <div class="step-head">{t(lang, 'workflow.step2')}</div>
         <div class="step-body">
-          <a class="pr-link" id="pr-link" href="#" target="_blank" rel="noopener noreferrer" hidden>
-            {t(lang, 'workflow.viewPr')}
-          </a>
-          <span class="step-hint" id="pr-hint">{t(lang, 'workflow.prPending')}</span>
-        </div>
-      </div>
-    </li>
-
-    <li class="step" data-step="3">
-      <span class="step-num">3</span>
-      <div class="step-content">
-        <div class="step-head">{t(lang, 'workflow.step3')}</div>
-        <div class="step-body">
-          <span class="step-hint" id="preview-hint">{t(lang, 'workflow.step3Hint')}</span>
-          <a class="preview-link" id="preview-link" href="#" target="_blank" rel="noopener noreferrer" hidden>
-            {t(lang, 'workflow.viewPreview')}
-          </a>
-        </div>
-      </div>
-    </li>
-
-    <li class="step" data-step="4">
-      <span class="step-num">4</span>
-      <div class="step-content">
-        <div class="step-head">{t(lang, 'workflow.step4')}</div>
-        <div class="step-body">
-          <button class="btn btn-success" type="button" id="btn-merge" disabled>
+          <button class="btn btn-success btn-lg" type="button" id="btn-merge" disabled>
             {t(lang, 'workflow.merge')}
           </button>
-          <span class="step-hint">{t(lang, 'workflow.step4Hint')}</span>
+          <span class="step-hint">{t(lang, 'workflow.step2Hint')}</span>
+          <details class="tech-details">
+            <summary>{t(lang, 'workflow.techDetails')}</summary>
+            <p class="tech-line">
+              Base : <code>{branch}</code> · {t(lang, 'workflow.step4Hint')}
+            </p>
+          </details>
         </div>
       </div>
     </li>
   </ol>
-
-  <!--
-    Time machine / Rollback (UX 2026):
-    - progressive disclosure (collapsed by default, discoverable);
-    - one-click restore with STAGED confirmation (arm → confirm, 6 s window);
-    - non-destructive: the restore is a new revert commit, never a rewrite;
-    - the "Undo publish" toast after a merge reuses the same engine.
-  -->
-  <details class="rollback-panel" id="rollback-panel">
-    <summary>
-      <span class="rollback-summary-label">{t(lang, 'rollback.title')}</span>
-      <span class="rollback-summary-sub">{t(lang, 'rollback.sub')}</span>
-    </summary>
-    <div class="rollback-body">
-      <p class="rollback-note">{t(lang, 'rollback.note', branch)}</p>
-      <p class="rollback-loading" id="history-loading">{t(lang, 'rollback.loading')}</p>
-      <p class="rollback-error" id="history-error" hidden></p>
-      <ul class="history-list" id="history-list" hidden></ul>
-    </div>
-  </details>
 </div>
 
 <script>
@@ -113,10 +85,11 @@ const { lang } = Astro.locals;
   }
 
   const btnCreate = document.getElementById('btn-create-pr') as HTMLButtonElement;
-  const prLink = document.getElementById('pr-link') as HTMLAnchorElement;
-  const prHint = document.getElementById('pr-hint') as HTMLElement;
-  const previewLink = document.getElementById('preview-link') as HTMLAnchorElement;
   const previewHint = document.getElementById('preview-hint') as HTMLElement;
+  const previewLink = document.getElementById('preview-link') as HTMLAnchorElement;
+  const prLink = document.getElementById('pr-link') as HTMLAnchorElement;
+  const prBranch = document.getElementById('pr-branch') as HTMLElement;
+  const prStatusTech = document.getElementById('pr-status-tech') as HTMLElement;
   const btnMerge = document.getElementById('btn-merge') as HTMLButtonElement;
 
   let payload: GeneratedPayload | null = null;
@@ -125,7 +98,7 @@ const { lang } = Astro.locals;
   let polls = 0;
 
   function activateStep(step: number, done = false) {
-    for (let i = 1; i <= 4; i++) {
+    for (let i = 1; i <= 2; i++) {
       const li = document.querySelector(`[data-step="${i}"]`);
       li?.classList.toggle('active', i === step && !done);
       li?.classList.toggle('done', i < step || (i === step && done));
@@ -133,7 +106,7 @@ const { lang } = Astro.locals;
   }
 
   function resetStepper() {
-    for (let i = 1; i <= 4; i++) {
+    for (let i = 1; i <= 2; i++) {
       document.querySelector(`[data-step="${i}"]`)?.classList.remove('active', 'done');
     }
   }
@@ -144,10 +117,13 @@ const { lang } = Astro.locals;
     btnCreate.disabled = false;
     if (!state.workflow) {
       resetStepper();
-      prLink.hidden = true;
       previewLink.hidden = true;
+      prLink.hidden = true;
+      prBranch.hidden = true;
+      prStatusTech.textContent = '';
       btnMerge.disabled = true;
     }
+    previewHint.textContent = t(lang, 'workflow.toastPayloadReady');
     toast(t(lang, 'workflow.toastPayloadReady'), 'info');
   });
 
@@ -155,6 +131,7 @@ const { lang } = Astro.locals;
     if (!payload || !payload.files.length) return;
     btnCreate.disabled = true;
     btnCreate.textContent = t(lang, 'workflow.creating');
+    previewHint.textContent = t(lang, 'workflow.previewPending');
 
     try {
       const res = await fetch('/api/commit-draft', {
@@ -179,11 +156,13 @@ const { lang } = Astro.locals;
       // Let the chat clear its pending Git-fallback images (now committed).
       window.dispatchEvent(new CustomEvent('sc:pr-created'));
 
-      activateStep(2);
+      activateStep(1);
+      // Technical details (small print): PR link + branch
       prLink.href = safeHttpUrl(data.prUrl);
-      prLink.textContent = t(lang, 'workflow.prLink', data.prNumber, data.branch);
+      prLink.textContent = t(lang, 'workflow.techPrLink', data.prNumber);
       prLink.hidden = false;
-      prHint.textContent = t(lang, 'workflow.step3Hint');
+      prBranch.textContent = data.branch;
+      prBranch.hidden = false;
       toast(t(lang, 'workflow.toastPrCreated', data.prNumber), 'success');
       switchToWorkspaceTab();
       startPolling();
@@ -191,7 +170,7 @@ const { lang } = Astro.locals;
       console.error('[workflow]', error);
       toast(error instanceof Error ? error.message : t(lang, 'workflow.toastCreateFailed'), 'error');
       btnCreate.disabled = false;
-      btnCreate.textContent = t(lang, 'workflow.createPr');
+      btnCreate.textContent = t(lang, 'workflow.createPreview');
     }
   });
 
@@ -208,27 +187,25 @@ const { lang } = Astro.locals;
         if (!res.ok || !status) {
           // Surface the real server error (diagnostic), then keep retrying.
           const detail = status?.error;
-          previewHint.textContent = detail
-            ? `⚠️ ${detail}`
-            : t(lang, 'workflow.statusError');
+          prStatusTech.textContent = detail ?? t(lang, 'workflow.statusError');
           return;
         }
 
         if (status.merged) {
-          activateStep(4, true);
+          activateStep(2, true);
           btnMerge.disabled = true;
-          btnMerge.textContent = t(lang, 'workflow.mergedDone2');
+          btnMerge.textContent = t(lang, 'workflow.mergedDone');
           previewHint.textContent = t(lang, 'workflow.mergedNote', workflow.prNumber);
           stopPolling();
           return;
         }
 
         if (status.previewUrl) {
-          activateStep(3);
-          activateStep(4);
+          activateStep(2);
           previewLink.href = safeHttpUrl(status.previewUrl);
           previewLink.hidden = false;
           previewHint.textContent = t(lang, 'workflow.previewReady');
+          prStatusTech.textContent = '';
           btnMerge.disabled = false;
           stopPolling();
           toast(t(lang, 'workflow.toastPreviewReady'), 'success');
@@ -237,6 +214,7 @@ const { lang } = Astro.locals;
 
         if (status.state === 'error') {
           previewHint.textContent = t(lang, 'workflow.previewFailed');
+          prStatusTech.textContent = t(lang, 'workflow.previewFailed');
           stopPolling();
           return;
         }
@@ -250,7 +228,7 @@ const { lang } = Astro.locals;
               : t(lang, 'workflow.previewPending');
       } catch (error) {
         console.error('[polling]', error);
-        previewHint.textContent = t(lang, 'workflow.statusError');
+        prStatusTech.textContent = t(lang, 'workflow.statusError');
       }
     }, 4000);
   }
@@ -275,231 +253,16 @@ const { lang } = Astro.locals;
       const data = await res.json();
       if (!res.ok || !data.merged) throw new Error(data.message ?? data.error ?? 'Merge refused');
 
-      activateStep(4, true);
+      activateStep(2, true);
       btnMerge.textContent = t(lang, 'workflow.mergedDone');
       previewHint.textContent = t(lang, 'workflow.mergedNote', workflow.prNumber);
       stopPolling();
-      void refreshHistory();
-
-      // UX 2026 — "Undo publish" window (Gmail pattern): the toast carries an
-      // action that reverts the merge to the previous production version.
-      toast(
-        t(lang, 'rollback.mergedUndo'),
-        'success',
-        data.sha
-          ? { label: t(lang, 'rollback.undo'), onClick: () => void undoPublish(data.sha as string) }
-          : undefined,
-      );
+      toast(t(lang, 'workflow.toastMerged'), 'success');
     } catch (error) {
       console.error('[merge]', error);
       toast(error instanceof Error ? error.message : t(lang, 'workflow.toastMergeFailed'), 'error');
       btnMerge.disabled = false;
       btnMerge.textContent = t(lang, 'workflow.merge');
     }
-  });
-
-  // ─────────────────────────────────────────────────────────────────
-  // ROLLBACK — version history + restore + undo publish
-  // ─────────────────────────────────────────────────────────────────
-
-  const rollbackPanel = document.getElementById('rollback-panel') as HTMLDetailsElement;
-  const historyList = document.getElementById('history-list') as HTMLElement;
-  const historyLoading = document.getElementById('history-loading') as HTMLElement;
-  const historyError = document.getElementById('history-error') as HTMLElement;
-
-  let confirmingSha: string | null = null;
-  let confirmTimer: number | null = null;
-  let historyLoaded = false;
-
-  interface HistoryCommit {
-    sha: string;
-    shortSha: string;
-    message: string;
-    date: string;
-    author: string;
-  }
-
-  /** Localized relative time (Intl.RelativeTimeFormat, no extra dependency). */
-  function relativeTime(iso: string): string {
-    const date = new Date(iso);
-    if (Number.isNaN(date.getTime())) return iso;
-    const locale = lang === 'fr' ? 'fr' : 'en';
-    const diffSec = Math.round((date.getTime() - Date.now()) / 1000);
-    const abs = Math.abs(diffSec);
-    if (abs < 60) return new Intl.RelativeTimeFormat(locale, { numeric: 'auto' }).format(diffSec, 'second');
-    if (abs < 3600) return new Intl.RelativeTimeFormat(locale, { numeric: 'auto' }).format(Math.round(diffSec / 60), 'minute');
-    if (abs < 86400) return new Intl.RelativeTimeFormat(locale, { numeric: 'auto' }).format(Math.round(diffSec / 3600), 'hour');
-    if (abs < 604800) return new Intl.RelativeTimeFormat(locale, { numeric: 'auto' }).format(Math.round(diffSec / 86400), 'day');
-    return new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(date);
-  }
-
-  async function loadHistory() {
-    historyLoaded = true;
-    historyLoading.hidden = false;
-    historyError.hidden = true;
-    historyList.hidden = true;
-    try {
-      const res = await fetch('/api/history');
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? 'History unavailable');
-      renderHistory(data.commits ?? [], data.head ?? null);
-    } catch (error) {
-      console.error('[rollback]', error);
-      historyLoading.hidden = true;
-      historyError.hidden = false;
-      historyError.textContent = t(lang, 'rollback.error');
-      // Allow a retry on the next open/close of the panel.
-      historyLoaded = false;
-    }
-  }
-
-  function refreshHistory(): void {
-    void loadHistory();
-  }
-
-  function renderHistory(commits: HistoryCommit[], head: string | null) {
-    historyLoading.hidden = true;
-    historyList.hidden = false;
-    historyList.textContent = '';
-
-    if (!commits.length) {
-      const empty = document.createElement('li');
-      empty.className = 'history-empty';
-      empty.textContent = t(lang, 'rollback.empty');
-      historyList.appendChild(empty);
-      return;
-    }
-
-    for (const commit of commits) {
-      const isCurrent = commit.sha === head;
-      const item = document.createElement('li');
-      item.className = 'history-item' + (isCurrent ? ' current' : '');
-      item.dataset.sha = commit.sha;
-
-      const dot = document.createElement('span');
-      dot.className = 'hist-dot';
-      dot.setAttribute('aria-hidden', 'true');
-
-      const info = document.createElement('div');
-      info.className = 'hist-info';
-      const msg = document.createElement('div');
-      msg.className = 'hist-msg';
-      msg.textContent = commit.message; // textContent auto-escapes (XSS-safe)
-      const meta = document.createElement('div');
-      meta.className = 'hist-meta';
-      const code = document.createElement('code');
-      code.textContent = commit.shortSha;
-      meta.append(code, document.createTextNode(` · ${relativeTime(commit.date)} · ${commit.author}`));
-      info.append(msg, meta);
-
-      const actions = document.createElement('div');
-      actions.className = 'hist-actions';
-      if (isCurrent) {
-        const badge = document.createElement('span');
-        badge.className = 'badge badge-success';
-        badge.textContent = t(lang, 'rollback.current');
-        actions.appendChild(badge);
-      } else {
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.className = 'btn btn-sm btn-ghost hist-restore';
-        button.textContent = t(lang, 'rollback.restore');
-        actions.appendChild(button);
-      }
-
-      item.append(dot, info, actions);
-      historyList.appendChild(item);
-    }
-  }
-
-  function resetConfirm() {
-    confirmingSha = null;
-    if (confirmTimer) {
-      clearTimeout(confirmTimer);
-      confirmTimer = null;
-    }
-    historyList.querySelectorAll('.history-item.confirming').forEach((item) => {
-      item.classList.remove('confirming');
-      const button = item.querySelector<HTMLButtonElement>('.hist-restore');
-      if (button) {
-        button.classList.remove('btn-danger', 'confirming');
-        button.textContent = t(lang, 'rollback.restore');
-      }
-    });
-  }
-
-  // Staged confirmation (UX 2026): first click ARMS the restore, second click
-  // (within 6 s) executes it. No modal wall, no accidental click.
-  historyList.addEventListener('click', (event) => {
-    const button = (event.target as HTMLElement).closest<HTMLButtonElement>('.hist-restore');
-    if (!button || button.disabled) return;
-    const item = button.closest<HTMLElement>('.history-item');
-    const sha = item?.dataset.sha;
-    if (!item || !sha) return;
-
-    if (confirmingSha !== sha) {
-      resetConfirm();
-      confirmingSha = sha;
-      item.classList.add('confirming');
-      button.classList.add('btn-danger', 'confirming');
-      button.textContent = t(lang, 'rollback.confirm');
-      confirmTimer = window.setTimeout(resetConfirm, 6000);
-      return;
-    }
-
-    resetConfirm();
-    void restoreVersion(sha, item);
-  });
-
-  async function restoreVersion(sha: string, item: HTMLElement) {
-    const button = item.querySelector<HTMLButtonElement>('.hist-restore');
-    if (button) {
-      button.disabled = true;
-      button.textContent = t(lang, 'rollback.restoring');
-    }
-    try {
-      const res = await fetch('/api/restore', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ sha }),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.restored) throw new Error(data.error ?? 'Restore failed');
-      toast(t(lang, 'rollback.restored', data.shortSha), 'success');
-      await loadHistory();
-    } catch (error) {
-      console.error('[rollback]', error);
-      toast(error instanceof Error ? error.message : t(lang, 'rollback.failed'), 'error');
-      if (button) {
-        button.disabled = false;
-        button.textContent = t(lang, 'rollback.restore');
-      }
-    }
-  }
-
-  /** Undo publish: revert the merge commit → production is back to the previous version. */
-  async function undoPublish(sha: string) {
-    try {
-      const res = await fetch('/api/restore', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ revert: sha }),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.restored) throw new Error(data.error ?? 'Undo failed');
-
-      activateStep(4, true);
-      previewHint.textContent = t(lang, 'rollback.undone');
-      toast(t(lang, 'rollback.undone'), 'info');
-      await loadHistory();
-    } catch (error) {
-      console.error('[undo-publish]', error);
-      toast(error instanceof Error ? error.message : t(lang, 'rollback.failed'), 'error');
-    }
-  }
-
-  // Lazy-load the history on first open of the panel (progressive disclosure).
-  rollbackPanel.addEventListener('toggle', () => {
-    if (rollbackPanel.open && !historyLoaded) void loadHistory();
   });
 </script>

@@ -930,10 +930,53 @@ body.resizing * {
   color: var(--color-success);
 }
 
-.pr-link,
 .preview-link {
-  font-size: 13.5px;
-  font-weight: 600;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--brand-primary);
+  padding: 10px 16px;
+  border: 1px solid color-mix(in srgb, var(--brand-primary) 45%, transparent);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--brand-primary) 10%, transparent);
+  transition: background var(--transition-fast);
+}
+.preview-link:hover {
+  background: color-mix(in srgb, var(--brand-primary) 20%, transparent);
+  text-decoration: none;
+}
+
+/* Détails techniques — petit texte repliable pour le debug */
+.tech-details {
+  font-size: 12px;
+  color: var(--text-faint);
+  margin-top: 6px;
+  max-width: 100%;
+}
+.tech-details summary {
+  cursor: pointer;
+  color: var(--text-faint);
+  user-select: none;
+  list-style: none;
+}
+.tech-details summary::-webkit-details-marker {
+  display: none;
+}
+.tech-details summary::before {
+  content: '⚙ ';
+}
+.tech-details summary:hover {
+  color: var(--text-muted);
+}
+.tech-details p {
+  margin: 4px 0 0;
+  line-height: 1.5;
+}
+.tech-branch {
+  font-family: var(--font-mono);
+  word-break: break-all;
+}
+.tech-line {
+  color: var(--text-faint);
 }
 
 /* ═══════════════════════════════════════════════════════════════════
