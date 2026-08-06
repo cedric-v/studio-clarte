@@ -89,8 +89,8 @@ npm run dev            # http://localhost:4321
 Routing is host-based — simulate a client subdomain in dev:
 
 ```bash
-curl -H "Host: studio.cedricv.com" http://localhost:4321/login
-# or add "127.0.0.1 studio.cedricv.com" to /etc/hosts and open the browser
+curl -H "Host: studio.yourdomain.com" http://localhost:4321/login
+# or add "127.0.0.1 studio.yourdomain.com" to /etc/hosts and open the browser
 ```
 
 ## 🧭 How it works
@@ -151,7 +151,7 @@ provided workflow into the repo — it builds every PR, deploys a preview via Pa
 Direct Upload and reports it as a GitHub Deployment. Studio picks it up with
 **no code change**:
 [`docs/preview-github-actions.yml`](docs/preview-github-actions.yml) · a tailored
-example at [`docs/preview-cedricv.yml`](docs/preview-cedricv.yml).
+example at [`docs/preview-cedricv.yml`](docs/preview-cedricv.yml) (this one is the author's own site — use it as a base and adapt the project name, build command and secrets).
 
 ### Adding a client site
 
