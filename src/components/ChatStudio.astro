@@ -51,7 +51,7 @@ const SUGGESTION_KEYS = ['chat.suggestion1', 'chat.suggestion2', 'chat.suggestio
   import { renderMarkdown } from '../lib/markdown-lite';
 
   const lang = getClientLocale();
-  const state = getState();
+  let state = getState();
   const messagesEl = document.getElementById('chat-messages')!;
   const inputEl = document.getElementById('chat-input') as HTMLTextAreaElement;
   const sendBtn = document.getElementById('btn-send') as HTMLButtonElement;
@@ -482,6 +482,9 @@ const SUGGESTION_KEYS = ['chat.suggestion1', 'chat.suggestion2', 'chat.suggestio
 
   // Session reset → back to the start state (chat + composer).
   on('sc:reset', () => {
+    // Re-capture the shared state (defense in depth: `state` must always be
+    // the current window.__sc object).
+    state = getState();
     pendingImages = [];
     gitImages = [];
     inputEl.value = '';

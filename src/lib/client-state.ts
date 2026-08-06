@@ -69,7 +69,19 @@ export function getState(): ScState {
  */
 /** Clears the shared state and the persisted copy (session reset). */
 export function resetState(): void {
-  window.__sc = { messages: [], payload: null, workflow: null };
+  // ⚠️ MUTATE IN PLACE — components captured the same object reference at
+  // startup (`const state = getState()`). Replacing the object would leave
+  // them pointing at the OLD state: the chat pane kept rendering the stale
+  // messages after reset, and new messages/payloads were pushed to an
+  // orphaned object that `persistState()` (which re-reads window.__sc) never
+  // saved. In-place mutation keeps every captured reference in sync.
+  if (window.__sc) {
+    window.__sc.messages = [];
+    window.__sc.payload = null;
+    window.__sc.workflow = null;
+  } else {
+    window.__sc = { messages: [], payload: null, workflow: null };
+  }
   try {
     sessionStorage.removeItem(STORAGE_KEY);
   } catch {
