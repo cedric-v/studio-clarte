@@ -122,7 +122,7 @@ const fr: Dictionary = {
   'preview.noDiff': 'Ce fichier est nouveau — aucune différence à afficher',
 
   // ── Workflow (simplifié client) ─────────────────────────────────
-  'workflow.title': '🚀 Publication',
+  'workflow.title': '☀️ Publication',
   'workflow.sub': 'Pré-visualisez puis publiez vos changements en toute sécurité.',
   'workflow.step1': 'Pré-visualisation',
   'workflow.step2': 'Validation & déploiement',
@@ -297,7 +297,7 @@ const en: Dictionary = {
   'preview.open': 'Open',
   'preview.noDiff': 'This is a new file — nothing to diff',
 
-  'workflow.title': '🚀 Publishing',
+  'workflow.title': '☀️ Publishing',
   'workflow.sub': 'Preview then safely publish your changes.',
   'workflow.step1': 'Preview',
   'workflow.step2': 'Validation & deployment',
