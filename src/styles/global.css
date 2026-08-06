@@ -338,6 +338,36 @@ body.resizing * {
   background: var(--brand-hover);
 }
 
+/* GitHub sign-in — dedicated CTA, INDEPENDENT of the site theme color.
+   Using --brand-primary with white text was unreadable for light/amber
+   themes (e.g. #f5b041 ≈ 1.9:1 contrast) and could blend into the dark
+   page. 2026 UX: light button on a dark surface = maximum contrast;
+   GitHub brand colors; elevation shadow; hover lift; focus-visible ring. */
+.btn-github {
+  background: #fff;
+  color: #1f2328; /* GitHub dark */
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.5),
+    0 6px 16px rgba(0, 0, 0, 0.4);
+}
+.btn-github:hover:not(:disabled) {
+  background: #f3f4f6;
+  color: #1f2328;
+  transform: translateY(-1px);
+  box-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.5),
+    0 10px 24px rgba(0, 0, 0, 0.45);
+}
+.btn-github:not(:disabled):active {
+  transform: translateY(1px);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+.btn-github:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+}
+
 .btn-success {
   background: var(--color-success);
   color: #04110b;
