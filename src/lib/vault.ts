@@ -25,6 +25,9 @@ export const SECRET_KEYS = [
   // in the site vault. The global env app only matches the agency domain.
   'OAUTH_GITHUB_CLIENT_ID',
   'OAUTH_GITHUB_CLIENT_SECRET',
+  // Optional per-site login allowlist (comma-separated GitHub logins).
+  // Empty = any GitHub account with access to the site's repo can log in.
+  'ALLOWED_GITHUB_LOGINS',
 ] as const;
 export type SecretName = (typeof SECRET_KEYS)[number];
 

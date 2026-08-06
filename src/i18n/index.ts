@@ -220,6 +220,10 @@ const fr: Dictionary = {
     "Client ID de l'OAuth App GitHub du site (GitHub → Settings → Developer settings → OAuth Apps). Chaque site a sa propre app : sa callback URL doit être https://studio.<ce-domaine>/api/auth/callback — une app GitHub n'accepte qu'une seule callback URL.",
   'settings.hintOAuthClientSecret':
     "Client Secret de l'OAuth App GitHub du site — stocké chiffré, write-only. Sans ces clés, la connexion sur ce sous-domaine est impossible (le fallback global ne correspond qu'au domaine de l'agence).",
+  'settings.fieldAllowlist': 'GitHub — Logins autorisés (optionnel)',
+  'settings.placeholderAllowlist': 'login1, login2 (vide = accès repo suffit)',
+  'settings.hintAllowlist':
+    'Liste blanche de logins GitHub (séparés par des virgules). Vide = tout compte GitHub ayant accès au dépôt du site (propriétaire ou collaborateur) peut se connecter.',
   'settings.notConfigured': 'non configurée',
   'settings.configured': 'configurée (write-only)',
   'settings.configuredEnv': 'configurée (fallback global)',
@@ -405,6 +409,10 @@ const en: Dictionary = {
     "Client ID of the site's GitHub OAuth App (GitHub → Settings → Developer settings → OAuth Apps). Each site needs its own app: its callback URL must be https://studio.<this-domain>/api/auth/callback — a GitHub OAuth App accepts a single callback URL.",
   'settings.hintOAuthClientSecret':
     "Client Secret of the site's GitHub OAuth App — stored encrypted, write-only. Without these keys, login on this subdomain is impossible (the global fallback only matches the agency domain).",
+  'settings.fieldAllowlist': 'GitHub — Allowed logins (optional)',
+  'settings.placeholderAllowlist': 'login1, login2 (empty = repo access is enough)',
+  'settings.hintAllowlist':
+    'Whitelist of GitHub logins (comma-separated). Empty = any GitHub account with access to the site repo (owner or collaborator) can log in.',
   'settings.notConfigured': 'not configured',
   'settings.configured': 'configured (write-only)',
   'settings.configuredEnv': 'configured (global fallback)',

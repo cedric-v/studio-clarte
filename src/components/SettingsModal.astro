@@ -44,6 +44,12 @@ const FIELDS = [
     placeholderKey: 'settings.placeholderOAuth',
     hintKey: 'settings.hintOAuthClientSecret',
   },
+  {
+    name: 'ALLOWED_GITHUB_LOGINS',
+    labelKey: 'settings.fieldAllowlist',
+    placeholderKey: 'settings.placeholderAllowlist',
+    hintKey: 'settings.hintAllowlist',
+  },
 ] as const;
 
 const GENERAL_FIELDS = FIELDS.slice(0, 1);
@@ -179,6 +185,7 @@ const OAUTH_FIELDS = FIELDS.slice(3);
     { name: 'R2_SECRET_ACCESS_KEY', labelKey: 'settings.fieldR2Secret' },
     { name: 'OAUTH_GITHUB_CLIENT_ID', labelKey: 'settings.fieldOAuthClientId' },
     { name: 'OAUTH_GITHUB_CLIENT_SECRET', labelKey: 'settings.fieldOAuthClientSecret' },
+    { name: 'ALLOWED_GITHUB_LOGINS', labelKey: 'settings.fieldAllowlist' },
   ] as const;
 
   /** True when at least one key is already configured (vault or env). */
