@@ -105,6 +105,13 @@ const fr: Dictionary = {
   'preview.code': 'Code',
   'preview.copy': 'Copier',
   'preview.download': 'Télécharger',
+  'preview.edit': 'Éditer',
+  'preview.save': 'Enregistrer',
+  'preview.cancel': 'Annuler',
+  'preview.modified': 'Modifié',
+  'preview.editorHint':
+    'Édition du fichier — Tab insère 2 espaces, Ctrl/⌘+S enregistre.',
+  'preview.saved': (path: string) => `« ${path} » enregistré ✓ (pris en compte dans la PR)`,
   'preview.meta': (n: number, kb: string, title: string) =>
     `${n} fichier(s) · ${kb} Ko · ${title}`,
   'preview.copied': (path: string) => `« ${path} » copié ✓`,
@@ -269,6 +276,13 @@ const en: Dictionary = {
   'preview.code': 'Code',
   'preview.copy': 'Copy',
   'preview.download': 'Download',
+  'preview.edit': 'Edit',
+  'preview.save': 'Save',
+  'preview.cancel': 'Cancel',
+  'preview.modified': 'Modified',
+  'preview.editorHint':
+    'Editing the file — Tab inserts 2 spaces, Ctrl/⌘+S saves.',
+  'preview.saved': (path: string) => `« ${path} » saved ✓ (included in the PR)`,
   'preview.meta': (n: number, kb: string, title: string) =>
     `${n} file(s) · ${kb} KB · ${title}`,
   'preview.copied': (path: string) => `« ${path} » copied ✓`,

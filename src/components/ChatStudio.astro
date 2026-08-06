@@ -390,12 +390,16 @@ const SUGGESTION_KEYS = ['chat.suggestion1', 'chat.suggestion2', 'chat.suggestio
             typeof (file as { content?: unknown }).content === 'string',
         );
         if (files.length) {
-          emit('sc:payload', {
+          const generated = {
             title: payload.title || 'Generated content',
             summary: payload.summary || '',
             // Git-fallback images are committed alongside the generated files.
             files: [...files, ...gitImages.map((img) => gitImageFile(img))],
-          });
+          };
+          // Single source of truth: manual edits in the preview panel are
+          // picked up from this shared state by the deploy stepper.
+          state.payload = generated;
+          emit('sc:payload', generated);
           toast(t(lang, 'chat.filesReady', files.length + gitImages.length), 'success');
           // Replace the raw JSON dump with a clean summary + payload note.
           const note = document.createElement('div');

@@ -30,14 +30,20 @@ const { lang } = Astro.locals;
     <div class="file-toolbar">
       <button class="btn btn-ghost btn-sm" type="button" id="btn-copy">📋 {t(lang, 'preview.copy')}</button>
       <button class="btn btn-ghost btn-sm" type="button" id="btn-download">⬇️ {t(lang, 'preview.download')}</button>
+      <button class="btn btn-ghost btn-sm" type="button" id="btn-edit">✏️ {t(lang, 'preview.edit')}</button>
+      <button class="btn btn-primary btn-sm" type="button" id="btn-save" hidden>💾 {t(lang, 'preview.save')}</button>
+      <button class="btn btn-ghost btn-sm" type="button" id="btn-cancel" hidden>{t(lang, 'preview.cancel')}</button>
+      <span class="badge badge-warning" id="edit-modified" hidden>{t(lang, 'preview.modified')}</span>
       <span class="file-path" id="file-path"></span>
     </div>
     <div class="file-view" id="file-view"></div>
+    <textarea class="file-editor" id="file-editor" spellcheck="false" hidden></textarea>
+    <p class="editor-hint" id="editor-hint" hidden></p>
   </div>
 </div>
 
 <script>
-  import { on } from '../lib/client-state';
+  import { getState, on } from '../lib/client-state';
   import type { PayloadFile } from '../lib/client-state';
   import { getClientLocale, t } from '../i18n';
   import { renderJson, renderMarkdown } from '../lib/markdown-lite';
@@ -59,18 +65,26 @@ const { lang } = Astro.locals;
     return EXT_MIME[ext] ?? 'image/webp';
   };
 
+  const state = getState();
   const emptyEl = document.getElementById('preview-empty') as HTMLElement;
   const rootEl = document.getElementById('preview-root') as HTMLElement;
   const tabsEl = document.getElementById('file-tabs') as HTMLElement;
   const viewEl = document.getElementById('file-view') as HTMLElement;
+  const editorEl = document.getElementById('file-editor') as HTMLTextAreaElement;
+  const editorHint = document.getElementById('editor-hint') as HTMLElement;
   const metaEl = document.getElementById('preview-meta') as HTMLElement;
   const pathEl = document.getElementById('file-path') as HTMLElement;
   const copyBtn = document.getElementById('btn-copy') as HTMLButtonElement;
   const downloadBtn = document.getElementById('btn-download') as HTMLButtonElement;
+  const editBtn = document.getElementById('btn-edit') as HTMLButtonElement;
+  const saveBtn = document.getElementById('btn-save') as HTMLButtonElement;
+  const cancelBtn = document.getElementById('btn-cancel') as HTMLButtonElement;
+  const modifiedBadge = document.getElementById('edit-modified') as HTMLElement;
 
   let files: PayloadFile[] = [];
   let active = 0;
   let viewMode: 'visual' | 'code' = 'visual';
+  let editing = false;
 
   const isMarkdown = (path: string) => /\.(md|mdx|markdown)$/i.test(path);
   const isJson = (path: string) => /\.json$/i.test(path);
@@ -78,8 +92,16 @@ const { lang } = Astro.locals;
 
   on('sc:payload', (payload: { files?: PayloadFile[]; title?: string; summary?: string }) => {
     if (!Array.isArray(payload.files) || !payload.files.length) return;
+    // Single source of truth: the shared state (edited files are picked up
+    // by the deploy stepper when creating the preview PR).
+    state.payload = {
+      title: payload.title ?? '',
+      summary: payload.summary ?? '',
+      files: payload.files,
+    };
     files = payload.files;
     active = 0;
+    exitEdit();
     renderTabs();
     renderFile();
     emptyEl.hidden = true;
@@ -101,6 +123,7 @@ const { lang } = Astro.locals;
       button.innerHTML = `${iconFor(file.path)}<span>${name}</span><em>${path}</em>`;
       button.addEventListener('click', () => {
         active = index;
+        exitEdit();
         renderTabs();
         renderFile();
       });
@@ -142,6 +165,70 @@ const { lang } = Astro.locals;
     return src.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 
+  // ── Manual editing (PagesCMS-style) ──────────────────────────────
+  function exitEdit() {
+    editing = false;
+    editorEl.hidden = true;
+    editorHint.hidden = true;
+    viewEl.hidden = false;
+    editBtn.hidden = false;
+    saveBtn.hidden = true;
+    cancelBtn.hidden = true;
+    renderModifiedBadge();
+  }
+
+  function renderModifiedBadge() {
+    const file = files[active];
+    modifiedBadge.hidden = !(file && file.modified);
+  }
+
+  editBtn.addEventListener('click', () => {
+    const file = files[active];
+    if (!file || (file.base64 && isImageFile(file.path))) return;
+    editing = true;
+    editorEl.value = file.content;
+    editorEl.hidden = false;
+    viewEl.hidden = true;
+    editBtn.hidden = true;
+    saveBtn.hidden = false;
+    cancelBtn.hidden = false;
+    editorHint.hidden = false;
+    editorHint.textContent = t(lang, 'preview.editorHint');
+    editorEl.focus();
+  });
+
+  saveBtn.addEventListener('click', () => {
+    const file = files[active];
+    if (!file || !editing) return;
+    file.content = editorEl.value;
+    file.modified = true;
+    // Keep the shared payload in sync (used by the deploy stepper).
+    if (state.payload) state.payload.files[active] = file;
+    exitEdit();
+    renderFile();
+    window.dispatchEvent(
+      new CustomEvent('sc:toast', { detail: { message: t(lang, 'preview.saved', file.path), type: 'success' } }),
+    );
+  });
+
+  cancelBtn.addEventListener('click', exitEdit);
+
+  // Tab → 2 spaces (essential for YAML/JSON), Ctrl/Cmd+S → save
+  editorEl.addEventListener('keydown', (event) => {
+    if (event.key === 'Tab') {
+      event.preventDefault();
+      const start = editorEl.selectionStart;
+      const end = editorEl.selectionEnd;
+      editorEl.value = editorEl.value.slice(0, start) + '  ' + editorEl.value.slice(end);
+      editorEl.selectionStart = editorEl.selectionEnd = start + 2;
+      return;
+    }
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
+      event.preventDefault();
+      saveBtn.click();
+    }
+  });
+
   // Visual / code toggle
   document.getElementById('view-toggle')?.addEventListener('click', (event) => {
     const button = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-view]');
@@ -151,6 +238,7 @@ const { lang } = Astro.locals;
       el.classList.toggle('active', el === button);
       el.setAttribute('aria-selected', String(el === button));
     });
+    exitEdit();
     renderFile();
   });
 

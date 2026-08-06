@@ -11,6 +11,8 @@ export interface PayloadFile {
   content: string;
   /** True when content is base64-encoded binary (e.g. a Git-fallback image). */
   base64?: boolean;
+  /** True when the human manually edited the content in the preview panel. */
+  modified?: boolean;
 }
 
 export interface GeneratedPayload {

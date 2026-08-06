@@ -808,6 +808,35 @@ body.resizing * {
   background: var(--bg-app);
   padding: 16px;
 }
+
+/* Éditeur manuel (PagesCMS-style) */
+.file-editor {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  resize: none;
+  border: 0;
+  border-top: 1px solid var(--border-color);
+  background: var(--bg-app);
+  color: var(--text-main);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.6;
+  padding: 16px;
+  tab-size: 2;
+  outline: none;
+}
+.file-editor:focus {
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--brand-primary) 35%, transparent);
+}
+.editor-hint {
+  flex-shrink: 0;
+  padding: 6px 12px;
+  border-top: 1px solid var(--border-color);
+  font-size: 11.5px;
+  color: var(--text-faint);
+  background: var(--bg-surface);
+}
 .file-view .code-fence {
   margin: 0;
   background: transparent;

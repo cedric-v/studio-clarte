@@ -69,7 +69,7 @@ const { lang } = Astro.locals;
 
 <script>
   import { getState, on, switchToWorkspaceTab, toast } from '../lib/client-state';
-  import type { GeneratedPayload, WorkflowState } from '../lib/client-state';
+  import type { WorkflowState } from '../lib/client-state';
   import { getClientLocale, t } from '../i18n';
 
   const lang = getClientLocale();
@@ -92,7 +92,6 @@ const { lang } = Astro.locals;
   const prStatusTech = document.getElementById('pr-status-tech') as HTMLElement;
   const btnMerge = document.getElementById('btn-merge') as HTMLButtonElement;
 
-  let payload: GeneratedPayload | null = null;
   let polling: ReturnType<typeof setInterval> | null = null;
   let pollingStarted = false;
   let polls = 0;
@@ -112,8 +111,7 @@ const { lang } = Astro.locals;
   }
 
   // New payload generated → ready for step 1
-  on('sc:payload', (data: GeneratedPayload) => {
-    payload = data;
+  on('sc:payload', () => {
     btnCreate.disabled = false;
     if (!state.workflow) {
       resetStepper();
@@ -128,7 +126,10 @@ const { lang } = Astro.locals;
   });
 
   btnCreate.addEventListener('click', async () => {
-    if (!payload || !payload.files.length) return;
+    // Read the SHARED payload at click time so manual edits made in the
+    // preview panel are included in the draft PR.
+    const current = getState().payload;
+    if (!current || !current.files.length) return;
     btnCreate.disabled = true;
     btnCreate.textContent = t(lang, 'workflow.creating');
     previewHint.textContent = t(lang, 'workflow.previewPending');
@@ -138,9 +139,9 @@ const { lang } = Astro.locals;
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
-          files: payload.files,
-          title: payload.title,
-          summary: payload.summary,
+          files: current.files,
+          title: current.title,
+          summary: current.summary,
         }),
       });
       const data = await res.json();
