@@ -275,5 +275,11 @@ export async function* runGeneration(
     summary: plan.summary || '',
     files,
   };
-  yield `\n\n\`\`\`json\n${JSON.stringify(payload)}\n\`\`\``;
+  // Stream the final JSON in chunks so large drafts (full file contents)
+  // are delivered reliably through the Worker, whatever the chunking.
+  const finalJson = `\n\n\`\`\`json\n${JSON.stringify(payload)}\n\`\`\``;
+  const CHUNK_SIZE = 8192;
+  for (let i = 0; i < finalJson.length; i += CHUNK_SIZE) {
+    yield finalJson.slice(i, i + CHUNK_SIZE);
+  }
 }
