@@ -225,6 +225,7 @@ const fr: Dictionary = {
   'settings.saving': '⏳ Chiffrement…',
   'settings.toastReadFailed': 'Impossible de lire les clés configurées',
   'settings.toastEmpty': 'Saisissez au moins une clé à enregistrer',
+  'settings.toastNoChanges': 'Aucune nouvelle clé saisie — les clés existantes sont conservées',
   'settings.toastSaved': 'Clés chiffrées et enregistrées ✓ (write-only)',
 
   // ── Language switcher ────────────────────────────────────────────
@@ -404,6 +405,7 @@ const en: Dictionary = {
   'settings.saving': '⏳ Encrypting…',
   'settings.toastReadFailed': 'Unable to read the configured keys',
   'settings.toastEmpty': 'Enter at least one key to save',
+  'settings.toastNoChanges': 'No new key entered — existing keys are kept',
   'settings.toastSaved': 'Keys encrypted and saved ✓ (write-only)',
 
   'lang.label': 'Language',

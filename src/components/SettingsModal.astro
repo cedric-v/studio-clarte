@@ -149,6 +149,24 @@ const R2_FIELDS = FIELDS.slice(2);
     { name: 'R2_SECRET_ACCESS_KEY', labelKey: 'settings.fieldR2Secret' },
   ] as const;
 
+  /** True when at least one key is already configured (vault or env). */
+  let hasConfigured = false;
+
+  /** The Save button is only enabled when at least one input has content. */
+  function syncSaveState() {
+    const anyValue = FIELDS.some((field) => {
+      const input = document.getElementById(`key-${field.name}`) as HTMLInputElement | null;
+      return Boolean(input?.value.trim());
+    });
+    saveBtn.disabled = !anyValue;
+  }
+
+  for (const field of FIELDS) {
+    document
+      .getElementById(`key-${field.name}`)
+      ?.addEventListener('input', syncSaveState);
+  }
+
   function toast(message: string, type: 'info' | 'success' | 'error' = 'info') {
     window.dispatchEvent(new CustomEvent('sc:toast', { detail: { message, type } }));
   }
@@ -175,11 +193,13 @@ const R2_FIELDS = FIELDS.slice(2);
 
   function open() {
     modal.hidden = false;
+    syncSaveState();
     loadMasked();
   }
   function close() {
     modal.hidden = true;
     form.reset();
+    syncSaveState();
   }
 
   window.addEventListener('sc:open-settings', open);
@@ -220,6 +240,7 @@ const R2_FIELDS = FIELDS.slice(2);
       updateR2Status(
         Boolean(data.configured?.R2_ACCESS_KEY_ID && data.configured?.R2_SECRET_ACCESS_KEY),
       );
+      hasConfigured = Object.values(data.configured ?? {}).some(Boolean);
     } catch {
       toast(t(lang, 'settings.toastReadFailed'), 'error');
     }
@@ -233,7 +254,13 @@ const R2_FIELDS = FIELDS.slice(2);
       if (input.value.trim()) payload[field.name] = input.value.trim();
     }
     if (!Object.keys(payload).length) {
-      toast(t(lang, 'settings.toastEmpty'), 'info');
+      // Safety net (the Save button is disabled with empty inputs): a submit
+      // can still arrive via implicit submission (Enter). If keys are already
+      // configured, tell the user they are kept — not that something is wrong.
+      toast(
+        hasConfigured ? t(lang, 'settings.toastNoChanges') : t(lang, 'settings.toastEmpty'),
+        'info',
+      );
       return;
     }
     saveBtn.disabled = true;
@@ -253,6 +280,7 @@ const R2_FIELDS = FIELDS.slice(2);
       toast(error instanceof Error ? error.message : 'Error', 'error');
     } finally {
       saveBtn.disabled = false;
+      syncSaveState();
       saveBtn.textContent = t(lang, 'settings.save');
     }
   });
