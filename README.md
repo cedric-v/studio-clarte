@@ -46,7 +46,12 @@ neither gives you the *safe pipeline* in between. Studio Clarté connects both.
   token limit), and assembles everything into a **single PR**.
 - **Human-in-the-loop editor** — review and fine-tune the generated files in an
   integrated, PagesCMS-style editor (monospace, Tab = 2 spaces for YAML/JSON,
-  ⌘S to save). Your edits are included in the preview and the final commit.
+  ⌘S to save). A **« Différence » view** shows *only the modified lines* for
+  existing files (base: the repo original — what did the AI change?), and it is
+  the **default view** for edited files. New files start **closed** (friendly
+  « Ouvrir » button instead of raw code) so non-technical reviewers are never
+  faced with intimidating markup. Your edits are included in the preview and
+  the final commit.
 - **Zero direct commit** — every generation creates a `draft/*` branch + a PR in
   ~1–2 s via the GitHub Git API (`createTree → createCommit → createRef →
   pulls.create`). `main` is only ever touched by a human action (publish).
@@ -101,7 +106,7 @@ AI chat (DeepSeek, streaming)
    ▼
 PLAN (file list) → one model call per file → payload assembled
    ▼
-Review & edit (integrated editor, human-in-the-loop)
+Review & edit (integrated editor + Diff view, human-in-the-loop)
    ▼
 POST /api/commit-draft  →  draft/* branch + PR (~1-2 s, no direct commit)
    ▼

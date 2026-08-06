@@ -88,12 +88,30 @@ const { lang } = Astro.locals;
   let active = 0;
   let viewMode: 'visual' | 'code' | 'diff' = 'visual';
   let editing = false;
+  // A new file starts CLOSED (no raw code shown) until the user opens it.
+  const opened = new Set<string>();
+  // Once the user picks a view tab, respect it; otherwise use smart defaults
+  // (diff for modified files, visual for opened new files).
+  let userChoseView = false;
 
   // Base for the Diff view: repo original (existing files) or the snapshot
   // taken before the first manual edit (new files).
   const diffBaseOf = (file: PayloadFile): string | undefined =>
     file.original ?? file.diffBase;
   const canDiff = (file: PayloadFile): boolean => Boolean(diffBaseOf(file));
+
+  function effectiveViewFor(file: PayloadFile): 'visual' | 'code' | 'diff' {
+    if (userChoseView) return viewMode;
+    return canDiff(file) ? 'diff' : 'visual';
+  }
+
+  function syncViewToggle(mode: 'visual' | 'code' | 'diff') {
+    document.querySelectorAll('#view-toggle [data-view]').forEach((el) => {
+      const activeTab = el.getAttribute('data-view') === mode;
+      el.classList.toggle('active', activeTab);
+      el.setAttribute('aria-selected', String(activeTab));
+    });
+  }
 
   const isMarkdown = (path: string) => /\.(md|mdx|markdown)$/i.test(path);
   const isJson = (path: string) => /\.json$/i.test(path);
@@ -110,6 +128,8 @@ const { lang } = Astro.locals;
     };
     files = payload.files;
     active = 0;
+    opened.clear();
+    userChoseView = false;
     exitEdit();
     renderTabs();
     renderFile();
@@ -146,7 +166,23 @@ const { lang } = Astro.locals;
     pathEl.textContent = file.path;
     updateDiffToggle(file);
 
-    if (viewMode === 'diff') {
+    // New file, not opened yet → friendly state (no raw code shown).
+    if (!diffBaseOf(file) && !opened.has(file.path)) {
+      viewEl.innerHTML = `<div class="file-closed">
+        <span class="empty-icon">📄</span>
+        <p>${t(lang, 'preview.newFile')}</p>
+        <button type="button" class="btn btn-primary" id="btn-open-file">${t(lang, 'preview.open')}</button>
+      </div>`;
+      document.getElementById('btn-open-file')?.addEventListener('click', () => {
+        opened.add(file.path);
+        renderFile();
+      });
+      syncViewToggle('visual');
+      return;
+    }
+
+    const mode = effectiveViewFor(file);
+    if (mode === 'diff') {
       renderDiff(file);
       return;
     }
@@ -157,7 +193,7 @@ const { lang } = Astro.locals;
       return;
     }
 
-    if (viewMode === 'code') {
+    if (mode === 'code') {
       if (isJson(file.path)) {
         viewEl.innerHTML = `<pre class="code-fence"><code>${renderJson(file.content).html}</code></pre>`;
       } else {
@@ -319,6 +355,7 @@ const { lang } = Astro.locals;
     // Keep the shared payload in sync (used by the deploy stepper).
     if (state.payload) state.payload.files[active] = file;
     exitEdit();
+    syncViewToggle(effectiveViewFor(file));
     renderFile();
     window.dispatchEvent(
       new CustomEvent('sc:toast', { detail: { message: t(lang, 'preview.saved', file.path), type: 'success' } }),
@@ -343,22 +380,22 @@ const { lang } = Astro.locals;
     }
   });
 
-  // Visual / code / diff toggle
+  // Visual / code / diff toggle — opening a new file or picking a view
   document.getElementById('view-toggle')?.addEventListener('click', (event) => {
     const button = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-view]');
     if (!button || button.disabled) return;
+    const file = files[active];
+    if (file && !diffBaseOf(file)) opened.add(file.path); // open new files
     const next = button.dataset.view === 'code' ? 'code' : button.dataset.view === 'diff' ? 'diff' : 'visual';
-    if (next === 'diff' && !canDiff(files[active])) {
+    if (next === 'diff' && file && !canDiff(file)) {
       window.dispatchEvent(
         new CustomEvent('sc:toast', { detail: { message: t(lang, 'preview.noDiff'), type: 'info' } }),
       );
       return;
     }
     viewMode = next;
-    document.querySelectorAll('#view-toggle [data-view]').forEach((el) => {
-      el.classList.toggle('active', el === button);
-      el.setAttribute('aria-selected', String(el === button));
-    });
+    userChoseView = true;
+    syncViewToggle(viewMode);
     exitEdit();
     renderFile();
   });
