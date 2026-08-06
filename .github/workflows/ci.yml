@@ -1,0 +1,24 @@
+name: ci
+
+# Lightweight CI gate for every PR (including Renovate dependency PRs) and
+# every push to main: type-check + production build. Keeps `platformAutomerge`
+# (Renovate) safe — a dependency bump only merges once the build is proven.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  check-build:
+    name: astro check + build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+      - run: npm run build
