@@ -40,6 +40,8 @@ export interface PRStatus {
   headSha: string;
   state: PRState;
   previewUrl: string | null;
+  /** Link to the failing build (check run / Actions run) when the preview failed. */
+  buildUrl: string | null;
   merged: boolean;
   updatedAt: string;
 }
@@ -249,12 +251,14 @@ export async function getPRStatus(octokit: Octokit, repo: string, prNumber: numb
       headSha: pr.head.sha,
       state: 'merged',
       previewUrl: null,
+      buildUrl: null,
       merged: true,
       updatedAt: pr.updated_at,
     };
   }
 
   let previewUrl: string | null = null;
+  let buildUrl: string | null = null;
   let state: PRState = 'pending';
 
   // Strategy 1 — Deployments
@@ -283,7 +287,8 @@ export async function getPRStatus(octokit: Octokit, repo: string, prNumber: numb
     // Deployments API unavailable → fall through
   }
 
-  // Strategy 2 — Cloudflare Pages Check Runs
+  // Strategy 2 — Check Runs (Cloudflare Pages OR the GitHub Actions preview
+  // workflow, e.g. "Preview (draft PR)"): a FAILED run must surface clearly.
   if (!previewUrl && state !== 'error') {
     try {
       const { data: runs } = await octokit.checks.listForRef({
@@ -291,17 +296,20 @@ export async function getPRStatus(octokit: Octokit, repo: string, prNumber: numb
         repo: repoName,
         ref: pr.head.sha,
       });
-      const cfRun = runs.check_runs.find((run) =>
-        /cloudflare/i.test(`${run.app?.slug ?? ''} ${run.name ?? ''}`),
+      const relevant = runs.check_runs.find((run) =>
+        /cloudflare|pages|preview/i.test(`${run.app?.slug ?? ''} ${run.name ?? ''}`),
       );
-      if (cfRun) {
-        if (cfRun.details_url) previewUrl = cfRun.details_url;
-        state =
-          cfRun.status === 'completed'
-            ? cfRun.conclusion === 'success'
-              ? 'success'
-              : 'error'
-            : 'in_progress';
+      if (relevant) {
+        if (relevant.status === 'completed') {
+          if (relevant.conclusion === 'success') {
+            state = 'success';
+          } else {
+            state = 'error';
+            buildUrl = relevant.details_url ?? relevant.html_url ?? null;
+          }
+        } else {
+          state = 'in_progress';
+        }
       }
     } catch {
       // ignore
@@ -315,6 +323,7 @@ export async function getPRStatus(octokit: Octokit, repo: string, prNumber: numb
     headSha: pr.head.sha,
     state,
     previewUrl,
+    buildUrl,
     merged: false,
     updatedAt: pr.updated_at,
   };

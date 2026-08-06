@@ -137,6 +137,7 @@ const fr: Dictionary = {
     'La pré-visualisation prend un peu de temps… (voir « Détails techniques » si besoin)',
   'workflow.techDetails': 'Détails techniques',
   'workflow.techPrLink': (n: number) => `Voir la Pull Request #${n} ↗`,
+  'workflow.viewBuild': 'Voir le détail du build ↗',
   'workflow.step4Hint':
     'Squash & merge vers main, puis suppression de la branche temporaire.',
   'workflow.merge': '🚀 Valider & Déployer en Prod',
@@ -306,6 +307,7 @@ const en: Dictionary = {
     'The preview takes a moment… (see “Technical details” if needed)',
   'workflow.techDetails': 'Technical details',
   'workflow.techPrLink': (n: number) => `View Pull Request #${n} ↗`,
+  'workflow.viewBuild': 'View the build ↗',
   'workflow.step4Hint': 'Squash & merge to main, then deletion of the temporary branch.',
   'workflow.merge': '🚀 Validate & Deploy to Prod',
   'workflow.merging': '⏳ Publishing…',
