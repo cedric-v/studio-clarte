@@ -1,7 +1,7 @@
 import { generateText, isStepCount } from 'ai';
 import type { LanguageModel, ModelMessage, Tool } from 'ai';
 import type { SiteConfig } from '../config/sites';
-import { buildFilePrompt, buildPlanPrompt } from './ai';
+import { buildFilePrompt, buildPatchPrompt, buildPlanPrompt } from './ai';
 
 /**
  * Sequential content generator — makes multi-page generation reliable.
@@ -83,6 +83,20 @@ export function extractJsonObject(text: string): unknown | null {
     }
   }
   return null;
+}
+
+/** Applies a list of exact search→replace patches to a content string. */
+export function applyPatch(
+  content: string,
+  patch: { search?: unknown; replace?: unknown }[],
+): { ok: boolean; content: string } {
+  let out = content;
+  for (const item of patch) {
+    if (typeof item.search !== 'string' || item.search === '') return { ok: false, content };
+    if (!out.includes(item.search)) return { ok: false, content }; // not found → fail
+    out = out.split(item.search).join(String(item.replace ?? ''));
+  }
+  return { ok: true, content: out };
 }
 
 export interface GenerationOptions {
@@ -191,15 +205,22 @@ export async function* runGeneration(
     let ok = false;
     for (let attempt = 0; attempt < MAX_RETRIES && !ok; attempt++) {
       try {
+        // Editing an existing file → PATCH mode (targeted replacements, tiny
+        // output — no truncation even for large pages). New files → full content.
+        const system = baseContent
+          ? buildPatchPrompt(site, target.path, target.description, baseContent)
+          : buildFilePrompt(site, target.path, target.description);
         const result = await generateText({
           model,
-          system: buildFilePrompt(site, target.path, target.description, baseContent),
+          system,
           messages: [{ role: 'user', content: userText }] as never,
           temperature: 0.3,
           maxOutputTokens: 8192,
           stopWhen: isStepCount(2),
         });
-        const obj = extractJsonObject(result.text) as { path?: unknown; content?: unknown } | null;
+        const obj = extractJsonObject(result.text) as
+          | { path?: unknown; content?: unknown; patch?: unknown }
+          | null;
         if (
           obj &&
           typeof obj.path === 'string' &&
@@ -218,6 +239,23 @@ export async function* runGeneration(
             originalForDiff ? { path: obj.path, content, original: originalForDiff } : { path: obj.path, content },
           );
           ok = true;
+        } else if (
+          baseContent &&
+          obj &&
+          typeof obj.path === 'string' &&
+          Array.isArray(obj.patch) &&
+          obj.patch.length > 0
+        ) {
+          // Patch mode: apply the targeted replacements to the base content.
+          const applied = applyPatch(baseContent, obj.patch);
+          if (applied.ok && applied.content.length > 0) {
+            files.push(
+              originalForDiff
+                ? { path: obj.path, content: applied.content, original: originalForDiff }
+                : { path: obj.path, content: applied.content },
+            );
+            ok = true;
+          }
         }
       } catch (error) {
         console.error(`[generator] file ${target.path} failed:`, error);

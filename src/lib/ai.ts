@@ -117,3 +117,37 @@ export function buildFilePrompt(
 
   return prompt.join('\n');
 }
+
+/**
+ * Patch prompt — used for EDITING an existing file (draft or repo). The model
+ * returns only targeted replacements (`search` → `replace`) instead of
+ * re-emitting the whole file, so even large pages fit within the token limit.
+ */
+export function buildPatchPrompt(
+  site: SiteConfig,
+  path: string,
+  description: string,
+  baseContent: string,
+): string {
+  return [
+    buildBasePrompt(site),
+    '',
+    `## Ta tâche : modifier UNE PARTIE du fichier « ${path} »`,
+    `Description : ${description}`,
+    'Le fichier ACTUEL est :',
+    '[DEBUT DU CONTENU EXISTANT]',
+    baseContent,
+    '[FIN DU CONTENU EXISTANT]',
+    '- Applique l\'ajustement demandé en trouvant les portions EXACTES à modifier.',
+    '- Réponds UNIQUEMENT avec ce JSON (SANS ```, SANS texte autour) :',
+    '{',
+    '  "path": "<le même chemin>",',
+    '  "patch": [',
+    '    { "search": "<portion exacte présente dans le fichier>", "replace": "<nouvelle portion>" }',
+    '  ]',
+    '}',
+    '- `search` doit être identique au caractère près à une portion du fichier actuel (sinon le remplacement échoue).',
+    '- N\'inclus JAMAIS le fichier entier. 1 à 5 remplacements maximum.',
+    '- Si une date change, corrige aussi le jour de la semaine correspondant (ex: le 28 août 2026 est un vendredi).',
+  ].join('\n');
+}
