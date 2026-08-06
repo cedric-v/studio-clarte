@@ -130,14 +130,20 @@ npx wrangler kv namespace create studio-clarte-kv   # → copy the id
 
 ### Configuration pattern (public repo, private values)
 
-The repo is **public** → real values never live in it:
+The repo is **public** → real values never live in it. **One source of truth
+per kind of value** to avoid `wrangler deploy` overwriting your config:
 
-- `wrangler.jsonc.example` is committed as a template. Copy it to
-  **`wrangler.jsonc`** (gitignored) and fill your values (KV id, vars).
-- Because the real file is ignored, `git pull` never overwrites it and every
-  `wrangler deploy` uses **your** config consistently.
-- Secrets (`VAULT_MASTER_KEY`, GitHub OAuth…) go through `wrangler secret put`
-  or the dashboard.
+- **Local `wrangler.jsonc`** (gitignored, template committed as
+  `wrangler.jsonc.example`): only the **KV namespace id** and
+  `SESSION_TTL_SECONDS` — everything the deploy needs. Because the file is
+  ignored, `git pull` never touches it.
+- **Cloudflare dashboard vars** (Workers → `studio-clarte` → Settings →
+  Variables and Secrets): the **private deployment vars** — `AGENCY_DOMAIN`,
+  `DEFAULT_SITE_ID`, `SITE_DOMAINS`, `SITE_OVERRIDES`. ⚠️ **Never put these
+  in `wrangler.jsonc`**: a deploy would push the file values and overwrite
+  the dashboard (the classic pitfall that broke `studio.cedricv.com` once).
+- **Secrets** (`VAULT_MASTER_KEY`, GitHub OAuth…) go through
+  `wrangler secret put` or the dashboard.
 
 ### Deploy
 

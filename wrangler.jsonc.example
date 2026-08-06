@@ -4,12 +4,19 @@
   "compatibility_date": "2025-08-01",
   "compatibility_flags": ["nodejs_compat"],
   // ═══════════════════════════════════════════════════════════════════
-  // TEMPLATE — copy this file to `wrangler.jsonc` (GITIGNORED) and replace
-  // every <...> placeholder with YOUR real values.
+  // TEMPLATE — copy this file to `wrangler.jsonc` (GITIGNORED) and fill in
+  // YOUR values. Why: this repo is PUBLIC, and `git pull` must never
+  // overwrite your local config.
   //
-  // Why: this repo is PUBLIC. `wrangler.jsonc` (the real file) is never
-  // committed — `git pull` never touches it and every deploy uses YOUR
-  // values consistently. No more manual dashboard edits.
+  // ⚠️ SPLIT OF RESPONSIBILITIES — the single source of truth matters:
+  //   • THIS FILE (local, gitignored): ONLY the KV namespace id and
+  //     SESSION_TTL_SECONDS — everything that `wrangler deploy` needs.
+  //   • THE CLOUDFLARE DASHBOARD (Workers → studio-clarte → Settings →
+  //     Variables and Secrets): the PRIVATE deployment vars —
+  //     AGENCY_DOMAIN, DEFAULT_SITE_ID, SITE_DOMAINS, SITE_OVERRIDES.
+  //
+  // NEVER put those private vars in this file: `wrangler deploy` would push
+  // the file values and OVERWRITE your dashboard configuration.
   // ═══════════════════════════════════════════════════════════════════
   "kv_namespaces": [
     {
@@ -18,15 +25,17 @@
     }
   ],
   "vars": {
-    "SESSION_TTL_SECONDS": 604800,
-    // Site registry — domains are deployment config, never hardcoded in code.
-    "AGENCY_DOMAIN": "<AGENCY_DOMAIN>", // ex. "studio.cedricv.com" → Super-Admin + default site
-    "DEFAULT_SITE_ID": "agence",
-    "SITE_DOMAINS": "{}", // ex. {"client-a":"studio.client-a.ch"}
-    // ex. {"agence":{"repo":"your-org/your-site","cdnDomain":"https://cdn.your-domain.com",
-    //      "r2AccountId":"<account-id>","r2Bucket":"cedricv-media"}}
-    "SITE_OVERRIDES": "{}"
+    "SESSION_TTL_SECONDS": 604800
   }
+  // ── Private vars — set in the DASHBOARD ONLY (never here) ──────────
+  //   AGENCY_DOMAIN  → your studio subdomain (e.g. studio.yourdomain.com)
+  //   DEFAULT_SITE_ID → site opened by default on the agency domain (agence)
+  //   SITE_DOMAINS   → {"client-a":"studio.client-a.ch", ...}
+  //   SITE_OVERRIDES → {"client-a":{"repo":"your-org/your-site",
+  //                      "cdnDomain":"https://cdn.your-domain.com",
+  //                      "r2AccountId":"...","r2Bucket":"..."}}
+  //                    (any entry without a seed = a NEW client site)
+  //
   // Storage model: DEDICATED per-site R2, no webmaster bucket.
   // Per site, either:
   //   • own R2 → r2AccountId/r2Bucket in SITE_OVERRIDES + the site's
