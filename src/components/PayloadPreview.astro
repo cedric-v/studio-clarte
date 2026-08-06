@@ -182,6 +182,7 @@ const { lang } = Astro.locals;
     }
 
     const mode = effectiveViewFor(file);
+    syncViewToggle(mode);
     if (mode === 'diff') {
       renderDiff(file);
       return;
