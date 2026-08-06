@@ -47,7 +47,7 @@ const fr: Dictionary = {
   // ── Header ────────────────────────────────────────────────────────
   'header.settings': 'Paramètres',
   'header.logout': 'Quitter',
-  'header.whiteLabel': 'Marque Blanche',
+  'header.whiteLabel': 'Studio Clarté',
   'header.superAdmin': 'Mode Super-Admin',
   'header.activeSite': 'Site actif',
   'header.reset': 'Réinitialiser',
@@ -244,7 +244,7 @@ const fr: Dictionary = {
 const en: Dictionary = {
   'header.settings': 'Settings',
   'header.logout': 'Log out',
-  'header.whiteLabel': 'White Label',
+  'header.whiteLabel': 'Studio Clarté',
   'header.superAdmin': 'Super-Admin Mode',
   'header.activeSite': 'Active site',
   'header.reset': 'Reset',
