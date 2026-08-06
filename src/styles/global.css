@@ -356,6 +356,13 @@ body.resizing * {
   color: var(--text-main);
 }
 
+/* Session reset — confirmation state (progressive) */
+.btn-reset.confirming {
+  border-color: color-mix(in srgb, var(--color-danger) 55%, transparent);
+  color: var(--color-danger);
+  background: color-mix(in srgb, var(--color-danger) 10%, transparent);
+}
+
 .btn-lg {
   padding: 13px 22px;
   font-size: 15px;

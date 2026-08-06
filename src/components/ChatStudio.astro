@@ -111,8 +111,11 @@ const SUGGESTION_KEYS = ['chat.suggestion1', 'chat.suggestion2', 'chat.suggestio
     return div;
   }
 
+  const welcomeEl = messagesEl.querySelector<HTMLElement>('.welcome');
+
   function renderAll() {
     messagesEl.innerHTML = '';
+    if (welcomeEl && state.messages.length === 0) messagesEl.appendChild(welcomeEl);
     for (const message of state.messages) renderMessage(message);
   }
 
@@ -475,6 +478,15 @@ const SUGGESTION_KEYS = ['chat.suggestion1', 'chat.suggestion2', 'chat.suggestio
   // clear the pending list so the next generation does not duplicate them.
   on('sc:pr-created', () => {
     gitImages = [];
+  });
+
+  // Session reset → back to the start state (chat + composer).
+  on('sc:reset', () => {
+    pendingImages = [];
+    gitImages = [];
+    inputEl.value = '';
+    renderStrip();
+    renderAll();
   });
 
   sendBtn.addEventListener('click', () => void send());

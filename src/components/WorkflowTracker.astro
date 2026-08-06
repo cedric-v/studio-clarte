@@ -267,6 +267,21 @@ const { lang } = Astro.locals;
     pollingStarted = false;
   }
 
+  // Session reset → back to the start state (stepper cleared).
+  on('sc:reset', () => {
+    resetStepper();
+    stopPolling();
+    btnCreate.disabled = true;
+    btnCreate.textContent = t(lang, 'workflow.createPreview');
+    previewHint.textContent = t(lang, 'workflow.step1Hint');
+    previewLink.hidden = true;
+    prLink.hidden = true;
+    prBranch.hidden = true;
+    prStatusTech.textContent = '';
+    buildLink.hidden = true;
+    btnMerge.disabled = true;
+  });
+
   btnMerge.addEventListener('click', async () => {
     const workflow = state.workflow;
     if (!workflow) return;

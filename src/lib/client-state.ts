@@ -67,6 +67,16 @@ export function getState(): ScState {
  * (draft files, chat history and the open PR). Per-tab by design — C3
  * (server-side KV snapshot, cross-device) remains a documented future step.
  */
+/** Clears the shared state and the persisted copy (session reset). */
+export function resetState(): void {
+  window.__sc = { messages: [], payload: null, workflow: null };
+  try {
+    sessionStorage.removeItem(STORAGE_KEY);
+  } catch {
+    // ignore
+  }
+}
+
 export function persistState(): void {
   const state = window.__sc;
   if (!state) return;

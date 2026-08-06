@@ -314,6 +314,18 @@ const { lang } = Astro.locals;
       `</div>`;
   }
 
+  // Session reset → back to the start state (empty panel).
+  on('sc:reset', () => {
+    files = [];
+    active = 0;
+    opened.clear();
+    userChoseView = false;
+    exitEdit();
+    emptyEl.hidden = false;
+    rootEl.hidden = true;
+    metaEl.textContent = t(lang, 'preview.empty');
+  });
+
   // ── Manual editing (PagesCMS-style) ──────────────────────────────
   function exitEdit() {
     editing = false;

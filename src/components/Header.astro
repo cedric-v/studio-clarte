@@ -49,6 +49,10 @@ const { lang } = Astro.locals;
 
     <LanguageSwitcher />
 
+    <button id="btn-reset" class="btn btn-ghost btn-reset" type="button" title={t(lang, 'header.resetTitle')}>
+      ↺ <span class="hide-sm" id="reset-label">{t(lang, 'header.reset')}</span>
+    </button>
+
     <button id="btn-open-settings" class="btn btn-ghost" type="button" title={t(lang, 'header.settings')}>
       ⚙️ <span class="hide-sm">{t(lang, 'header.settings')}</span>
     </button>

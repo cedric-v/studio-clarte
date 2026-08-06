@@ -50,6 +50,14 @@ const fr: Dictionary = {
   'header.whiteLabel': 'Marque Blanche',
   'header.superAdmin': 'Mode Super-Admin',
   'header.activeSite': 'Site actif',
+  'header.reset': 'Réinitialiser',
+  'header.resetTitle': 'Réinitialiser la session (chat + brouillon)',
+  'header.resetConfirm': 'Confirmer ?',
+  'toast.resetDone': 'Session réinitialisée ✓',
+  'toast.nothingToReset': 'Rien à réinitialiser',
+  'toast.resetWarn': 'Cela effacera le chat et le brouillon en cours.',
+  'toast.resetWarnPr':
+    'Une PR est ouverte : elle restera sur GitHub. Cela effacera le chat et le brouillon.',
 
   // ── Mobile tabs ──────────────────────────────────────────────────
   'tabs.chat': '💬 Assistant IA',
@@ -229,6 +237,14 @@ const en: Dictionary = {
   'header.whiteLabel': 'White Label',
   'header.superAdmin': 'Super-Admin Mode',
   'header.activeSite': 'Active site',
+  'header.reset': 'Reset',
+  'header.resetTitle': 'Reset the session (chat + draft)',
+  'header.resetConfirm': 'Confirm?',
+  'toast.resetDone': 'Session reset ✓',
+  'toast.nothingToReset': 'Nothing to reset',
+  'toast.resetWarn': 'This will clear the chat and the current draft.',
+  'toast.resetWarnPr':
+    'An open PR will remain on GitHub. This clears the chat and the draft.',
 
   'tabs.chat': '💬 AI Assistant',
   'tabs.workspace': '📄 Preview & Deploy',
