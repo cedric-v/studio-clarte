@@ -215,6 +215,14 @@ const fr: Dictionary = {
     "Token API R2 du client, restreint à SON bucket (Object Read & Write). Nécessite r2AccountId/r2Bucket dans la config du site.",
   'settings.hintR2Secret':
     'Partie secrète du token R2 du client — stockée chiffrée, write-only.',
+  'settings.sectionOAuth': 'Connexion — GitHub OAuth du site',
+  'settings.fieldOAuthClientId': 'GitHub OAuth — Client ID',
+  'settings.fieldOAuthClientSecret': 'GitHub OAuth — Client Secret',
+  'settings.placeholderOAuth': '… (écrire une nouvelle valeur pour remplacer)',
+  'settings.hintOAuthClientId':
+    "Client ID de l'OAuth App GitHub du site (GitHub → Settings → Developer settings → OAuth Apps). Chaque site a sa propre app : sa callback URL doit être https://studio.<ce-domaine>/api/auth/callback — une app GitHub n'accepte qu'une seule callback URL.",
+  'settings.hintOAuthClientSecret':
+    "Client Secret de l'OAuth App GitHub du site — stocké chiffré, write-only. Sans ces clés, la connexion sur ce sous-domaine est impossible (le fallback global ne correspond qu'au domaine de l'agence).",
   'settings.notConfigured': 'non configurée',
   'settings.configured': 'configurée (write-only)',
   'settings.configuredEnv': 'configurée (fallback global)',
@@ -395,6 +403,14 @@ const en: Dictionary = {
     'Client R2 API token, scoped to THEIR bucket (Object Read & Write). Requires r2AccountId/r2Bucket in the site config.',
   'settings.hintR2Secret':
     'Secret part of the client R2 token — stored encrypted, write-only.',
+  'settings.sectionOAuth': 'Login — site GitHub OAuth',
+  'settings.fieldOAuthClientId': 'GitHub OAuth — Client ID',
+  'settings.fieldOAuthClientSecret': 'GitHub OAuth — Client Secret',
+  'settings.placeholderOAuth': '… (type a new value to replace)',
+  'settings.hintOAuthClientId':
+    "Client ID of the site's GitHub OAuth App (GitHub → Settings → Developer settings → OAuth Apps). Each site needs its own app: its callback URL must be https://studio.<this-domain>/api/auth/callback — a GitHub OAuth App accepts a single callback URL.",
+  'settings.hintOAuthClientSecret':
+    "Client Secret of the site's GitHub OAuth App — stored encrypted, write-only. Without these keys, login on this subdomain is impossible (the global fallback only matches the agency domain).",
   'settings.notConfigured': 'not configured',
   'settings.configured': 'configured (write-only)',
   'settings.configuredEnv': 'configured (global fallback)',

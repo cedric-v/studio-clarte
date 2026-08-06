@@ -20,6 +20,12 @@ export const SECRET_KEYS = [
   'GITHUB_PAT',
   'R2_ACCESS_KEY_ID',
   'R2_SECRET_ACCESS_KEY',
+  // Per-site GitHub OAuth (client self-login on their own subdomain).
+  // A GitHub OAuth App has a SINGLE callback URL, so each client subdomain
+  // needs its OWN app: OAUTH_GITHUB_CLIENT_ID / OAUTH_GITHUB_CLIENT_SECRET
+  // in the site vault. The global env app only matches the agency domain.
+  'OAUTH_GITHUB_CLIENT_ID',
+  'OAUTH_GITHUB_CLIENT_SECRET',
 ] as const;
 export type SecretName = (typeof SECRET_KEYS)[number];
 
@@ -185,6 +191,36 @@ export async function resolveSecret(
     return (env as unknown as Record<string, string | undefined>)[name];
   }
   return undefined;
+}
+
+/**
+ * Resolves the GitHub OAuth credentials for a site's login.
+ *
+ * Per-site creds (stored encrypted in the site vault) take precedence —
+ * required for CLIENT subdomains, whose callback URL can never match the
+ * global app (a GitHub OAuth App accepts a single callback URL). Falls back
+ * to the global Worker secrets (which match the agency domain only).
+ */
+export async function resolveOAuthCredentials(
+  env: CloudflareEnv,
+  site: SiteConfig | null,
+): Promise<{ clientId: string; clientSecret: string } | null> {
+  if (site) {
+    const vault = await decryptVault(env, site.id);
+    if (vault.OAUTH_GITHUB_CLIENT_ID && vault.OAUTH_GITHUB_CLIENT_SECRET) {
+      return {
+        clientId: vault.OAUTH_GITHUB_CLIENT_ID,
+        clientSecret: vault.OAUTH_GITHUB_CLIENT_SECRET,
+      };
+    }
+  }
+  if (env.OAUTH_GITHUB_CLIENT_ID) {
+    return {
+      clientId: env.OAUTH_GITHUB_CLIENT_ID,
+      clientSecret: env.OAUTH_GITHUB_CLIENT_SECRET ?? '',
+    };
+  }
+  return null;
 }
 
 /**

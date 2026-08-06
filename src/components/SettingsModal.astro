@@ -38,10 +38,23 @@ const FIELDS = [
     placeholderKey: 'settings.placeholderR2Key',
     hintKey: 'settings.hintR2Secret',
   },
+  {
+    name: 'OAUTH_GITHUB_CLIENT_ID',
+    labelKey: 'settings.fieldOAuthClientId',
+    placeholderKey: 'settings.placeholderOAuth',
+    hintKey: 'settings.hintOAuthClientId',
+  },
+  {
+    name: 'OAUTH_GITHUB_CLIENT_SECRET',
+    labelKey: 'settings.fieldOAuthClientSecret',
+    placeholderKey: 'settings.placeholderOAuth',
+    hintKey: 'settings.hintOAuthClientSecret',
+  },
 ] as const;
 
 const GENERAL_FIELDS = FIELDS.slice(0, 2);
-const R2_FIELDS = FIELDS.slice(2);
+const R2_FIELDS = FIELDS.slice(2, 4);
+const OAUTH_FIELDS = FIELDS.slice(4);
 ---
 
 <div class="modal-backdrop" id="settings-modal" hidden data-r2-configured={String(r2Configured)}>
@@ -120,6 +133,30 @@ const R2_FIELDS = FIELDS.slice(2);
         </label>
       ))}
 
+      <div class="field-divider">🔑 {t(lang, 'settings.sectionOAuth')}</div>
+
+      {OAUTH_FIELDS.map((field) => (
+        <label class="field" for={`key-${field.name}`}>
+          <span class="field-label">
+            {t(lang, field.labelKey)} <code>{field.name}</code>
+          </span>
+          <div class="masked-row">
+            <span class="masked-value" id={`masked-${field.name}`}>—</span>
+            <span class="badge badge-muted" id={`badge-${field.name}`}>{t(lang, 'settings.notConfigured')}</span>
+          </div>
+          <input
+            id={`key-${field.name}`}
+            class="input"
+            type="password"
+            name={field.name}
+            placeholder={t(lang, field.placeholderKey)}
+            autocomplete="new-password"
+            spellcheck="false"
+          />
+          <span class="field-hint">{t(lang, field.hintKey)}</span>
+        </label>
+      ))}
+
       <div class="modal-actions">
         <button class="btn btn-ghost" type="button" id="settings-cancel">
           {t(lang, 'settings.cancel')}
@@ -147,6 +184,8 @@ const R2_FIELDS = FIELDS.slice(2);
     { name: 'GITHUB_PAT', labelKey: 'settings.fieldGithub' },
     { name: 'R2_ACCESS_KEY_ID', labelKey: 'settings.fieldR2AccessKey' },
     { name: 'R2_SECRET_ACCESS_KEY', labelKey: 'settings.fieldR2Secret' },
+    { name: 'OAUTH_GITHUB_CLIENT_ID', labelKey: 'settings.fieldOAuthClientId' },
+    { name: 'OAUTH_GITHUB_CLIENT_SECRET', labelKey: 'settings.fieldOAuthClientSecret' },
   ] as const;
 
   /** True when at least one key is already configured (vault or env). */
