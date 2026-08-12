@@ -162,6 +162,13 @@ const fr: Dictionary = {
   'workflow.toastMerged': '🚀 Publié en production !',
   'workflow.toastCreateFailed': 'Échec de la création de la pré-visualisation',
   'workflow.toastMergeFailed': 'Publication impossible',
+  'workflow.cancel': '✕ Annuler la preview',
+  'workflow.cancelling': '⏳ Annulation…',
+  'workflow.cancelConfirm': (n: number) =>
+    `Fermer la preview (PR #${n}) et supprimer sa branche draft/* ? Le contenu du brouillon reste disponible.`,
+  'workflow.cancelDone': (n: number) =>
+    `Preview annulée — PR #${n} fermée et branche supprimée.`,
+  'workflow.cancelFailed': 'Impossible d\'annuler la preview',
 
   // ── Rollback (time machine / undo publish) ────────────────────────
   'rollback.title': '🕘 Historique & Rollback',
@@ -353,6 +360,13 @@ const en: Dictionary = {
   'workflow.toastMerged': '🚀 Published to production!',
   'workflow.toastCreateFailed': 'Preview creation failed',
   'workflow.toastMergeFailed': 'Publishing failed',
+  'workflow.cancel': '✕ Cancel the preview',
+  'workflow.cancelling': '⏳ Cancelling…',
+  'workflow.cancelConfirm': (n: number) =>
+    `Close the preview (PR #${n}) and delete its draft/* branch? The draft content stays available.`,
+  'workflow.cancelDone': (n: number) =>
+    `Preview cancelled — PR #${n} closed and branch deleted.`,
+  'workflow.cancelFailed': 'Unable to cancel the preview',
 
   'rollback.title': '🕘 History & Rollback',
   'rollback.sub': 'Go back to a previous version if something went wrong.',

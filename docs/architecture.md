@@ -65,6 +65,12 @@ Publish ──▶ /api/commit-draft ──▶ branch draft/* + PR (never main)
 5. **No webmaster bucket.** Storage is per-client (their own R2, or git).
    Global keys fall back only for the agency site.
 6. **One final PR per session** (Approach A), not stacked per-change PRs.
+   **Draft hygiene**: at most ONE open `draft/*` PR per site — creating a new
+   preview auto-closes any previous open draft PR and deletes its branch;
+   an explicit **« Annuler la preview »** action (POST `/api/cancel-preview`)
+   covers the discard-without-replacement case. The repo never accumulates
+   stale preview PRs. (No cron cleanup: every git action runs with the
+   logged-in collaborator's OAuth token — no server-side service token.)
 7. **Draft iteration**: plan → patch per file → final payload; the draft is
    sent back on every message (C1 active).
 8. **Dependency maintenance (Renovate, automerged minors).**

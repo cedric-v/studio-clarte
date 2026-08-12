@@ -132,6 +132,75 @@ export async function getDefaultBranch(octokit: Octokit, repo: string): Promise<
 }
 
 /**
+ * Closes an OPEN draft PR (with a short comment) and deletes its `draft/*`
+ * head branch. Used by the explicit "cancel preview" action and by the
+ * auto-cleanup when a new draft replaces a previous one. No-op when the PR
+ * is already closed or merged.
+ */
+export async function closeDraftPR(
+  octokit: Octokit,
+  repo: string,
+  prNumber: number,
+  reason = 'Fermée depuis Studio Clarté (preview annulée).',
+): Promise<void> {
+  const { owner, repoName } = splitRepo(repo);
+  const { data: pr } = await octokit.pulls.get({ owner, repo: repoName, pull_number: prNumber });
+  if (pr.state !== 'open') return; // already closed/merged — nothing to do
+
+  await octokit.issues.createComment({
+    owner,
+    repo: repoName,
+    issue_number: prNumber,
+    body: reason,
+  });
+  await octokit.pulls.update({
+    owner,
+    repo: repoName,
+    pull_number: prNumber,
+    state: 'closed',
+  });
+  // Best-effort: the head branch may already have been deleted by hand
+  // (GitHub then reports `head.ref` as null).
+  if (pr.head?.ref) {
+    await octokit.git
+      .deleteRef({ owner, repo: repoName, ref: `heads/${pr.head.ref}` })
+      .catch(() => undefined);
+  }
+}
+
+/**
+ * Draft hygiene: closes every OPEN `draft/*` PR of the repo and deletes its
+ * branch — so a site never accumulates stale preview PRs ("poubelle").
+ * ONLY head branches prefixed `draft/` are touched (never other branches).
+ * Best-effort: failures are logged, never fatal. Returns the number of PRs
+ * that were closed.
+ */
+export async function cleanupStaleDrafts(
+  octokit: Octokit,
+  repo: string,
+  base: string,
+): Promise<number> {
+  const { owner, repoName } = splitRepo(repo);
+  const { data: pulls } = await octokit.pulls.list({
+    owner,
+    repo: repoName,
+    state: 'open',
+    base,
+    per_page: 50,
+  });
+  const stale = pulls.filter((pr) => pr.head?.ref?.startsWith('draft/'));
+  for (const pr of stale) {
+    try {
+      await closeDraftPR(octokit, repo, pr.number);
+      console.log(`[github] closed stale draft PR #${pr.number} (${pr.head?.ref})`);
+    } catch (error) {
+      console.warn(`[github] failed to close stale draft PR #${pr.number}`, error);
+    }
+  }
+  return stale.length;
+}
+
+/**
  * Creates the `draft/*` branch + the Pull Request in one atomic pass.
  * Never touches `main`.
  */
@@ -144,6 +213,16 @@ export async function createDraftPR(
   const { owner, repoName } = splitRepo(repo);
   const base = opts.base ?? 'main';
   const createdAt = new Date().toISOString();
+
+  // Draft hygiene: a new draft REPLACES any previous open one — close the
+  // stale `draft/*` PRs and delete their branches so the repo stays clean
+  // (at most one open preview PR per site at any time). Best-effort: if the
+  // cleanup fails, the new draft is still created.
+  try {
+    await cleanupStaleDrafts(octokit, repo, base);
+  } catch (error) {
+    console.warn('[github] draft cleanup skipped:', error);
+  }
 
   // 1. Current SHA of the base branch
   const { data: baseRef } = await octokit.git.getRef({

@@ -33,6 +33,9 @@ const { lang } = Astro.locals;
           <a class="preview-link" id="preview-link" href="#" target="_blank" rel="noopener noreferrer" hidden>
             {t(lang, 'workflow.viewPreview')}
           </a>
+          <button class="btn btn-ghost" type="button" id="btn-cancel" hidden>
+            {t(lang, 'workflow.cancel')}
+          </button>
           <details class="tech-details">
             <summary>{t(lang, 'workflow.techDetails')}</summary>
             <p id="pr-tech">
@@ -90,6 +93,7 @@ const { lang } = Astro.locals;
   }
 
   const btnCreate = document.getElementById('btn-create-pr') as HTMLButtonElement;
+  const btnCancel = document.getElementById('btn-cancel') as HTMLButtonElement;
   const previewHint = document.getElementById('preview-hint') as HTMLElement;
   const previewLink = document.getElementById('preview-link') as HTMLAnchorElement;
   const prLink = document.getElementById('pr-link') as HTMLAnchorElement;
@@ -127,6 +131,7 @@ const { lang } = Astro.locals;
       prStatusTech.textContent = '';
       buildLink.hidden = true;
       btnMerge.disabled = true;
+      btnCancel.hidden = true;
     }
     previewHint.textContent = t(lang, 'workflow.toastPayloadReady');
     toast(t(lang, 'workflow.toastPayloadReady'), 'info');
@@ -166,6 +171,7 @@ const { lang } = Astro.locals;
       window.dispatchEvent(new CustomEvent('sc:pr-created'));
 
       activateStep(1);
+      btnCancel.hidden = false;
       // Technical details (small print): PR link + branch
       prLink.href = safeHttpUrl(data.prUrl);
       prLink.textContent = t(lang, 'workflow.techPrLink', data.prNumber);
@@ -188,6 +194,7 @@ const { lang } = Astro.locals;
     const workflow = state.workflow;
     if (!workflow) return;
     btnCreate.disabled = true;
+    btnCancel.hidden = false;
     activateStep(2);
     prLink.href = safeHttpUrl(workflow.prUrl);
     prLink.textContent = t(lang, 'workflow.prLink', workflow.prNumber, workflow.branch);
@@ -220,6 +227,7 @@ const { lang } = Astro.locals;
           btnMerge.disabled = true;
           btnMerge.textContent = t(lang, 'workflow.mergedDone');
           previewHint.textContent = t(lang, 'workflow.mergedNote', workflow.prNumber);
+          btnCancel.hidden = true;
           stopPolling();
           return;
         }
@@ -280,6 +288,53 @@ const { lang } = Astro.locals;
     prStatusTech.textContent = '';
     buildLink.hidden = true;
     btnMerge.disabled = true;
+    btnCancel.hidden = true;
+    btnCancel.disabled = false;
+    btnCancel.textContent = t(lang, 'workflow.cancel');
+  });
+
+  // Explicit "cancel preview": close the draft PR + delete its branch,
+  // WITHOUT merging. The generated payload stays ready (can be re-previewed
+  // or regenerated).
+  btnCancel.addEventListener('click', async () => {
+    const workflow = state.workflow;
+    if (!workflow) return;
+    if (!window.confirm(t(lang, 'workflow.cancelConfirm', workflow.prNumber))) return;
+    btnCancel.disabled = true;
+    btnCancel.textContent = t(lang, 'workflow.cancelling');
+    try {
+      const res = await fetch('/api/cancel-preview', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ prNumber: workflow.prNumber }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.closed) throw new Error(data.error ?? 'Cancel failed');
+
+      state.workflow = null;
+      persistState();
+      stopPolling();
+      resetStepper();
+      previewLink.hidden = true;
+      prLink.hidden = true;
+      prBranch.hidden = true;
+      prStatusTech.textContent = '';
+      buildLink.hidden = true;
+      btnMerge.disabled = true;
+      btnCancel.hidden = true;
+      btnCancel.disabled = false;
+      btnCancel.textContent = t(lang, 'workflow.cancel');
+      // The payload stays ready: re-create the preview or regenerate content.
+      btnCreate.disabled = false;
+      btnCreate.textContent = t(lang, 'workflow.createPreview');
+      previewHint.textContent = t(lang, 'workflow.toastPayloadReady');
+      toast(t(lang, 'workflow.cancelDone', workflow.prNumber), 'success');
+    } catch (error) {
+      console.error('[workflow]', error);
+      toast(error instanceof Error ? error.message : t(lang, 'workflow.cancelFailed'), 'error');
+      btnCancel.disabled = false;
+      btnCancel.textContent = t(lang, 'workflow.cancel');
+    }
   });
 
   btnMerge.addEventListener('click', async () => {

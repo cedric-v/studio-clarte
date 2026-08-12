@@ -218,7 +218,8 @@ Pages project, preview workflow, per-client R2 storage, DNS, vault keys, final t
 | `/api/chat` | POST | AI streaming: plan + one call per file; repo read tools (`listFiles`/`readFile`) |
 | `/api/draft/:token` | GET | Fetch a generated draft payload out of band (KV-backed, 2h TTL, unguessable token) |
 | `/api/upload-url` | POST | Upload target: client R2 presigned URL **or** git-mode path |
-| `/api/commit-draft` | POST | `draft/*` branch + PR in ~1-2 s (Direct Git API) |
+| `/api/commit-draft` | POST | `draft/*` branch + PR in ~1-2 s (Direct Git API) — auto-closes any previous open `draft/*` PR (one active preview per site) |
+| `/api/cancel-preview` | POST | Explicit cancel: closes the draft PR + deletes its branch (no merge) |
 | `/api/status/:siteId/:prNumber` | GET | Preview build polling (Deployments / Check Runs) |
 | `/api/merge` | POST | Squash & merge to `main` + branch deletion |
 | `/api/history` | GET | Production version history (last commits on `main`) |
