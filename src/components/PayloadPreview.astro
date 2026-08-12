@@ -10,16 +10,21 @@ const { lang } = Astro.locals;
       <h2>{t(lang, 'preview.title')}</h2>
       <span class="panel-sub" id="preview-meta">{t(lang, 'preview.empty')}</span>
     </div>
-    <div class="seg" id="view-toggle" role="tablist" aria-label="View mode">
-      <button type="button" role="tab" data-view="visual" class="active" aria-selected="true">
-        {t(lang, 'preview.visual')}
+    <div class="panel-actions">
+      <button class="btn btn-ghost btn-sm" type="button" id="btn-discard-draft" hidden>
+        {t(lang, 'preview.discard')}
       </button>
-      <button type="button" role="tab" data-view="code" aria-selected="false">
-        {t(lang, 'preview.code')}
-      </button>
-      <button type="button" role="tab" data-view="diff" aria-selected="false">
-        {t(lang, 'preview.diff')}
-      </button>
+      <div class="seg" id="view-toggle" role="tablist" aria-label="View mode">
+        <button type="button" role="tab" data-view="visual" class="active" aria-selected="true">
+          {t(lang, 'preview.visual')}
+        </button>
+        <button type="button" role="tab" data-view="code" aria-selected="false">
+          {t(lang, 'preview.code')}
+        </button>
+        <button type="button" role="tab" data-view="diff" aria-selected="false">
+          {t(lang, 'preview.diff')}
+        </button>
+      </div>
     </div>
   </div>
 
@@ -30,7 +35,7 @@ const { lang } = Astro.locals;
 
   <div class="preview-root" id="preview-root" hidden>
     <div class="file-tabs" id="file-tabs" role="tablist" aria-label="Files"></div>
-    <div class="file-toolbar">
+    <div class="file-toolbar" id="file-toolbar">
       <button class="btn btn-ghost btn-sm" type="button" id="btn-copy">📋 {t(lang, 'preview.copy')}</button>
       <button class="btn btn-ghost btn-sm" type="button" id="btn-download">⬇️ {t(lang, 'preview.download')}</button>
       <button class="btn btn-ghost btn-sm" type="button" id="btn-edit">✏️ {t(lang, 'preview.edit')}</button>
@@ -46,7 +51,7 @@ const { lang } = Astro.locals;
 </div>
 
 <script>
-  import { getState, on, persistState } from '../lib/client-state';
+  import { emit, getState, on, persistState, toast } from '../lib/client-state';
   import type { PayloadFile } from '../lib/client-state';
   import { getClientLocale, t } from '../i18n';
   import { renderJson, renderMarkdown } from '../lib/markdown-lite';
@@ -77,12 +82,14 @@ const { lang } = Astro.locals;
   const editorHint = document.getElementById('editor-hint') as HTMLElement;
   const metaEl = document.getElementById('preview-meta') as HTMLElement;
   const pathEl = document.getElementById('file-path') as HTMLElement;
+  const toolbarEl = document.getElementById('file-toolbar') as HTMLElement;
   const copyBtn = document.getElementById('btn-copy') as HTMLButtonElement;
   const downloadBtn = document.getElementById('btn-download') as HTMLButtonElement;
   const editBtn = document.getElementById('btn-edit') as HTMLButtonElement;
   const saveBtn = document.getElementById('btn-save') as HTMLButtonElement;
   const cancelBtn = document.getElementById('btn-cancel') as HTMLButtonElement;
   const modifiedBadge = document.getElementById('edit-modified') as HTMLElement;
+  const discardBtn = document.getElementById('btn-discard-draft') as HTMLButtonElement;
 
   let files: PayloadFile[] = [];
   let active = 0;
@@ -127,7 +134,7 @@ const { lang } = Astro.locals;
       files: payload.files,
     };
     files = payload.files;
-    active = 0;
+    active = -1; // list only by default — content appears on file click
     opened.clear();
     userChoseView = false;
     exitEdit();
@@ -135,6 +142,7 @@ const { lang } = Astro.locals;
     renderFile();
     emptyEl.hidden = true;
     rootEl.hidden = false;
+    discardBtn.hidden = false;
     const kb = (files.reduce((sum, file) => sum + file.content.length, 0) / 1024).toFixed(1);
     metaEl.textContent = t(lang, 'preview.meta', files.length, kb, payload.title ?? '');
   });
@@ -162,7 +170,20 @@ const { lang } = Astro.locals;
 
   function renderFile() {
     const file = files[active];
-    if (!file) return;
+    // Default state: list only — no file selected → no content, no toolbar.
+    // (The studio targets non-technical users: details appear on click.)
+    if (!file) {
+      pathEl.textContent = '';
+      toolbarEl.hidden = true;
+      viewEl.hidden = false;
+      viewEl.innerHTML = `<div class="file-closed">
+        <span class="empty-icon">📂</span>
+        <p>${t(lang, 'preview.selectFile')}</p>
+      </div>`;
+      syncViewToggle('visual');
+      return;
+    }
+    toolbarEl.hidden = false;
     pathEl.textContent = file.path;
     updateDiffToggle(file);
 
@@ -314,16 +335,38 @@ const { lang } = Astro.locals;
       `</div>`;
   }
 
-  // Session reset → back to the start state (empty panel).
-  on('sc:reset', () => {
+  // Back to the start state (empty panel).
+  function resetPanel() {
     files = [];
-    active = 0;
+    active = -1;
     opened.clear();
     userChoseView = false;
     exitEdit();
     emptyEl.hidden = false;
     rootEl.hidden = true;
     metaEl.textContent = t(lang, 'preview.empty');
+    discardBtn.hidden = true;
+  }
+
+  // Session reset → back to the start state (chat + draft).
+  on('sc:reset', resetPanel);
+
+  // Pending draft discarded (chat marker or the discard button) → empty panel.
+  on('sc:payload-cleared', resetPanel);
+
+  // Manual discard: clears the local draft. An open preview PR must be
+  // cancelled from the stepper first (it would otherwise become untracked).
+  discardBtn.addEventListener('click', () => {
+    const current = getState();
+    if (current.workflow) {
+      toast(t(lang, 'preview.discardPrActive'), 'error');
+      return;
+    }
+    if (!window.confirm(t(lang, 'preview.discardConfirm'))) return;
+    current.payload = null;
+    persistState();
+    emit('sc:payload-cleared', null);
+    toast(t(lang, 'preview.discardDone'), 'success');
   });
 
   // ── Manual editing (PagesCMS-style) ──────────────────────────────

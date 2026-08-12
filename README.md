@@ -51,19 +51,23 @@ neither gives you the *safe pipeline* in between. Studio Clarté connects both.
   token limit), and assembles everything into a **single PR**.
 - **Human-in-the-loop editor** — review and fine-tune the generated files in an
   integrated, PagesCMS-style editor (monospace, Tab = 2 spaces for YAML/JSON,
-  ⌘S to save). A **« Différence » view** shows *only the modified lines* for
-  existing files (base: the repo original — what did the AI change?), and it is
-  the **default view** for edited files. New files start **closed** (friendly
-  « Ouvrir » button instead of raw code) so non-technical reviewers are never
-  faced with intimidating markup. Your edits are included in the preview and
-  the final commit.
+  ⌘S to save). The « Fichiers concernés » panel shows the **file list only** by
+  default (no code); click a file to open its view. A **« Différence » view**
+  shows *only the modified lines* for existing files (base: the repo original —
+  what did the AI change?). New files start **closed** (friendly « Ouvrir »
+  button instead of raw code) so non-technical reviewers are never faced with
+  intimidating markup. A **« 🗑️ Abandonner le brouillon »** button — or simply
+  asking the chat to cancel — discards the draft at any time. Your edits are
+  included in the preview and the final commit.
 - **Zero direct commit** — every generation creates a `draft/*` branch + a PR in
   ~1–2 s via the GitHub Git API (`createTree → createCommit → createRef →
   pulls.create`). `main` is only ever touched by a human action (publish).
 - **Preview → Publish** — a Cloudflare preview build runs on the PR; the studio
-  shows the **preview link** and only then enables **« Validate & Deploy to Prod »**
-  (squash & merge). Includes **rollback**: restore any previous production version
-  or undo the last publish.
+  shows the **preview link** — pointed **directly at the modified page** when a
+  single page is touched, or a **list of direct links** to every modified page
+  (built from their frontmatter permalinks) — and only then enables
+  **« Validate & Deploy to Prod »** (squash & merge). Includes **rollback**: restore
+  any previous production version or undo the last publish.
 - **Repo-aware AI** — the model browses and reads your repo before editing, so it
   finds the right files and preserves your frontmatter, permalinks and structure
   (minimal edits, no rewrites).
@@ -118,6 +122,7 @@ POST /api/commit-draft  →  draft/* branch + PR (~1-2 s, no direct commit)
 Cloudflare preview build (Pages Git integration OR GitHub Actions workflow)
    ▼
 「 Voir la Pré-visualisation ↗ 」 → human validation
+   │   (single page → direct link ; several → list of direct page links)
    ▼
 POST /api/merge  →  squash & merge to main  →  production deploys (your CI)
 ```
@@ -231,9 +236,10 @@ Pages project, preview workflow, per-client R2 storage, DNS, vault keys, final t
 
 ```
 src/
-├── components/     Header · ChatStudio (paste/drag&drop, WebP) · PayloadPreview
-│                   (editor PagesCMS-style) · WorkflowTracker (2-step publish) ·
-│                   SettingsModal (write-only vault) · Toasts · LanguageSwitcher
+├── components/     Header · ChatStudio (paste/drag&drop, WebP, expandable
+│                   composer) · PayloadPreview (editor PagesCMS-style) ·
+│                   WorkflowTracker (2-step publish) · SettingsModal (write-only
+│                   vault) · Toasts · LanguageSwitcher
 ├── config/sites.ts Multi-tenant registry (domains come from env, never hardcoded)
 ├── lib/
 │   ├── ai.ts            DeepSeek client + plan/file prompts (minimal-edit aware)

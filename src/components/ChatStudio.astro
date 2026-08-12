@@ -37,6 +37,7 @@ const SUGGESTION_KEYS = ['chat.suggestion1', 'chat.suggestion2', 'chat.suggestio
         placeholder={t(lang, 'chat.placeholder')}
         aria-label={t(lang, 'chat.placeholder')}
       ></textarea>
+      <button class="icon-btn" id="btn-expand" type="button" title={t(lang, 'chat.expandInput')} aria-label={t(lang, 'chat.expandInput')}>⤢</button>
       <button class="btn btn-primary" id="btn-send" type="button">{t(lang, 'chat.send')}</button>
     </div>
     <input type="file" id="file-input" accept="image/*" multiple hidden />
@@ -414,6 +415,24 @@ const SUGGESTION_KEYS = ['chat.suggestion1', 'chat.suggestion2', 'chat.suggestio
         scrollBottom();
       }
 
+      // Cancel intent: the model emitted [[CANCEL_DRAFT]] → discard the
+      // pending draft (chat history is kept) and clear the preview panel.
+      // An open preview PR (if any) stays tracked and remains on GitHub.
+      const cancelRequested = /\[\[\s*CANCEL_DRAFT\s*\]\]/.test(acc);
+      if (cancelRequested) {
+        display = display.replace(/\[\[\s*CANCEL_DRAFT\s*\]\]/g, '').trim();
+        const hadWorkflow = Boolean(state.workflow);
+        state.payload = null;
+        persistState();
+        emit('sc:payload-cleared', null);
+        gitImages = [];
+        display = display || t(lang, 'chat.cancelDraftDone');
+        if (hadWorkflow) display += '\n\n' + t(lang, 'chat.cancelDraftPrOpen');
+        bubble.innerHTML = renderMarkdown(display);
+        scrollBottom();
+        toast(hadWorkflow ? t(lang, 'chat.cancelDraftPrOpen') : t(lang, 'chat.cancelDraftDone'), 'info');
+      }
+
       const assistantMessage: ChatMessage = {
         role: 'assistant',
         content: display,
@@ -422,7 +441,9 @@ const SUGGESTION_KEYS = ['chat.suggestion1', 'chat.suggestion2', 'chat.suggestio
       state.messages.push(assistantMessage);
       persistState();
 
-      if (payload && payload.files.length) {
+      if (cancelRequested) {
+        // Handled above: draft discarded, message displayed, no payload.
+      } else if (payload && payload.files.length) {
         const files = payload.files.filter(
           (file): file is { path: string; content: string } =>
             typeof file === 'object' &&
@@ -497,6 +518,12 @@ const SUGGESTION_KEYS = ['chat.suggestion1', 'chat.suggestion2', 'chat.suggestio
     gitImages = [];
   });
 
+  // Pending draft discarded (chat marker or the preview panel button) → the
+  // Git-fallback images bound to it are discarded too.
+  on('sc:payload-cleared', () => {
+    gitImages = [];
+  });
+
   // Session reset → back to the start state (chat + composer).
   on('sc:reset', () => {
     // Re-capture the shared state (defense in depth: `state` must always be
@@ -505,6 +532,7 @@ const SUGGESTION_KEYS = ['chat.suggestion1', 'chat.suggestion2', 'chat.suggestio
     pendingImages = [];
     gitImages = [];
     inputEl.value = '';
+    setInputExpanded(false, false);
     renderStrip();
     renderAll();
   });
@@ -517,8 +545,31 @@ const SUGGESTION_KEYS = ['chat.suggestion1', 'chat.suggestion2', 'chat.suggestio
     }
   });
 
-  // Auto-grow textarea
+  // Auto-grow textarea (suspended while manually expanded)
+  const expandBtn = document.getElementById('btn-expand') as HTMLButtonElement;
+  let inputExpanded = false;
+
+  function setInputExpanded(expanded: boolean, focus = true) {
+    inputExpanded = expanded;
+    if (expanded) {
+      // Large fixed-height editor; the resize handle allows fine-tuning.
+      inputEl.classList.add('expanded');
+      inputEl.style.height = `${Math.min(window.innerHeight * 0.5, 420)}px`;
+    } else {
+      inputEl.classList.remove('expanded');
+      inputEl.style.height = 'auto';
+      inputEl.style.height = `${Math.min(inputEl.scrollHeight, 160)}px`;
+    }
+    expandBtn.textContent = expanded ? '⤡' : '⤢';
+    expandBtn.title = t(lang, expanded ? 'chat.collapseInput' : 'chat.expandInput');
+    expandBtn.setAttribute('aria-label', expandBtn.title);
+    if (focus) inputEl.focus();
+  }
+
+  expandBtn.addEventListener('click', () => setInputExpanded(!inputExpanded));
+
   inputEl.addEventListener('input', () => {
+    if (inputExpanded) return;
     inputEl.style.height = 'auto';
     inputEl.style.height = `${Math.min(inputEl.scrollHeight, 160)}px`;
   });

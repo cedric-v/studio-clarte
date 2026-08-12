@@ -56,7 +56,9 @@ export function buildPlanPrompt(site: SiteConfig): string {
   return [
     buildBasePrompt(site),
     '',
-    '## Ta tâche — PREMIÈRE ÉTAPE : planifier OU converser',
+    '## Ta tâche — PREMIÈRE ÉTAPE : planifier, converser OU annuler',
+    '- Si l\'utilisateur demande d\'ANNULER / ABANDONNER / DÉFAIRE la modification en cours (un brouillon « [BROUILLON EN COURS] » figure dans les messages) → commence ta réponse par le marqueur exact [[CANCEL_DRAFT]] (seul sur sa ligne), suivi éventuellement d\'un court message de confirmation. Ce marqueur déclenche l\'effacement du brouillon côté système.',
+    '- N\'utilise [[CANCEL_DRAFT]] QUE si un brouillon non publié est réellement en cours de traitement dans la conversation. Sinon, réponds naturellement, sans marqueur.',
     '- Si l\'utilisateur ne demande PAS de générer/modifier du contenu (salutation, question, discussion) → réponds naturellement en français, SANS JSON.',
     '- Si l\'utilisateur demande de générer ou modifier du contenu → réponds UNIQUEMENT avec ce JSON (SANS ``` et SANS contenu de fichier) :',
     '{',

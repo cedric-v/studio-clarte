@@ -721,6 +721,13 @@ body.resizing * {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand-primary) 25%, transparent);
 }
 
+/* Manually expanded composer: large editor + draggable resize handle */
+.composer-row textarea.expanded {
+  min-height: 200px;
+  max-height: none;
+  resize: vertical;
+}
+
 .composer-hint {
   margin-top: 8px;
   font-size: 11.5px;
@@ -767,6 +774,11 @@ body.resizing * {
 .panel-header h2 {
   font-size: 15px;
   font-weight: 700;
+}
+.panel-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 .panel-sub {
   font-size: 12px;
@@ -1094,6 +1106,46 @@ body.resizing * {
 .preview-link:hover {
   background: color-mix(in srgb, var(--brand-primary) 20%, transparent);
   text-decoration: none;
+}
+
+/* Pages modifiées — liens directs vers chaque page (drafts multi-fichiers) */
+.preview-pages {
+  margin-top: 10px;
+  font-size: 12.5px;
+}
+.preview-pages-title {
+  color: var(--text-muted);
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.preview-pages-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-left: 2px;
+  margin: 0;
+  list-style: none;
+}
+.preview-pages-list a {
+  display: block;
+  padding: 3px 0;
+  color: var(--brand-primary);
+  text-decoration: none;
+}
+.preview-pages-list a:hover {
+  text-decoration: none;
+}
+.preview-pages-label {
+  display: block;
+  font-weight: 600;
+  font-size: 13px;
+}
+.preview-pages-url {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-faint);
+  word-break: break-all;
 }
 
 /* Détails techniques — petit texte repliable pour le debug */

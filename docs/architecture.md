@@ -19,6 +19,7 @@ Chat / editor  ──▶ /api/chat ──▶ generator loop ──▶ DeepSeek (
                                           │
 Draft (KV-backed, out-of-band) ◀─ payload marker ─┘
    │                     (chat streams progress + [[PAYLOAD:token]] only)
+   │                     (« annule » → [[CANCEL_DRAFT]] → local draft cleared)
    │
 Review (diff + editor) ◀─ /api/draft/:token (full payload)
    │       └── preview ──▶ GitHub Actions/Pages (client infra)
@@ -38,7 +39,7 @@ Publish ──▶ /api/commit-draft ──▶ branch draft/* + PR (never main)
 | **Storage** | images → client's R2 (or git fallback) | presigned uploads, R2 |
 | **State** | in-memory draft persisted in `sessionStorage` (C1) + KV-backed out-of-band payload delivery (`/api/draft/:token`) | `src/lib/client-state.ts`, `src/pages/api/draft/[token].ts` |
 | **Preview** | GitHub check runs → `buildUrl` polling | GitHub Actions / Pages (client repo) |
-| **i18n / UX** | FR/EN, stepper 2 étapes, diff-first, « Ouvrir » | vanilla, Astro SSR on Workers |
+| **i18n / UX** | FR/EN, stepper 2 étapes, liste d'abord (contenu au clic), abandon du brouillon (bouton ou marqueur `[[CANCEL_DRAFT]]`), liens directs vers les pages modifiées (permalinks) | vanilla, Astro SSR on Workers |
 
 ## Key decisions (ADR-lite)
 
@@ -68,9 +69,13 @@ Publish ──▶ /api/commit-draft ──▶ branch draft/* + PR (never main)
    **Draft hygiene**: at most ONE open `draft/*` PR per site — creating a new
    preview auto-closes any previous open draft PR and deletes its branch;
    an explicit **« Annuler la preview »** action (POST `/api/cancel-preview`)
-   covers the discard-without-replacement case. The repo never accumulates
-   stale preview PRs. (No cron cleanup: every git action runs with the
-   logged-in collaborator's OAuth token — no server-side service token.)
+   covers the discard-without-replacement case. On the client side, a
+   **« 🗑️ Abandonner le brouillon »** button — or a `[[CANCEL_DRAFT]]` marker
+   the model emits when the user asks to cancel — clears the **local draft**
+   (chat history kept); an open PR is only closed by the explicit preview-cancel
+   action. The repo never accumulates stale preview PRs. (No cron cleanup:
+   every git action runs with the logged-in collaborator's OAuth token — no
+   server-side service token.)
 7. **Draft iteration**: plan → patch per file → final payload; the draft is
    sent back on every message (C1 active).
 8. **Dependency maintenance (Renovate, automerged minors).**

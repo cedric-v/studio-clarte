@@ -150,13 +150,20 @@ export async function* runGeneration(
       ...(opts.tools ? { tools: opts.tools } : {}),
     });
     const text = result.text.trim();
-    const obj = extractJsonObject(text) as
-      | { title?: string; summary?: string; plan?: unknown }
-      | null;
-    if (obj && Array.isArray(obj.plan) && obj.plan.length) {
-      plan = obj;
-    } else {
+    // Cancel intent: the model emits the [[CANCEL_DRAFT]] marker instead of a
+    // plan — it takes precedence (no file generation) and flows through as the
+    // streamed reply. The client discards the pending draft on receipt.
+    if (/\[\[\s*CANCEL_DRAFT\s*\]\]/.test(text)) {
       reply = text;
+    } else {
+      const obj = extractJsonObject(text) as
+        | { title?: string; summary?: string; plan?: unknown }
+        | null;
+      if (obj && Array.isArray(obj.plan) && obj.plan.length) {
+        plan = obj;
+      } else {
+        reply = text;
+      }
     }
   } catch (error) {
     console.error('[generator] plan failed:', error);

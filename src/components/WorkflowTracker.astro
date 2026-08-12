@@ -33,6 +33,10 @@ const { lang } = Astro.locals;
           <a class="preview-link" id="preview-link" href="#" target="_blank" rel="noopener noreferrer" hidden>
             {t(lang, 'workflow.viewPreview')}
           </a>
+          <div class="preview-pages" id="preview-pages" hidden>
+            <div class="preview-pages-title">{t(lang, 'workflow.pagesTitle')}</div>
+            <ul class="preview-pages-list" id="preview-pages-list"></ul>
+          </div>
           <button class="btn btn-ghost" type="button" id="btn-cancel" hidden>
             {t(lang, 'workflow.cancel')}
           </button>
@@ -96,6 +100,8 @@ const { lang } = Astro.locals;
   const btnCancel = document.getElementById('btn-cancel') as HTMLButtonElement;
   const previewHint = document.getElementById('preview-hint') as HTMLElement;
   const previewLink = document.getElementById('preview-link') as HTMLAnchorElement;
+  const pagesEl = document.getElementById('preview-pages') as HTMLElement;
+  const pagesList = document.getElementById('preview-pages-list') as HTMLUListElement;
   const prLink = document.getElementById('pr-link') as HTMLAnchorElement;
   const prBranch = document.getElementById('pr-branch') as HTMLElement;
   const prStatusTech = document.getElementById('pr-status-tech') as HTMLElement;
@@ -105,6 +111,10 @@ const { lang } = Astro.locals;
   let polling: ReturnType<typeof setInterval> | null = null;
   let pollingStarted = false;
   let polls = 0;
+  // Direct links to the modified pages (from frontmatter permalinks), built
+  // once the preview base URL is known.
+  let pageLinks: { path: string; url: string; title: string }[] = [];
+  let previewBase: string | null = null;
 
   function activateStep(step: number, done = false) {
     for (let i = 1; i <= 2; i++) {
@@ -120,8 +130,64 @@ const { lang } = Astro.locals;
     }
   }
 
+  /** Extracts the page URL + title from a file's frontmatter (permalink). */
+  function pageMetaFromContent(content: string): { url: string; title: string } | null {
+    const permalink = content.match(/^permalink:\s*["']?([^"'\n]+)["']?\s*$/m);
+    if (!permalink) return null;
+    const url = permalink[1].trim();
+    // Templated permalinks ({{ … }} / {% … %}) can't be resolved client-side.
+    if (url.includes('{{') || url.includes('{%')) return null;
+    const title = content.match(/^title:\s*["']?([^"'\n]+)["']?\s*$/m);
+    return { url, title: title ? title[1].trim() : url };
+  }
+
+  /** Recomputes the direct page links from the current draft payload. */
+  function computePageLinks() {
+    const payload = getState().payload;
+    pageLinks = [];
+    for (const file of payload?.files ?? []) {
+      const meta = pageMetaFromContent(file.content);
+      if (meta) pageLinks.push({ path: file.path, ...meta });
+    }
+    // Keep the rendered list in sync if the preview is already available.
+    if (previewBase) renderPageLinks(previewBase);
+  }
+
+  /** Joins the preview base URL with a page permalink. */
+  function joinUrl(base: string, path: string): string {
+    if (/^https?:\/\//i.test(path)) return path;
+    return base.replace(/\/$/, '') + (path.startsWith('/') ? path : '/' + path);
+  }
+
+  /** Renders the list of directly-linked pages (multi-page drafts only). */
+  function renderPageLinks(base: string) {
+    pagesList.innerHTML = '';
+    if (pageLinks.length <= 1) {
+      pagesEl.hidden = true;
+      return;
+    }
+    for (const link of pageLinks) {
+      const li = document.createElement('li');
+      const a = document.createElement('a');
+      a.href = safeHttpUrl(joinUrl(base, link.url));
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+      const label = document.createElement('span');
+      label.className = 'preview-pages-label';
+      label.textContent = `${link.title} ↗`;
+      const path = document.createElement('span');
+      path.className = 'preview-pages-url';
+      path.textContent = link.url;
+      a.append(label, path);
+      li.appendChild(a);
+      pagesList.appendChild(li);
+    }
+    pagesEl.hidden = false;
+  }
+
   // New payload generated → ready for step 1
   on('sc:payload', () => {
+    computePageLinks();
     btnCreate.disabled = false;
     if (!state.workflow) {
       resetStepper();
@@ -135,6 +201,19 @@ const { lang } = Astro.locals;
     }
     previewHint.textContent = t(lang, 'workflow.toastPayloadReady');
     toast(t(lang, 'workflow.toastPayloadReady'), 'info');
+  });
+
+  // Pending draft discarded (chat marker or the discard button) → nothing
+  // left to preview. An open PR (if any) stays tracked and can be cancelled
+  // or merged from the stepper.
+  on('sc:payload-cleared', () => {
+    btnCreate.disabled = true;
+    pageLinks = [];
+    pagesEl.hidden = true;
+    pagesList.innerHTML = '';
+    if (!state.workflow) {
+      previewHint.textContent = t(lang, 'workflow.step1Hint');
+    }
   });
 
   btnCreate.addEventListener('click', async () => {
@@ -193,6 +272,7 @@ const { lang } = Astro.locals;
   (function restoreWorkflow() {
     const workflow = state.workflow;
     if (!workflow) return;
+    computePageLinks();
     btnCreate.disabled = true;
     btnCancel.hidden = false;
     activateStep(2);
@@ -234,12 +314,21 @@ const { lang } = Astro.locals;
 
         if (status.previewUrl) {
           activateStep(2);
-          previewLink.href = safeHttpUrl(status.previewUrl);
+          previewBase = safeHttpUrl(status.previewUrl).replace(/\/$/, '');
+          // Single modified page → the preview link goes straight to it.
+          previewLink.href =
+            pageLinks.length === 1
+              ? safeHttpUrl(joinUrl(previewBase, pageLinks[0].url))
+              : previewBase;
           previewLink.hidden = false;
-          previewHint.textContent = t(lang, 'workflow.previewReady');
+          previewHint.textContent =
+            pageLinks.length === 1
+              ? `${t(lang, 'workflow.previewReady')} — ${pageLinks[0].title}`
+              : t(lang, 'workflow.previewReady');
           prStatusTech.textContent = '';
           btnMerge.disabled = false;
           stopPolling();
+          renderPageLinks(previewBase);
           toast(t(lang, 'workflow.toastPreviewReady'), 'success');
           return;
         }
@@ -279,6 +368,10 @@ const { lang } = Astro.locals;
   on('sc:reset', () => {
     resetStepper();
     stopPolling();
+    pageLinks = [];
+    previewBase = null;
+    pagesEl.hidden = true;
+    pagesList.innerHTML = '';
     btnCreate.disabled = true;
     btnCreate.textContent = t(lang, 'workflow.createPreview');
     previewHint.textContent = t(lang, 'workflow.step1Hint');
@@ -315,6 +408,9 @@ const { lang } = Astro.locals;
       persistState();
       stopPolling();
       resetStepper();
+      previewBase = null;
+      pagesEl.hidden = true;
+      pagesList.innerHTML = '';
       previewLink.hidden = true;
       prLink.hidden = true;
       prBranch.hidden = true;
@@ -324,10 +420,14 @@ const { lang } = Astro.locals;
       btnCancel.hidden = true;
       btnCancel.disabled = false;
       btnCancel.textContent = t(lang, 'workflow.cancel');
-      // The payload stays ready: re-create the preview or regenerate content.
-      btnCreate.disabled = false;
+      // Re-create the preview only if a draft still exists (it may have been
+      // discarded in the meantime).
+      const hasDraft = Boolean(getState().payload?.files?.length);
+      btnCreate.disabled = !hasDraft;
       btnCreate.textContent = t(lang, 'workflow.createPreview');
-      previewHint.textContent = t(lang, 'workflow.toastPayloadReady');
+      previewHint.textContent = hasDraft
+        ? t(lang, 'workflow.toastPayloadReady')
+        : t(lang, 'workflow.step1Hint');
       toast(t(lang, 'workflow.cancelDone', workflow.prNumber), 'success');
     } catch (error) {
       console.error('[workflow]', error);
