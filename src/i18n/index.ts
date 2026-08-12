@@ -99,6 +99,8 @@ const fr: Dictionary = {
   'chat.noPayload': 'Réponse générée sans payload structuré — précisez la demande',
   'chat.noPayloadNote':
     "Aucun fichier structuré détecté. Pour générer du contenu, précisez une demande claire (ex: « génère la page Offres ») ou relancez la génération.",
+  'chat.noPayloadKeepDraft':
+    'Aucun fichier structuré détecté — le brouillon précédent est conservé dans « Fichiers concernés ».',
   'chat.cancelDraftDone': '✅ Brouillon abandonné — aucune modification ne sera publiée.',
   'chat.cancelDraftPrOpen':
     '⚠️ Une pré-visualisation est ouverte : elle reste sur GitHub. Utilisez « ✕ Annuler la preview » pour la fermer.',
@@ -313,6 +315,8 @@ const en: Dictionary = {
     'Response generated without a structured payload — please be more specific',
   'chat.noPayloadNote':
     'No structured files detected. To generate content, give a clear request (e.g. "generate the Services page") or retry the generation.',
+  'chat.noPayloadKeepDraft':
+    'No structured files detected — the previous draft is kept in "Affected files".',
   'chat.cancelDraftDone': '✅ Draft discarded — no changes will be published.',
   'chat.cancelDraftPrOpen':
     '⚠️ A preview is open: it stays on GitHub. Use “✕ Cancel the preview” to close it.',

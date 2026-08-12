@@ -131,8 +131,18 @@ export async function* runGeneration(
   site: SiteConfig,
   opts: GenerationOptions,
 ): AsyncGenerator<string> {
+  // The latest REAL user request — the last user message may be the synthetic
+  // draft context (« [BROUILLON EN COURS …] ») appended by the client, which
+  // must NOT drive the per-file generation prompt.
   const userText =
-    [...opts.messages].reverse().find((m) => m.role === 'user')?.content ?? '';
+    [...opts.messages]
+      .reverse()
+      .find(
+        (m) =>
+          m.role === 'user' &&
+          typeof m.content === 'string' &&
+          !m.content.startsWith('[BROUILLON EN COURS'),
+      )?.content ?? '';
 
   // ── Step 1: plan (or conversational reply) ────────────────────────
   let plan: { title?: string; summary?: string; plan?: unknown } | null = null;

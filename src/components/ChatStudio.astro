@@ -300,7 +300,7 @@ const SUGGESTION_KEYS = ['chat.suggestion1', 'chat.suggestion2', 'chat.suggestio
   function buildDraftContext(files: { path: string; content: string }[]): string {
     return (
       '[BROUILLON EN COURS — NON PUBLIÉ]\n' +
-      "Ce sont les fichiers du brouillon actuel (pas encore publié). Si l'utilisateur demande des ajustements, applique-les sur CES fichiers et renvoie-les COMPLETS.\n\n" +
+      "Ce sont les fichiers du brouillon actuel (pas encore publié). Si l'utilisateur demande des ajustements (modification, réorganisation, correction…), planifie-les sur CES fichiers — le système régénérera chaque fichier séparément. Ne colle JAMAIS le contenu d'un fichier dans ta réponse : renvoie uniquement le plan.\n\n" +
       files.map((file) => `### ${file.path}\n${file.content}`).join('\n\n') +
       '\n[FIN DU BROUILLON]'
     );
@@ -485,7 +485,9 @@ const SUGGESTION_KEYS = ['chat.suggestion1', 'chat.suggestion2', 'chat.suggestio
         note.className = 'payload-note payload-note-warn';
         note.textContent = isTruncated(display)
           ? t(lang, 'chat.truncatedNote')
-          : t(lang, 'chat.noPayloadNote');
+          : state.payload?.files?.length
+            ? t(lang, 'chat.noPayloadKeepDraft')
+            : t(lang, 'chat.noPayloadNote');
         bubble.appendChild(note);
       }
     } catch (error) {
