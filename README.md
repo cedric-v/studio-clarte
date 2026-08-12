@@ -66,8 +66,12 @@ neither gives you the *safe pipeline* in between. Studio Clarté connects both.
   shows the **preview link** — pointed **directly at the modified page** when a
   single page is touched, or a **list of direct links** to every modified page
   (built from their frontmatter permalinks) — and only then enables
-  **« Validate & Deploy to Prod »** (squash & merge). Includes **rollback**: restore
-  any previous production version or undo the last publish.
+  **« Validate & Deploy to Prod »** (squash & merge). A **two-tier review**
+  speeds things up: the modified page is rendered instantly in the studio
+  (content review without waiting for the build), and the **⚡ auto-preview**
+  toggle (on by default) starts the CI build as soon as a draft is generated.
+  Includes **rollback**: restore any previous production version or undo the
+  last publish.
 - **Repo-aware AI** — the model browses and reads your repo before editing, so it
   finds the right files and preserves your frontmatter, permalinks and structure
   (minimal edits, no rewrites).
@@ -195,7 +199,9 @@ repo to a Pages project and enable PR previews.
 **Option B — GitHub Actions** (when the client already owns its CD/CI): drop the
 provided workflow into the repo — it builds every PR, deploys a preview via Pages
 Direct Upload and reports it as a GitHub Deployment. Studio picks it up with
-**no code change**:
+**no code change**. The template caches `node_modules` (keyed on
+`package-lock.json`) and ships commented-out site build caches (Eleventy/Astro/
+Vite), so previews build from warm caches:
 [`docs/preview-github-actions.yml`](docs/preview-github-actions.yml) · a tailored
 example at [`docs/preview-cedricv.yml`](docs/preview-cedricv.yml) (this one is the author's own site — use it as a base and adapt the project name, build command and secrets).
 

@@ -13,6 +13,11 @@
 #      'preview' — Studio Clarté's status polling picks it up and shows
 #      « Voir la Preview ↗ », then enables the merge button.
 #
+# Speed (recommended): node_modules is cached between runs (keyed on
+# package-lock.json), so `npm ci` only runs when the lockfile changes —
+# the biggest speedup for every preview. Optional site build caches
+# (Eleventy / Astro / Vite) are provided commented-out below.
+#
 # Client prerequisites:
 #   - a Cloudflare Pages project (create once): `npx wrangler pages project create <name>`
 #   - repository secrets:
@@ -46,7 +51,39 @@ jobs:
           node-version: 20
           cache: npm
 
-      - run: npm ci
+      # ── Cache node_modules (biggest win) ────────────────────────────────
+      # `npm ci` DELETES node_modules, so it must be skipped on a cache hit —
+      # otherwise the cache is useless. Key = lockfile hash (+ node version).
+      - name: Cache node_modules
+        id: cache-node-modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-modules-20-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-modules-20-
+
+      - name: Install dependencies
+        run: npm ci
+        if: steps.cache-node-modules.outputs.cache-hit != 'true'
+
+      # ── Optional: site build caches (rolling cache) ─────────────────────
+      # Uncomment the paths your build actually uses. Rolling cache =
+      # restore the previous run's cache, then save a new one after the build.
+      #   - Eleventy: .eleventy-cache/  (only if the site fetches remote data)
+      #   - Astro:    .astro/           (content/astro build cache)
+      #   - Vite:     node_modules/.vite
+      # - name: Cache site build
+      #   uses: actions/cache@v4
+      #   with:
+      #     path: |
+      #       .eleventy-cache
+      #       .astro
+      #       node_modules/.vite
+      #     key: ${{ runner.os }}-site-cache-${{ github.sha }}
+      #     restore-keys: |
+      #       ${{ runner.os }}-site-cache-
+
       # - run: npm test          # optional: same tests as production
 
       # ⚠️ MIRROR YOUR PRODUCTION BUILD exactly (command, env secrets,

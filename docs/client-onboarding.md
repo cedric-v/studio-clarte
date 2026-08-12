@@ -81,6 +81,8 @@ npx wrangler pages project create client-a-com   # nom = convention ci-dessus
    - `CF_PAGES_PROJECT` : nom du projet (ou hardcoder `--project-name` dans le workflow).
 4. **Merger le workflow sur `main` une fois.** Toutes les PR `draft/*` suivantes déclencheront la preview automatiquement.
 
+   > ⚡ **Accélération** : le template fourni met en cache `node_modules` (clé = `package-lock.json` + version Node) — `npm ci` ne tourne que lorsque le lockfile change. Les previews suivantes partent d'un cache chaud (gain majeur). Des caches de build optionnels (`.eleventy-cache` / `.astro` / `node_modules/.vite`) sont fournis en commentaire, à décommenter si le build les utilise.
+
 ---
 
 ## 5. Stockage des images (R2 du client — recommandé)
@@ -149,8 +151,8 @@ Puis :
 ## 7. Test final
 
 1. Ouvrir `https://studio.client-a.ch` → se connecter (ou basculer en Super-Admin).
-2. Générer un contenu → « Fichiers concernés » : liste des fichiers générés (le contenu s'affiche au clic).
-3. « 👁️ Créer la pré-visualisation » → PR + build de preview lancés (~1-2 s).
+2. Générer un contenu → « Fichiers concernés » : liste des fichiers générés (le contenu s'affiche au clic, avec le titre + l'URL de la page en en-tête).
+3. « 👁️ Créer la pré-visualisation » → PR + build de preview lancés (~1-2 s). ⚡ Avec l'option « Pré-visualisation automatique » (cochée par défaut), le build démarre dès la génération — il est souvent déjà prêt quand vous avez fini de relire le contenu.
 4. « Voir la Preview ↗ » apparaît → valider visuellement. Une seule page modifiée :
    le lien pointe **directement vers la page**. Plusieurs pages : une liste
    « Pages modifiées — accès direct » donne un lien direct vers chacune.

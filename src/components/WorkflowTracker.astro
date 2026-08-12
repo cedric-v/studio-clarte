@@ -29,6 +29,13 @@ const { lang } = Astro.locals;
           <button class="btn btn-primary btn-lg" type="button" id="btn-create-pr" disabled>
             {t(lang, 'workflow.createPreview')}
           </button>
+          <label class="auto-preview-toggle" title={t(lang, 'workflow.autoPreviewTitle')}>
+            <input type="checkbox" id="auto-preview" checked />
+            <span>⚡ {t(lang, 'workflow.autoPreview')}</span>
+          </label>
+          <p class="auto-preview-note" id="auto-preview-note" hidden>
+            {t(lang, 'workflow.autoPreviewNote')}
+          </p>
           <span class="step-hint" id="preview-hint">{t(lang, 'workflow.step1Hint')}</span>
           <a class="preview-link" id="preview-link" href="#" target="_blank" rel="noopener noreferrer" hidden>
             {t(lang, 'workflow.viewPreview')}
@@ -115,6 +122,34 @@ const { lang } = Astro.locals;
   // once the preview base URL is known.
   let pageLinks: { path: string; url: string; title: string }[] = [];
   let previewBase: string | null = null;
+  // ⚡ Auto-preview: create the preview build as soon as a new draft is
+  // generated (per-browser preference, ON by default).
+  const autoPreviewInput = document.getElementById('auto-preview') as HTMLInputElement;
+  const autoPreviewNote = document.getElementById('auto-preview-note') as HTMLElement;
+  const AUTO_PREVIEW_KEY = 'sc:auto-preview';
+
+  function isAutoPreviewEnabled(): boolean {
+    try {
+      return localStorage.getItem(AUTO_PREVIEW_KEY) !== 'false';
+    } catch {
+      return true;
+    }
+  }
+
+  function syncAutoPreviewUi() {
+    autoPreviewInput.checked = isAutoPreviewEnabled();
+    autoPreviewNote.hidden = !autoPreviewInput.checked;
+  }
+
+  syncAutoPreviewUi();
+  autoPreviewInput.addEventListener('change', () => {
+    try {
+      localStorage.setItem(AUTO_PREVIEW_KEY, autoPreviewInput.checked ? 'true' : 'false');
+    } catch {
+      // ignore
+    }
+    autoPreviewNote.hidden = !autoPreviewInput.checked;
+  });
 
   function activateStep(step: number, done = false) {
     for (let i = 1; i <= 2; i++) {
@@ -200,7 +235,14 @@ const { lang } = Astro.locals;
       btnCancel.hidden = true;
     }
     previewHint.textContent = t(lang, 'workflow.toastPayloadReady');
-    toast(t(lang, 'workflow.toastPayloadReady'), 'info');
+    // ⚡ Auto-preview: start the build right away so it is ready by the time
+    // the client finishes reviewing the content in « Fichiers concernés ».
+    if (isAutoPreviewEnabled()) {
+      toast(t(lang, 'workflow.autoPreviewStarted'), 'info');
+      void createPreview(true);
+    } else {
+      toast(t(lang, 'workflow.toastPayloadReady'), 'info');
+    }
   });
 
   // Pending draft discarded (chat marker or the discard button) → nothing
@@ -216,14 +258,21 @@ const { lang } = Astro.locals;
     }
   });
 
-  btnCreate.addEventListener('click', async () => {
-    // Read the SHARED payload at click time so manual edits made in the
-    // preview panel are included in the draft PR.
+  let creatingPreview = false;
+
+  /** Creates the draft PR + preview build from the shared payload. */
+  async function createPreview(auto = false) {
+    if (creatingPreview) return;
+    // Read the SHARED payload at click/trigger time so manual edits made in
+    // the preview panel are included in the draft PR.
     const current = getState().payload;
     if (!current || !current.files.length) return;
+    creatingPreview = true;
     btnCreate.disabled = true;
     btnCreate.textContent = t(lang, 'workflow.creating');
-    previewHint.textContent = t(lang, 'workflow.previewPending');
+    previewHint.textContent = auto
+      ? t(lang, 'workflow.autoPreviewStarted')
+      : t(lang, 'workflow.previewPending');
 
     try {
       const res = await fetch('/api/commit-draft', {
@@ -265,8 +314,12 @@ const { lang } = Astro.locals;
       toast(error instanceof Error ? error.message : t(lang, 'workflow.toastCreateFailed'), 'error');
       btnCreate.disabled = false;
       btnCreate.textContent = t(lang, 'workflow.createPreview');
+    } finally {
+      creatingPreview = false;
     }
-  });
+  }
+
+  btnCreate.addEventListener('click', () => void createPreview());
 
   // Refresh support: restore an open workflow (PR link + polling resumes).
   (function restoreWorkflow() {

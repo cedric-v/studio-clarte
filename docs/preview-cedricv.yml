@@ -7,6 +7,9 @@
 # production untouched — prod stays main-only after tests).
 #
 # Preview URL: https://preview-<PR>.cedric-v.pages.dev
+#
+# Speed: node_modules is cached (keyed on package-lock.json) so `npm ci`
+# only runs when the lockfile changes — the biggest speedup for previews.
 # ═══════════════════════════════════════════════════════════════════
 name: Preview (draft PR)
 
@@ -34,8 +37,20 @@ jobs:
           node-version: '24'
           cache: 'npm'
 
+      # ── Cache node_modules (biggest win) ────────────────────────────────
+      # `npm ci` DELETES node_modules, so it must be skipped on a cache hit.
+      - name: Cache node_modules
+        id: cache-node-modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-modules-24-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-modules-24-
+
       - name: Install dependencies
         run: npm ci
+        if: steps.cache-node-modules.outputs.cache-hit != 'true'
 
       # Same build as production (Eleventy), with the same env secrets.
       - name: Build

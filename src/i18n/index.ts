@@ -149,6 +149,12 @@ const fr: Dictionary = {
   'workflow.step2': 'Validation & déploiement',
   'workflow.createPreview': '👁️ Créer la pré-visualisation',
   'workflow.creating': '⏳ Création de la pré-visualisation…',
+  'workflow.autoPreview': 'Pré-visualisation automatique',
+  'workflow.autoPreviewTitle': 'Lancer la pré-visualisation dès qu\'un contenu est généré',
+  'workflow.autoPreviewNote':
+    'Pendant le build, le contenu généré reste visible dans « Fichiers concernés ».',
+  'workflow.autoPreviewStarted':
+    '⚡ Pré-visualisation lancée automatiquement — pendant ce temps, le contenu est dans « Fichiers concernés ».',
   'workflow.step1Hint':
     'Générez une pré-visualisation de votre site avec les changements.',
   'workflow.step2Hint': 'Lorsque la pré-visualisation vous convient, publiez-la en production.',
@@ -363,6 +369,12 @@ const en: Dictionary = {
   'workflow.step2': 'Validation & deployment',
   'workflow.createPreview': '👁️ Create the preview',
   'workflow.creating': '⏳ Creating the preview…',
+  'workflow.autoPreview': 'Automatic preview',
+  'workflow.autoPreviewTitle': 'Start the preview as soon as content is generated',
+  'workflow.autoPreviewNote':
+    'While the build runs, the generated content stays visible in "Affected files".',
+  'workflow.autoPreviewStarted':
+    '⚡ Preview started automatically — meanwhile, the content is in "Affected files".',
   'workflow.step1Hint': 'Generate a preview of your site with the changes.',
   'workflow.step2Hint': 'When the preview looks right, publish it to production.',
   'workflow.viewPreview': '👁️ View the Preview ↗',

@@ -124,6 +124,14 @@ const { lang } = Astro.locals;
   const isJson = (path: string) => /\.json$/i.test(path);
   const iconFor = (path: string) => (isMarkdown(path) ? '📝' : isJson(path) ? '⚙️' : '📄');
 
+  /** Page context (title + permalink) from a file's frontmatter. */
+  function pageMeta(content: string): { title: string; permalink: string } | null {
+    const permalink = content.match(/^permalink:\s*["']?([^"'\n]+)["']?\s*$/m);
+    if (!permalink) return null;
+    const title = content.match(/^title:\s*["']?([^"'\n]+)["']?\s*$/m);
+    return { title: title ? title[1].trim() : '', permalink: permalink[1].trim() };
+  }
+
   on('sc:payload', (payload: { files?: PayloadFile[]; title?: string; summary?: string }) => {
     if (!Array.isArray(payload.files) || !payload.files.length) return;
     // Single source of truth: the shared state (edited files are picked up
@@ -224,9 +232,17 @@ const { lang } = Astro.locals;
       return;
     }
 
-    // Visual view
+    // Visual view — the modified page rendered in its context (title + URL)
+    // for an instant content review without waiting for the CI build.
     if (isMarkdown(file.path)) {
-      viewEl.innerHTML = `<article class="md-preview">${renderMarkdown(file.content)}</article>`;
+      const meta = pageMeta(file.content);
+      const header = meta
+        ? `<div class="page-preview-header">
+             <span class="page-preview-title">${escapeHtml(meta.title || 'Page')}</span>
+             <span class="page-preview-url">${escapeHtml(meta.permalink)}</span>
+           </div>`
+        : '';
+      viewEl.innerHTML = header + `<article class="md-preview">${renderMarkdown(file.content)}</article>`;
     } else if (isJson(file.path)) {
       viewEl.innerHTML = `<pre class="code-fence"><code>${renderJson(file.content).html}</code></pre>`;
     } else {
