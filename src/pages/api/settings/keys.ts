@@ -65,6 +65,22 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return json({ error: 'No keys to save' }, 400);
   }
 
+  // Guard: a CLIENT site must never store the AGENCY's global DeepSeek key.
+  // Clients must provide their own key (no API costs paid on their behalf).
+  const deepseek = secrets.DEEPSEEK_API_KEY;
+  if (deepseek && !site.isAgency) {
+    const env = locals.env as unknown as Record<string, string | undefined>;
+    if (env.DEEPSEEK_API_KEY && deepseek === env.DEEPSEEK_API_KEY) {
+      return json(
+        {
+          error:
+            "Cette clé DeepSeek est celle de l'agence — un site client doit saisir sa propre clé API. La clé de l'agence ne peut pas être stockée dans son coffre-fort.",
+        },
+        403,
+      );
+    }
+  }
+
   try {
     const masked = await writeSecrets(locals.env, site.id, secrets);
     return json({

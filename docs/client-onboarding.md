@@ -159,5 +159,6 @@ Puis :
 ## Rappels de sécurité
 
 - Les clés du client (R2, DeepSeek, OAuth GitHub) sont chiffrées en AES-256-GCM dans le coffre-fort write-only — **jamais** en clair, **jamais** dans le code, et le fallback global ne s'applique **qu'au site de l'agence**.
+- La clé DeepSeek de l'agence (secret Worker) est **refusée** dans le coffre-fort d'un site client (HTTP 403) : chaque client doit saisir sa **propre** clé dans ⚙️ Paramètres — aucun frais API n'est payé à votre place.
 - Le bucket R2 du client n'est accessible qu'avec **son** token scoped ; l'upload se fait en URL présignée temporaire.
 - Aucun octet média ne transite par le Worker du webmaster (upload direct bucket → CDN client).
