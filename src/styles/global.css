@@ -671,6 +671,70 @@ body.resizing * {
   padding: 12px;
 }
 
+/* AI provider + model picker row (above the composer box) */
+.model-selector {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.model-field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.model-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.model-select {
+  max-width: 180px;
+  padding: 5px 8px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  background: var(--bg-app);
+  color: var(--text-main);
+  font-size: 12.5px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color var(--transition-fast);
+}
+.model-select:focus {
+  outline: none;
+  border-color: var(--brand-primary);
+}
+.model-custom {
+  flex: 1;
+  min-width: 160px;
+  max-width: 260px;
+  padding: 5px 8px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  background: var(--bg-app);
+  color: var(--text-main);
+  font-size: 12.5px;
+  font-family: var(--font-mono);
+}
+.model-custom:focus {
+  outline: none;
+  border-color: var(--brand-primary);
+}
+.model-badge {
+  margin-left: auto;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--text-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .composer-strip {
   display: flex;
   gap: 8px;

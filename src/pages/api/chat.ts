@@ -2,13 +2,22 @@ import type { APIRoute } from 'astro';
 import { createTextStreamResponse } from 'ai';
 import type { ModelMessage } from 'ai';
 import { z } from 'zod';
-import { createDeepSeek } from '../../lib/ai';
+import {
+  createAiModel,
+  DEFAULT_PROVIDER_ID,
+  getAiProvider,
+  modelSupportsJsonMode,
+} from '../../lib/ai';
 import { createOctokit, getFileContent, listRepoFiles } from '../../lib/github-edge';
 import { runGeneration } from '../../lib/generator';
 import { resolveSecret } from '../../lib/vault';
 
 /**
- * POST /api/chat — DeepSeek streaming (`deepseek-chat`).
+ * POST /api/chat — AI streaming (provider + model selectable).
+ *
+ * The client picks a provider (`provider`) and a model (`model`) in the
+ * composer; the server resolves the matching API key from the site vault
+ * (or the agency's global env fallback) and streams the reply.
  *
  * Orchestrates generation via `runGeneration`:
  *   - conversational requests → streamed natural reply ;
@@ -34,14 +43,37 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const body = (await request.json().catch(() => null)) as {
     messages?: ModelMessage[];
     draft?: { path: string; content: string; original?: string }[];
+    /** AI provider id (see AI_PROVIDERS in lib/ai.ts). Default: deepseek. */
+    provider?: string;
+    /** Model id for that provider. Default: the provider's first model. */
+    model?: string;
   } | null;
   const messages = Array.isArray(body?.messages) ? body.messages : [];
   if (!messages.length) return json({ error: 'Parameter "messages" required' }, 400);
 
-  const apiKey = await resolveSecret(locals.env, site, 'DEEPSEEK_API_KEY');
+  // ── Provider + model selection (client-chosen, server-validated) ──
+  const providerId =
+    typeof body?.provider === 'string' && body.provider.trim()
+      ? body.provider.trim()
+      : DEFAULT_PROVIDER_ID;
+  const provider = getAiProvider(providerId);
+  if (!provider) {
+    return json({ error: `Fournisseur d'IA inconnu : ${providerId}` }, 400);
+  }
+  const modelId =
+    typeof body?.model === 'string' && body.model.trim()
+      ? body.model.trim()
+      : (provider.models[0]?.id ?? '');
+  if (!modelId) {
+    return json({ error: 'Modèle IA non spécifié.' }, 400);
+  }
+
+  const apiKey = await resolveSecret(locals.env, site, provider.apiKeyName);
   if (!apiKey) {
     return json(
-      { error: 'DeepSeek key not configured for this site — add it in ⚙️ Settings.' },
+      {
+        error: `Clé API ${provider.label} non configurée pour ce site — ajoutez-la dans ⚙️ Paramètres.`,
+      },
       400,
     );
   }
@@ -97,7 +129,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           });
           return token;
         };
-        for await (const chunk of runGeneration(createDeepSeek(apiKey), site, {
+        for await (const chunk of runGeneration(createAiModel(provider, modelId, apiKey), site, {
           messages,
           tools,
           storeDraft,
@@ -109,6 +141,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
           readExisting: octokit
             ? (path) => getFileContent(octokit, site.repo, path, site.defaultBranch)
             : undefined,
+          // Reasoning models (Grok Reasoning, Gemini thinking…) reject
+          // `response_format: json_object` — the generator drops it.
+          jsonMode: modelSupportsJsonMode(provider, modelId),
         })) {
           controller.enqueue(chunk);
         }

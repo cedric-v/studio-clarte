@@ -21,6 +21,36 @@ const FIELDS = [
     hintKey: 'settings.hintDeepseek',
   },
   {
+    name: 'OPENROUTER_API_KEY',
+    labelKey: 'settings.fieldOpenrouter',
+    placeholderKey: 'settings.placeholderAiKey',
+    hintKey: 'settings.hintOpenrouter',
+  },
+  {
+    name: 'OPENAI_API_KEY',
+    labelKey: 'settings.fieldOpenai',
+    placeholderKey: 'settings.placeholderAiKey',
+    hintKey: 'settings.hintOpenai',
+  },
+  {
+    name: 'GEMINI_API_KEY',
+    labelKey: 'settings.fieldGemini',
+    placeholderKey: 'settings.placeholderAiKey',
+    hintKey: 'settings.hintGemini',
+  },
+  {
+    name: 'GROK_API_KEY',
+    labelKey: 'settings.fieldGrok',
+    placeholderKey: 'settings.placeholderAiKey',
+    hintKey: 'settings.hintGrok',
+  },
+  {
+    name: 'OPENCODE_API_KEY',
+    labelKey: 'settings.fieldOpencode',
+    placeholderKey: 'settings.placeholderAiKey',
+    hintKey: 'settings.hintOpencode',
+  },
+  {
     name: 'R2_ACCESS_KEY_ID',
     labelKey: 'settings.fieldR2AccessKey',
     placeholderKey: 'settings.placeholderR2Key',
@@ -52,9 +82,9 @@ const FIELDS = [
   },
 ] as const;
 
-const GENERAL_FIELDS = FIELDS.slice(0, 1);
-const R2_FIELDS = FIELDS.slice(1, 3);
-const OAUTH_FIELDS = FIELDS.slice(3);
+const AI_FIELDS = FIELDS.slice(0, 6);
+const R2_FIELDS = FIELDS.slice(6, 8);
+const OAUTH_FIELDS = FIELDS.slice(8);
 ---
 
 <div class="modal-backdrop" id="settings-modal" hidden data-r2-configured={String(r2Configured)}>
@@ -68,7 +98,10 @@ const OAUTH_FIELDS = FIELDS.slice(3);
     <p class="field-hint modal-env-hint">{t(lang, 'settings.envHint')}</p>
 
     <form id="keys-form">
-      {GENERAL_FIELDS.map((field) => (
+      <div class="field-divider">🤖 {t(lang, 'settings.sectionAi')}</div>
+      <p class="field-hint modal-env-hint">{t(lang, 'settings.aiHint')}</p>
+
+      {AI_FIELDS.map((field) => (
         <label class="field" for={`key-${field.name}`}>
           <span class="field-label">
             {t(lang, field.labelKey)} <code>{field.name}</code>
@@ -181,6 +214,11 @@ const OAUTH_FIELDS = FIELDS.slice(3);
 
   const FIELDS = [
     { name: 'DEEPSEEK_API_KEY', labelKey: 'settings.fieldDeepseek' },
+    { name: 'OPENROUTER_API_KEY', labelKey: 'settings.fieldOpenrouter' },
+    { name: 'OPENAI_API_KEY', labelKey: 'settings.fieldOpenai' },
+    { name: 'GEMINI_API_KEY', labelKey: 'settings.fieldGemini' },
+    { name: 'GROK_API_KEY', labelKey: 'settings.fieldGrok' },
+    { name: 'OPENCODE_API_KEY', labelKey: 'settings.fieldOpencode' },
     { name: 'R2_ACCESS_KEY_ID', labelKey: 'settings.fieldR2AccessKey' },
     { name: 'R2_SECRET_ACCESS_KEY', labelKey: 'settings.fieldR2Secret' },
     { name: 'OAUTH_GITHUB_CLIENT_ID', labelKey: 'settings.fieldOAuthClientId' },

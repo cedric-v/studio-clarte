@@ -164,6 +164,14 @@ export interface GenerationOptions {
    */
   draft?: { path: string; content: string; original?: string }[];
   /**
+   * Whether the model accepts `response_format: { type: 'json_object' }`
+   * (the preferred way to force valid JSON for NEW files). Set to false
+   * for reasoning models that reject it (Grok Reasoning, Gemini thinking…).
+   * Default true. JSON mode is ALWAYS dropped on the retry attempt — the
+   * loose extractor parses plain JSON (fenced or bare) just as well.
+   */
+  jsonMode?: boolean;
+  /**
    * When provided, the final payload is stored OUT OF BAND (server-side)
    * and the stream carries a compact marker `[[PAYLOAD:<token>]]` instead of
    * the full JSON. Large payloads (full file contents ≈ 15-30 KB) streamed
@@ -307,7 +315,12 @@ export async function* runGeneration(
           // NOTE: `responseFormat` is supported at runtime (the AI SDK
           // forwards it to the model call → `response_format` on the wire)
           // but is not exposed in the public generateText typings — cast.
-          responseFormat: { type: 'json' } as never,
+          // Retry (attempt 1) drops JSON mode: reasoning models (Grok
+          // Reasoning, Gemini thinking…) reject response_format entirely —
+          // the loose JSON extractor handles the plain-JSON reply.
+          ...(attempt === 0 && opts.jsonMode !== false
+            ? ({ responseFormat: { type: 'json' } as never })
+            : {}),
           stopWhen: isStepCount(2),
         });
         const lengthTruncated = result.finishReason === 'length';

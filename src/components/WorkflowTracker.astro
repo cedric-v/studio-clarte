@@ -571,6 +571,7 @@ const { lang } = Astro.locals;
     prStatusTech.textContent = '';
     buildLink.hidden = true;
     btnMerge.disabled = true;
+    btnMerge.textContent = t(lang, 'workflow.merge');
     btnCancel.hidden = true;
     btnCancel.disabled = false;
     btnCancel.textContent = t(lang, 'workflow.cancel');

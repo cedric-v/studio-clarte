@@ -16,7 +16,18 @@ const VAULT_PREFIX = 'vault:';
 const IV_BYTES = 12;
 
 export const SECRET_KEYS = [
+  // ── AI providers (OpenAI-compatible endpoints) ───────────────────
+  // One key per provider: DeepSeek (default), OpenRouter (many models via
+  // a single key), OpenAI (GPT-5.x, incl. GPT-5.6 Luna), Google Gemini,
+  // Grok (xAI). The chat lets the user pick provider + model; the server
+  // resolves the matching key from here.
   'DEEPSEEK_API_KEY',
+  'OPENROUTER_API_KEY',
+  'OPENAI_API_KEY',
+  'GEMINI_API_KEY',
+  'GROK_API_KEY',
+  'OPENCODE_API_KEY',
+  // ── Images / R2 (per-site storage) ───────────────────────────────
   'R2_ACCESS_KEY_ID',
   'R2_SECRET_ACCESS_KEY',
   // Per-site GitHub OAuth (client self-login on their own subdomain).
@@ -188,7 +199,7 @@ export async function resolveSecret(
   const vault = await decryptVault(env, site.id);
   if (vault[name]) return vault[name];
   if (site.isAgency) {
-    // Env fallback only exists for schema fields (DEEPSEEK_API_KEY);
+    // Env fallback only exists for schema fields (the AI provider keys);
     // the R2 keys are vault-only (dedicated per-site storage).
     return (env as unknown as Record<string, string | undefined>)[name];
   }

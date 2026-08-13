@@ -11,9 +11,10 @@
 > (multi-tenant by design). The AI does the heavy lifting, a human keeps the
 > final say, and every change goes through a safe preview → publish pipeline.
 
-**Stack** : Astro SSR on Cloudflare Workers · DeepSeek (`deepseek-chat`) ·
-Direct Git API (Octokit) · Cloudflare R2 · AES-256-GCM key vault · Vanilla CSS ·
-i18n FR/EN. **License** : BSD 3-Clause.
+**Stack** : Astro SSR on Cloudflare Workers · AI multi-fournisseurs (DeepSeek,
+OpenRouter, OpenAI GPT-5.x, Google Gemini, Grok xAI, OpenCode Go — modèle au
+choix) · Direct Git API (Octokit) · Cloudflare R2 · AES-256-GCM key vault ·
+Vanilla CSS · i18n FR/EN. **License** : BSD 3-Clause.
 
 ---
 
@@ -49,6 +50,11 @@ neither gives you the *safe pipeline* in between. Studio Clarté connects both.
   replay and an opt-in page in one prompt: the studio plans the files, then
   generates **each page in its own model call** (so the output never hits the
   token limit), and assembles everything into a **single PR**.
+- **Multi-provider AI** — connect your own keys for **DeepSeek**, **OpenRouter**
+  (hundreds of models via one key), **OpenAI** (incl. GPT-5.6 Luna), **Google
+  Gemini** (3.7 Pro/Flash), **Grok (xAI)** (4.6) and **OpenCode Go**, and switch
+  provider + model right in the composer (per-browser memory, free-form model
+  ids allowed). Generation always plans first, then calls the model once per file.
 - **Human-in-the-loop editor** — review and fine-tune the generated files in an
   integrated, PagesCMS-style editor (monospace, Tab = 2 spaces for YAML/JSON,
   ⌘S to save). The « Fichiers concernés » panel shows the **file list only** by
@@ -85,7 +91,8 @@ neither gives you the *safe pipeline* in between. Studio Clarté connects both.
 - **Client-owned storage** — images go to **the client's own R2 bucket** (their
   account, their costs) via presigned URLs, or fall back to being committed in
   git. Your Worker never transits a single media byte.
-- **Write-only key vault** — client API keys (DeepSeek, R2, GitHub OAuth) are
+- **Write-only key vault** — client API keys (AI providers: DeepSeek,
+  OpenRouter, OpenAI, Gemini, Grok, OpenCode Go · R2 · GitHub OAuth) are
   encrypted (AES-256-GCM) and only ever displayed masked: `sk-••••••••1234`.
   Global fallbacks are reserved for the agency site — clients bring their own keys.
 - **Security-first** — Gitleaks pre-commit/pre-push hooks, security headers,
@@ -118,7 +125,7 @@ curl -H "Host: studio.yourdomain.com" http://localhost:4321/login
 ## 🧭 How it works
 
 ```
-AI chat (DeepSeek, streaming)
+AI chat (multi-provider, streaming — provider + model au choix)
    │  site prompt (per subdomain) + media references (CDN or repo paths)
    ▼
 PLAN (file list) → one model call per file → payload assembled
@@ -233,7 +240,7 @@ Pages project, preview workflow, per-client R2 storage, DNS, vault keys, final t
 
 | Endpoint | Method | Role |
 |---|---|---|
-| `/api/chat` | POST | AI streaming: plan + one call per file; repo read tools (`listFiles`/`readFile`) |
+| `/api/chat` | POST | AI streaming (provider + model au choix): plan + one call per file; repo read tools (`listFiles`/`readFile`) |
 | `/api/draft/:token` | GET | Fetch a generated draft payload out of band (KV-backed, 2h TTL, unguessable token) |
 | `/api/upload-url` | POST | Upload target: client R2 presigned URL **or** git-mode path |
 | `/api/commit-draft` | POST | `draft/*` branch + PR in ~1-2 s (Direct Git API) — auto-closes any previous open `draft/*` PR (one active preview per site) |
@@ -255,7 +262,8 @@ src/
 │                   vault) · Toasts · LanguageSwitcher
 ├── config/sites.ts Multi-tenant registry (domains come from env, never hardcoded)
 ├── lib/
-│   ├── ai.ts            DeepSeek client + plan/file prompts (minimal-edit aware)
+│   ├── ai.ts            Provider registry (DeepSeek/OpenRouter/OpenAI/Gemini/
+│   │                    Grok/OpenCode Go — OpenAI-compat) + prompts
 │   ├── generator.ts     Sequential multi-page generation (plan → one call/file)
 │   ├── github-edge.ts   Direct Git API: draft/* + PR, preview status, merge, rollback
 │   ├── storage.ts       R2 presigned URLs / git-mode targets (per-client)

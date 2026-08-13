@@ -17,7 +17,13 @@ export const EnvSchema = z.object({
   VAULT_MASTER_KEY: z.string().min(16).optional(),
 
   // ── Global fallbacks (site not configured in the vault) ──────────
+  // One per AI provider — AGENCY SITE ONLY (clients bring their own keys).
   DEEPSEEK_API_KEY: z.string().optional(),
+  OPENROUTER_API_KEY: z.string().optional(),
+  OPENAI_API_KEY: z.string().optional(),
+  GEMINI_API_KEY: z.string().optional(),
+  GROK_API_KEY: z.string().optional(),
+  OPENCODE_API_KEY: z.string().optional(),
 
   // ── GitHub OAuth (collaborator authentication) ───────────────────
   OAUTH_GITHUB_CLIENT_ID: z.string().optional(),
