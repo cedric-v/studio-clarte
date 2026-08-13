@@ -372,7 +372,14 @@ export async function getPRStatus(octokit: Octokit, repo: string, prNumber: numb
         repo: repoName,
         deployment_id: cfDeployment.id,
       });
-      const latest = statuses[0];
+      // statuses are newest-first. GitHub marks a deployment 'inactive' when a
+      // newer one supersedes it (same environment) — that status carries no
+      // URL. Skip inactive statuses and take the newest one that still carries
+      // the preview URL (fallback: newest non-inactive, then statuses[0]).
+      const latest =
+        statuses.find((s) => s.state !== 'inactive' && (s.environment_url || s.target_url)) ??
+        statuses.find((s) => s.state !== 'inactive') ??
+        statuses[0];
       if (latest) {
         previewUrl = latest.environment_url ?? latest.target_url ?? null;
         state = mapDeploymentState(latest.state);

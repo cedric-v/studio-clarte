@@ -374,7 +374,7 @@ const { lang } = Astro.locals;
     btnCancel.hidden = false;
     activateStep(2);
     prLink.href = safeHttpUrl(workflow.prUrl);
-    prLink.textContent = t(lang, 'workflow.prLink', workflow.prNumber, workflow.branch);
+    prLink.textContent = t(lang, 'workflow.techPrLink', workflow.prNumber);
     prLink.hidden = false;
     prBranch.textContent = workflow.branch;
     prBranch.hidden = false;
