@@ -39,7 +39,7 @@
     // JSON map siteId → client custom domain, e.g. {"client-a":"studio.client-a.ch"}
     "SITE_DOMAINS": "{}",
     // JSON map siteId → partial site overrides (repo, cdnDomain, r2…).
-    // e.g. {"agence":{"repo":"your-org/your-site","cdnDomain":"https://cdn.your-domain.com"}}
+    // e.g. {"agence":{"name":"Your Site Name","repo":"your-org/your-site","cdnDomain":"https://cdn.your-domain.com"}}
     "SITE_OVERRIDES": "{}",
     "SESSION_TTL_SECONDS": 604800
   }
