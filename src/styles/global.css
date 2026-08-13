@@ -702,27 +702,88 @@ body.resizing * {
   align-items: flex-end;
   gap: 8px;
 }
-.composer-row textarea {
+
+/* Contained input box (ChatGPT/Gemini/Claude pattern): the textarea and its
+   action buttons (expand, send) live inside ONE rounded container — the send
+   stays a compact circular icon, always visible even on small screens. */
+.composer-box {
+  position: relative;
   flex: 1;
-  min-height: 76px;
+  min-width: 0;
+  display: flex;
+  align-items: flex-end;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  background: var(--bg-app);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+.composer-box:focus-within {
+  border-color: var(--brand-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand-primary) 25%, transparent);
+}
+.composer-box textarea {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
   max-height: 200px;
   resize: none;
-  padding: 12px 14px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border-color);
-  background: var(--bg-app);
+  padding: 12px 14px 42px; /* bottom room for the floating actions */
+  border: 0;
+  outline: none;
+  background: transparent;
   color: var(--text-main);
   font-size: 14px;
   line-height: 1.5;
 }
-.composer-row textarea:focus {
-  outline: none;
-  border-color: var(--brand-primary);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand-primary) 25%, transparent);
+.composer-actions {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.composer-action {
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 14px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+.composer-action:hover {
+  background: var(--bg-surface-elevated);
+  color: var(--text-main);
+}
+.send-btn {
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--brand-primary);
+  color: #fff;
+  font-size: 18px;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: opacity var(--transition-fast);
+}
+.send-btn:hover {
+  opacity: 0.9;
+}
+.send-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 /* Manually expanded composer: large editor + draggable resize handle */
-.composer-row textarea.expanded {
+.composer-box textarea.expanded {
   min-height: 200px;
   max-height: none;
   resize: vertical;

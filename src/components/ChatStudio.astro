@@ -31,14 +31,18 @@ const SUGGESTION_KEYS = ['chat.suggestion1', 'chat.suggestion2', 'chat.suggestio
     <div class="composer-strip" id="image-strip" hidden></div>
     <div class="composer-row">
       <button class="icon-btn" id="btn-attach" type="button" title={t(lang, 'chat.attach')}>📎</button>
-      <textarea
-        id="chat-input"
-        rows="2"
-        placeholder={t(lang, 'chat.placeholder')}
-        aria-label={t(lang, 'chat.placeholder')}
-      ></textarea>
-      <button class="icon-btn" id="btn-expand" type="button" title={t(lang, 'chat.expandInput')} aria-label={t(lang, 'chat.expandInput')}>⤢</button>
-      <button class="btn btn-primary" id="btn-send" type="button">{t(lang, 'chat.send')}</button>
+      <div class="composer-box">
+        <textarea
+          id="chat-input"
+          rows="2"
+          placeholder={t(lang, 'chat.placeholder')}
+          aria-label={t(lang, 'chat.placeholder')}
+        ></textarea>
+        <div class="composer-actions">
+          <button class="composer-action" id="btn-expand" type="button" title={t(lang, 'chat.expandInput')} aria-label={t(lang, 'chat.expandInput')}>⤢</button>
+          <button class="send-btn" id="btn-send" type="button" title={t(lang, 'chat.sendTitle')} aria-label={t(lang, 'chat.send')}>↑</button>
+        </div>
+      </div>
     </div>
     <input type="file" id="file-input" accept="image/*" multiple hidden />
     <p class="composer-hint">{t(lang, 'chat.composerHint')}</p>
@@ -496,7 +500,7 @@ const SUGGESTION_KEYS = ['chat.suggestion1', 'chat.suggestion2', 'chat.suggestio
     } finally {
       streaming = false;
       sendBtn.disabled = false;
-      sendBtn.textContent = t(lang, 'chat.send');
+      sendBtn.textContent = '↑';
       scrollBottom();
     }
   }
