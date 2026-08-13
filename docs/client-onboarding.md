@@ -131,10 +131,19 @@ Workers Versions model bakes vars into each version). Edit the `vars` section:
     "repo": "client-org/instant-academie",
     "framework": "eleventy",
     "cdnDomain": "https://cdn.instant-academie.com",
-    "systemPromptAddon": "… directives propres au site …"
+    "systemPromptAddon": "… directives propres au site …",
+    "skillPaths": [".agents/skills/ajouter-offre/SKILL.studio.md"]
   }
 }
 ```
+
+> **Skills par site (optionnel)** : ajouter `skillPaths` (array de chemins
+> repo-relative vers des fichiers `SKILL.md`, frontmatter `name` +
+> `description`) à charger depuis **le repo du site** via l'API GitHub. Ils
+> sont injectés dans les prompts **uniquement quand la demande utilisateur
+> matche la description** (sémantique des skills d'agents CLI). Les autres
+> sites ne sont pas affectés (défaut : `[]`). Voir `docs/architecture.md` →
+> décision 10.
 
 > If the client uses R2 storage (recommended), add `r2AccountId` / `r2Bucket`
 > (step 5) and enter the client's keys in the site vault.
@@ -143,7 +152,7 @@ Puis :
 - [ ] **Domaine custom** sur le Worker : `studio.client-a.ch` (Workers → studio-clarte → Domains & Routes).
 - [ ] **OAuth GitHub** (si le client se connecte lui-même) : une OAuth App GitHub n'accepte qu'**une seule callback URL** — l'app globale ne fonctionne que sur le domaine de l'agence. Pour le self-login du client sur son sous-domaine : créer une **2ᵉ OAuth App** (callback `https://studio.client-a.ch/api/auth/callback`), puis saisir `OAUTH_GITHUB_CLIENT_ID` / `OAUTH_GITHUB_CLIENT_SECRET` dans le coffre-fort du site (⚙️ Paramètres, section « Connexion ») — sans changement de code depuis la v0.6 (résolution par site, fallback global).
 - [ ] **Autorisation = accès au repo** (automatique) : à la connexion, le Studio vérifie que le compte GitHub peut accéder au repo du site (propriétaire ou collaborateur). Aucune liste à maintenir. ⚠️ Repo **privé** : au premier login, l'utilisateur doit accorder à l'OAuth App l'accès à ses repos privés ; repo d'**organisation** : l'admin de l'org doit approuver l'app (Settings de l'org → Third-party access).
-- [ ] **Coffre-fort** du site : coller `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` du client (étape 5). Le client peut aussi y saisir sa propre clé DeepSeek.
+- [ ] **Coffre-fort** du site : coller `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` du client (étape 5). Le client peut aussi y saisir sa **propre clé IA** (DeepSeek, OpenRouter, OpenAI, Gemini, Grok…), puis choisir son **fournisseur + modèle actifs** dans ⚙️ Paramètres.
   - **Aucun `GITHUB_PAT` à renseigner** : chaque contributeur se connecte avec son propre compte GitHub (OAuth), et les commits/PR/merges portent son nom automatiquement.
 
 ---
@@ -165,7 +174,7 @@ Puis :
 
 ## Rappels de sécurité
 
-- Les clés du client (R2, DeepSeek, OAuth GitHub) sont chiffrées en AES-256-GCM dans le coffre-fort write-only — **jamais** en clair, **jamais** dans le code, et le fallback global ne s'applique **qu'au site de l'agence**.
-- La clé DeepSeek de l'agence (secret Worker) est **refusée** dans le coffre-fort d'un site client (HTTP 403) : chaque client doit saisir sa **propre** clé dans ⚙️ Paramètres — aucun frais API n'est payé à votre place.
+- Les clés du client (R2, IA, OAuth GitHub) sont chiffrées en AES-256-GCM dans le coffre-fort write-only — **jamais** en clair, **jamais** dans le code, et le fallback global ne s'applique **qu'au site de l'agence**.
+- Les clés IA de l'agence (secrets Worker) sont **refusées** dans le coffre-fort d'un site client (HTTP 403) : chaque client doit saisir ses **propres** clés (DeepSeek, OpenRouter, OpenAI, Gemini, Grok…) dans ⚙️ Paramètres — aucun frais API n'est payé à votre place.
 - Le bucket R2 du client n'est accessible qu'avec **son** token scoped ; l'upload se fait en URL présignée temporaire.
 - Aucun octet média ne transite par le Worker du webmaster (upload direct bucket → CDN client).

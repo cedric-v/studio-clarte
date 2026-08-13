@@ -102,6 +102,26 @@ neither gives you the *safe pipeline* in between. Studio Clarté connects both.
 
 ---
 
+## 🚧 Limitations (assumées)
+
+- **Contenu uniquement, jamais de code exécuté** — le Studio génère/modifie des
+  fichiers de contenu (Markdown, JSON, YAML) et **n'exécute jamais de code ni de
+  shell** : l'API GitHub est la « main » de l'agent (décision d'architecture
+  n°2). Les builds, tests et previews tournent sur la **CI du client**.
+- **Taille par fichier** — chaque page est générée dans son propre appel modèle
+  (limite de sortie ~8192 tokens) : les très longs documents doivent être
+  découpés en plusieurs fichiers dans le plan (jamais tronqués en silence).
+- **Preview dépendante de la CI client** — l'URL de préview est extraite des
+  GitHub Deployments (fallback check runs) ; un client en pure intégration Git
+  Pages sans `environment:` peut rester « en attente » sans lien (voir E3 dans
+  `docs/architecture.md`).
+- **Déclenchement des skills par heuristique** — une skill ne s'injecte que si
+  la demande utilisateur matche sa description (phrases/verbes de création).
+  Une formulation très éloignée peut manquer le déclencheur : reformuler ou
+  préciser la demande.
+
+---
+
 ## 📸 Screenshots
 
 *Coming soon — see the list at the bottom of this file.*

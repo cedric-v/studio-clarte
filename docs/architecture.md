@@ -33,6 +33,7 @@ Publish ──▶ /api/commit-draft ──▶ branch draft/* + PR (never main)
 | Component | Role | Tech |
 |---|---|---|
 | **Generator** | plan → one DeepSeek call per file, patch mode, final payload | `src/lib/generator.ts`, `ai.ts` |
+| **Skills** | per-site client instructions loaded from the site's OWN repo (`.agents/skills/…/SKILL.md`), description-triggered injection into the prompts | `src/lib/skills.ts` + `skillPaths` in `SITE_OVERRIDES` |
 | **GitHub hands** | read/write site files, PRs, status | Octokit v22 (REST/GraphQL, edge) |
 | **Registry** | multi-tenant sites from env vars (`SITE_DOMAINS`, `SITE_OVERRIDES`) | `src/config/sites.ts` — new clients = vars in the gitignored `wrangler.jsonc` |
 | **Vault** | per-site keys, encrypted, write-only | AES-256-GCM, `VAULT_MASTER_KEY` |
@@ -98,6 +99,16 @@ Publish ──▶ /api/commit-draft ──▶ branch draft/* + PR (never main)
    through the long-lived chat response truncated in production ("Réponse
    tronquée"); the marker is immune. The store is also a first step toward
    C3 (cross-device draft persistence, `docs/iteration-strategy.md`).
+10. **Per-site skills: client instructions live in the client repo, injected
+    only on demand.** A site can declare `skillPaths` (in `SITE_OVERRIDES`)
+    pointing to `.agents/skills/<skill>/SKILL.md` files in ITS OWN repo
+    (frontmatter `name` + `description`). The description drives the trigger:
+    when the user request matches it, the full body is injected into the plan
+    AND per-file prompts. This gives client teams the same "skill" semantics
+    as CLI agents (pi / opencode / codex) **without any execution capability**
+    — the skill is pure instructions on top of the existing content pipeline.
+    Isolation: skills load from `site.repo` only, and sites without
+    `skillPaths` are completely unaffected.
 
 ## Why not `@cloudflare/computer` for generation/iteration?
 
@@ -130,6 +141,9 @@ not for text edits.
   *skipped* run rather than the failing one. The failure is correctly surfaced
   (« pré-visualisation échouée ») but the direct link may not point to the root
   cause — surfacing it would require reading all check runs on the head SHA.
+- **Skill trigger is heuristic**: a per-site skill activates only when the
+  user request matches its description (creation phrases/verbs). A far-afield
+  phrasing may miss the trigger — reformulating re-arms it.
 - **Preview URL extracted from GitHub Deployments only**: a client using pure
   Cloudflare Pages *Git integration* (no `environment:` on a preview job, hence
   no Deployment) gets a check run instead — the studio would stay « en attente »
