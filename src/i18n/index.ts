@@ -185,6 +185,7 @@ const fr: Dictionary = {
   'workflow.toastMergeFailed': 'Publication impossible',
   'workflow.mergeNote':
     '⚠️ Les checks qualité s\'exécutent après la fusion sur main — la mise en ligne n\'est effective que s\'ils passent.',
+  'workflow.trackPublish': 'Suivre la publication sur GitHub ↗',
   'workflow.publishingPending':
     '⏳ Publication en cours — les checks qualité s\'exécutent sur main…',
   'workflow.publishingInProgress': '🚀 Déploiement en production en cours…',
@@ -416,6 +417,7 @@ const en: Dictionary = {
   'workflow.toastMergeFailed': 'Publishing failed',
   'workflow.mergeNote':
     '⚠️ Quality checks run after the merge on main — the site only goes live if they pass.',
+  'workflow.trackPublish': 'Track the publish on GitHub ↗',
   'workflow.publishingPending': '⏳ Publishing — quality checks are running on main…',
   'workflow.publishingInProgress': '🚀 Deploying to production…',
   'workflow.publishFailed': '⚠️ Publish failed',

@@ -77,6 +77,9 @@ const { lang } = Astro.locals;
           <a class="preview-link" id="prod-link" href="#" target="_blank" rel="noopener noreferrer" hidden>
             {t(lang, 'workflow.viewSite')}
           </a>
+          <a class="publish-track-link" id="publish-track-link" href="#" target="_blank" rel="noopener noreferrer" hidden>
+            {t(lang, 'workflow.trackPublish')}
+          </a>
           <span class="step-hint">{t(lang, 'workflow.step2Hint')}</span>
           <details class="tech-details">
             <summary>{t(lang, 'workflow.techDetails')}</summary>
@@ -119,6 +122,7 @@ const { lang } = Astro.locals;
   const buildLink = document.getElementById('build-link') as HTMLAnchorElement;
   const btnMerge = document.getElementById('btn-merge') as HTMLButtonElement;
   const prodLink = document.getElementById('prod-link') as HTMLAnchorElement;
+  const publishTrackLink = document.getElementById('publish-track-link') as HTMLAnchorElement;
 
   let polling: ReturnType<typeof setInterval> | null = null;
   let pollingStarted = false;
@@ -232,6 +236,7 @@ const { lang } = Astro.locals;
   on('sc:payload', () => {
     computePageLinks();
     prodLink.hidden = true; // back to draft mode — the site link is stale
+    publishTrackLink.hidden = true;
     btnCreate.disabled = false;
     if (!state.workflow || state.workflow.published) {
       // Fresh draft: reset the stepper. A *published* workflow is closed — the
@@ -239,6 +244,8 @@ const { lang } = Astro.locals;
       // visible until its replacement PR is created a moment later.
       resetStepper();
       previewLink.hidden = true;
+      pagesEl.hidden = true;
+      pagesList.innerHTML = '';
       prLink.hidden = true;
       prBranch.hidden = true;
       prStatusTech.textContent = '';
@@ -265,6 +272,7 @@ const { lang } = Astro.locals;
     btnCreate.disabled = true;
     pageLinks = [];
     prodLink.hidden = true;
+    publishTrackLink.hidden = true;
     pagesEl.hidden = true;
     pagesList.innerHTML = '';
     if (!state.workflow) {
@@ -412,10 +420,20 @@ const { lang } = Astro.locals;
             btnMerge.disabled = true;
             btnMerge.textContent = t(lang, 'workflow.mergedDone');
             previewHint.textContent = t(lang, 'workflow.mergedNote', workflow.prNumber);
-            // Point the user at the live site once the deploy succeeded.
+            // Live site + direct links to the published pages (same logic as
+            // the preview: single page → direct link, several → list).
+            publishTrackLink.hidden = true;
             if (status.prodUrl) {
-              prodLink.href = safeHttpUrl(status.prodUrl);
+              const base = safeHttpUrl(status.prodUrl).replace(/\/$/, '');
+              prodLink.href =
+                pageLinks.length === 1
+                  ? safeHttpUrl(joinUrl(base, pageLinks[0].url))
+                  : base;
+              if (pageLinks.length === 1) {
+                previewHint.textContent = `${t(lang, 'workflow.mergedNote', workflow.prNumber)} — ${pageLinks[0].title}`;
+              }
               prodLink.hidden = false;
+              renderPageLinks(base);
             }
             // Mark the workflow as published: a new draft later triggers the
             // soft reset instead of inheriting this closed state.
@@ -433,6 +451,11 @@ const { lang } = Astro.locals;
             btnMerge.textContent = t(lang, 'workflow.publishFailed');
             previewHint.textContent = t(lang, 'workflow.mergedFailedNote');
             prodLink.hidden = true;
+            // Link to the failing run so the user can see what failed.
+            if (status.runUrl || workflow.prUrl) {
+              publishTrackLink.href = safeHttpUrl(status.runUrl ?? workflow.prUrl);
+              publishTrackLink.hidden = false;
+            }
             stopPolling();
             toast(t(lang, 'workflow.mergedFailed'), 'error');
             return;
@@ -444,12 +467,19 @@ const { lang } = Astro.locals;
             btnMerge.disabled = true;
             btnMerge.textContent = t(lang, 'workflow.mergeAwaiting');
             previewHint.textContent = t(lang, 'workflow.mergeAwaitingNote');
+            publishTrackLink.href = safeHttpUrl(status.runUrl ?? workflow.prUrl);
+            publishTrackLink.hidden = false;
             stopPolling();
             return;
           }
           activateStep(2);
           btnMerge.disabled = true;
           btnMerge.textContent = t(lang, 'workflow.merging');
+          // Progress link while the quality checks + deploy run on main.
+          if (status.runUrl || workflow.prUrl) {
+            publishTrackLink.href = safeHttpUrl(status.runUrl ?? workflow.prUrl);
+            publishTrackLink.hidden = false;
+          }
           previewHint.textContent =
             status.prodState === 'in_progress'
               ? t(lang, 'workflow.publishingInProgress')
@@ -517,6 +547,7 @@ const { lang } = Astro.locals;
     previewBase = null;
     mergePolls = 0;
     prodLink.hidden = true;
+    publishTrackLink.hidden = true;
     pagesEl.hidden = true;
     pagesList.innerHTML = '';
     btnCreate.disabled = true;
@@ -557,6 +588,7 @@ const { lang } = Astro.locals;
       resetStepper();
       previewBase = null;
       prodLink.hidden = true;
+      publishTrackLink.hidden = true;
       pagesEl.hidden = true;
       pagesList.innerHTML = '';
       previewLink.hidden = true;

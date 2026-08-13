@@ -47,6 +47,8 @@ export interface PRStatus {
   /** Post-merge production deploy tracking (filled once the PR is merged). */
   prodState: 'unknown' | 'pending' | 'in_progress' | 'success' | 'error';
   prodUrl: string | null;
+  /** Actions run on the merge commit — progress link while publishing. */
+  runUrl: string | null;
   /** PR merge timestamp — post-merge deployments created after it are tracked. */
   mergedAt: string | null;
 }
@@ -348,6 +350,7 @@ export async function getPRStatus(octokit: Octokit, repo: string, prNumber: numb
       updatedAt: pr.updated_at,
       prodState: prod.state,
       prodUrl: prod.url,
+      runUrl: prod.runUrl,
       mergedAt: pr.merged_at ?? null,
     };
   }
@@ -430,6 +433,7 @@ export async function getPRStatus(octokit: Octokit, repo: string, prNumber: numb
     updatedAt: pr.updated_at,
     prodState: 'unknown',
     prodUrl: null,
+    runUrl: null,
     mergedAt: null,
   };
 }
@@ -448,8 +452,39 @@ export async function getProductionDeployState(
   repo: string,
   mergedAt: string | null,
   mergeSha: string | null,
-): Promise<{ state: 'pending' | 'in_progress' | 'success' | 'error'; url: string | null }> {
+): Promise<{
+  state: 'pending' | 'in_progress' | 'success' | 'error';
+  url: string | null;
+  /** Actions run URL on the merge commit — shown as the progress link. */
+  runUrl: string | null;
+}> {
   const { owner, repoName } = splitRepo(repo);
+
+  // Check runs on the merge commit: the progress link (runUrl) + failure
+  // detection (a failed gate = the deploy job was skipped).
+  let runUrl: string | null = null;
+  let gateFailed = false;
+  if (mergeSha) {
+    try {
+      const { data: runs } = await octokit.checks.listForRef({
+        owner,
+        repo: repoName,
+        ref: mergeSha,
+      });
+      const failed = runs.check_runs.find((run) =>
+        ['failure', 'timed_out', 'action_required'].includes(run.conclusion ?? ''),
+      );
+      if (failed) {
+        gateFailed = true;
+        runUrl = failed.details_url ?? failed.html_url ?? null;
+      } else {
+        const first = runs.check_runs[0];
+        runUrl = first?.details_url ?? first?.html_url ?? null;
+      }
+    } catch {
+      // ignore — keep pending
+    }
+  }
 
   // 1. Latest production deployment created AFTER the merge.
   if (mergedAt) {
@@ -477,36 +512,22 @@ export async function getProductionDeployState(
           deployment_id: post.id,
         });
         const latest = statuses[0];
-        if (!latest) return { state: 'in_progress', url: null };
+        if (!latest) return { state: 'in_progress', url: null, runUrl };
         const url = latest.environment_url ?? latest.target_url ?? null;
-        if (latest.state === 'success') return { state: 'success', url };
-        if (latest.state === 'error' || latest.state === 'failure') return { state: 'error', url };
-        return { state: 'in_progress', url };
+        if (latest.state === 'success') return { state: 'success', url, runUrl };
+        if (latest.state === 'error' || latest.state === 'failure')
+          return { state: 'error', url, runUrl };
+        return { state: 'in_progress', url, runUrl };
       }
     } catch {
       // API hiccup → fall through to check runs, keep polling.
     }
   }
 
-  // 2. No post-merge deployment yet → a failed check on the merge commit means
-  //    a gate (quality/lint) failed and the deploy job was skipped.
-  if (mergeSha) {
-    try {
-      const { data: runs } = await octokit.checks.listForRef({
-        owner,
-        repo: repoName,
-        ref: mergeSha,
-      });
-      const failed = runs.check_runs.find((run) =>
-        ['failure', 'timed_out', 'action_required'].includes(run.conclusion ?? ''),
-      );
-      if (failed) return { state: 'error', url: null };
-    } catch {
-      // ignore — keep pending
-    }
-  }
-
-  return { state: 'pending', url: null };
+  // 2. No post-merge deployment yet → a failed gate on the merge commit means
+  //    the deploy job was skipped.
+  if (gateFailed) return { state: 'error', url: null, runUrl };
+  return { state: 'pending', url: null, runUrl };
 }
 
 export interface MergeResult {
