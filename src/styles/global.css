@@ -118,6 +118,11 @@ button {
 
 .app-shell {
   display: grid;
+  /* Constrain the single implicit column to the viewport width: without it,
+     an auto track sizes to the WIDEST child's min-content (e.g. the header
+     actions) and the whole layout overflows/clips on mobile — the chat
+     composer's right side (send button) disappears. */
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: var(--header-h) 1fr auto;
   height: 100dvh;
   overflow: hidden;
