@@ -1127,6 +1127,14 @@ body.resizing * {
   color: var(--text-faint);
 }
 
+/* Publication — avertissement checks qualité post-fusion */
+.publish-note {
+  margin: 6px 0 0;
+  font-size: 11.5px;
+  color: var(--text-faint);
+  max-width: 46ch;
+}
+
 /* Page context header — instant content preview (tier 1) */
 .page-preview-header {
   display: flex;

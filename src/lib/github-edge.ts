@@ -44,6 +44,11 @@ export interface PRStatus {
   buildUrl: string | null;
   merged: boolean;
   updatedAt: string;
+  /** Post-merge production deploy tracking (filled once the PR is merged). */
+  prodState: 'unknown' | 'pending' | 'in_progress' | 'success' | 'error';
+  prodUrl: string | null;
+  /** PR merge timestamp — post-merge deployments created after it are tracked. */
+  mergedAt: string | null;
 }
 
 export function createOctokit(pat: string): Octokit {
@@ -323,6 +328,14 @@ export async function getPRStatus(octokit: Octokit, repo: string, prNumber: numb
   const { data: pr } = await octokit.pulls.get({ owner, repo: repoName, pull_number: prNumber });
 
   if (pr.merged) {
+    // Post-merge: track the production deploy (client CI) instead of declaring
+    // success at merge time — the deploy only happens if quality passes on main.
+    const prod = await getProductionDeployState(
+      octokit,
+      repo,
+      pr.merged_at ?? null,
+      pr.merge_commit_sha ?? null,
+    );
     return {
       prNumber,
       prUrl: pr.html_url,
@@ -333,6 +346,9 @@ export async function getPRStatus(octokit: Octokit, repo: string, prNumber: numb
       buildUrl: null,
       merged: true,
       updatedAt: pr.updated_at,
+      prodState: prod.state,
+      prodUrl: prod.url,
+      mergedAt: pr.merged_at ?? null,
     };
   }
 
@@ -405,7 +421,75 @@ export async function getPRStatus(octokit: Octokit, repo: string, prNumber: numb
     buildUrl,
     merged: false,
     updatedAt: pr.updated_at,
+    prodState: 'unknown',
+    prodUrl: null,
+    mergedAt: null,
   };
+}
+
+/**
+ * Post-merge production deploy tracking.
+ *
+ * After a PR is merged to `main`, the client's CI runs the quality checks and
+ * the deploy-to-prod job (which creates a GitHub Deployment with environment
+ * 'production' and the live URL). This helper returns the state of that
+ * deployment, or falls back to the merge commit's check runs so a failed gate
+ * (deploy skipped) is still reported as an error.
+ */
+export async function getProductionDeployState(
+  octokit: Octokit,
+  repo: string,
+  mergedAt: string | null,
+  mergeSha: string | null,
+): Promise<{ state: 'pending' | 'in_progress' | 'success' | 'error'; url: string | null }> {
+  const { owner, repoName } = splitRepo(repo);
+
+  // 1. Latest production deployment created AFTER the merge.
+  if (mergedAt) {
+    try {
+      const { data: deployments } = await octokit.repos.listDeployments({
+        owner,
+        repo: repoName,
+        environment: 'production',
+      });
+      const post = deployments.find((d) => d.created_at >= mergedAt);
+      if (post) {
+        const { data: statuses } = await octokit.repos.listDeploymentStatuses({
+          owner,
+          repo: repoName,
+          deployment_id: post.id,
+        });
+        const latest = statuses[0];
+        if (!latest) return { state: 'in_progress', url: null };
+        const url = latest.environment_url ?? latest.target_url ?? null;
+        if (latest.state === 'success') return { state: 'success', url };
+        if (latest.state === 'error' || latest.state === 'failure') return { state: 'error', url };
+        return { state: 'in_progress', url };
+      }
+    } catch {
+      // API hiccup → fall through to check runs, keep polling.
+    }
+  }
+
+  // 2. No post-merge deployment yet → a failed check on the merge commit means
+  //    a gate (quality/lint) failed and the deploy job was skipped.
+  if (mergeSha) {
+    try {
+      const { data: runs } = await octokit.checks.listForRef({
+        owner,
+        repo: repoName,
+        ref: mergeSha,
+      });
+      const failed = runs.check_runs.find((run) =>
+        ['failure', 'timed_out', 'action_required'].includes(run.conclusion ?? ''),
+      );
+      if (failed) return { state: 'error', url: null };
+    } catch {
+      // ignore — keep pending
+    }
+  }
+
+  return { state: 'pending', url: null };
 }
 
 export interface MergeResult {

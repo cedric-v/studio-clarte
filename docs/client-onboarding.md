@@ -156,7 +156,10 @@ Puis :
 4. « Voir la Preview ↗ » apparaît → valider visuellement. Une seule page modifiée :
    le lien pointe **directement vers la page**. Plusieurs pages : une liste
    « Pages modifiées — accès direct » donne un lien direct vers chacune.
-5. « 🚀 Valider & Fusionner en Prod » → squash & merge → la prod du client se déploie (après ses tests).
+5. « 🚀 Valider & Fusionner en Prod » → squash & merge, puis le Studio **suit le déploiement** :
+   « ⏳ Publication en cours… (checks qualité sur main) » → « ✅ Publié en production ! »
+   si le déploiement réussit, ou « ⚠️ Publication échouée » si les checks qualité ne passent
+   pas (contenu fusionné mais pas en ligne — corriger puis republier, ou rollback).
 
 ---
 

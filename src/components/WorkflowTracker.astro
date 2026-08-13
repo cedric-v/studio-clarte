@@ -73,6 +73,7 @@ const { lang } = Astro.locals;
           <button class="btn btn-success btn-lg" type="button" id="btn-merge" disabled>
             {t(lang, 'workflow.merge')}
           </button>
+          <p class="publish-note">{t(lang, 'workflow.mergeNote')}</p>
           <span class="step-hint">{t(lang, 'workflow.step2Hint')}</span>
           <details class="tech-details">
             <summary>{t(lang, 'workflow.techDetails')}</summary>
@@ -118,6 +119,9 @@ const { lang } = Astro.locals;
   let polling: ReturnType<typeof setInterval> | null = null;
   let pollingStarted = false;
   let polls = 0;
+  // Post-merge tracking: polls since the merge, to bound the wait for the
+  // production deploy (quality checks + deploy on main).
+  let mergePolls = 0;
   // Direct links to the modified pages (from frontmatter permalinks), built
   // once the preview base URL is known.
   let pageLinks: { path: string; url: string; title: string }[] = [];
@@ -356,12 +360,44 @@ const { lang } = Astro.locals;
         }
 
         if (status.merged) {
-          activateStep(2, true);
-          btnMerge.disabled = true;
-          btnMerge.textContent = t(lang, 'workflow.mergedDone');
-          previewHint.textContent = t(lang, 'workflow.mergedNote', workflow.prNumber);
+          // Post-merge: track the production deploy (quality checks + deploy
+          // on main) instead of declaring success at merge time.
           btnCancel.hidden = true;
-          stopPolling();
+          if (status.prodState === 'success') {
+            activateStep(2, true);
+            btnMerge.disabled = true;
+            btnMerge.textContent = t(lang, 'workflow.mergedDone');
+            previewHint.textContent = t(lang, 'workflow.mergedNote', workflow.prNumber);
+            stopPolling();
+            toast(t(lang, 'workflow.toastMerged'), 'success');
+            return;
+          }
+          if (status.prodState === 'error') {
+            activateStep(2, true);
+            btnMerge.disabled = true;
+            btnMerge.textContent = t(lang, 'workflow.publishFailed');
+            previewHint.textContent = t(lang, 'workflow.mergedFailedNote');
+            stopPolling();
+            toast(t(lang, 'workflow.mergedFailed'), 'error');
+            return;
+          }
+          // pending / in_progress / unknown → keep polling, bounded.
+          mergePolls++;
+          if (mergePolls > 75) {
+            // ~5 min at 4s — stop and let the user verify on GitHub.
+            btnMerge.disabled = true;
+            btnMerge.textContent = t(lang, 'workflow.mergeAwaiting');
+            previewHint.textContent = t(lang, 'workflow.mergeAwaitingNote');
+            stopPolling();
+            return;
+          }
+          activateStep(2);
+          btnMerge.disabled = true;
+          btnMerge.textContent = t(lang, 'workflow.merging');
+          previewHint.textContent =
+            status.prodState === 'in_progress'
+              ? t(lang, 'workflow.publishingInProgress')
+              : t(lang, 'workflow.publishingPending');
           return;
         }
 
@@ -423,6 +459,7 @@ const { lang } = Astro.locals;
     stopPolling();
     pageLinks = [];
     previewBase = null;
+    mergePolls = 0;
     pagesEl.hidden = true;
     pagesList.innerHTML = '';
     btnCreate.disabled = true;
@@ -504,11 +541,14 @@ const { lang } = Astro.locals;
       const data = await res.json();
       if (!res.ok || !data.merged) throw new Error(data.message ?? data.error ?? 'Merge refused');
 
-      activateStep(2, true);
-      btnMerge.textContent = t(lang, 'workflow.mergedDone');
-      previewHint.textContent = t(lang, 'workflow.mergedNote', workflow.prNumber);
-      stopPolling();
-      toast(t(lang, 'workflow.toastMerged'), 'success');
+      // The PR is merged — resume polling to track the production deploy
+      // (quality checks + deploy on main) until it succeeds or fails.
+      mergePolls = 0;
+      activateStep(2);
+      btnMerge.disabled = true;
+      btnMerge.textContent = t(lang, 'workflow.merging');
+      previewHint.textContent = t(lang, 'workflow.publishingPending');
+      startPolling();
     } catch (error) {
       console.error('[merge]', error);
       toast(error instanceof Error ? error.message : t(lang, 'workflow.toastMergeFailed'), 'error');

@@ -38,7 +38,7 @@ Publish ──▶ /api/commit-draft ──▶ branch draft/* + PR (never main)
 | **Vault** | per-site keys, encrypted, write-only | AES-256-GCM, `VAULT_MASTER_KEY` |
 | **Storage** | images → client's R2 (or git fallback) | presigned uploads, R2 |
 | **State** | in-memory draft persisted in `sessionStorage` (C1) + KV-backed out-of-band payload delivery (`/api/draft/:token`) | `src/lib/client-state.ts`, `src/pages/api/draft/[token].ts` |
-| **Preview** | GitHub check runs → `buildUrl` polling | GitHub Actions / Pages (client repo) |
+| **Preview** | GitHub check runs → buildUrl polling ; post-merge production deploy tracking (quality gate + deploy on main) | GitHub Actions / Pages (client repo) |
 | **i18n / UX** | FR/EN, stepper 2 étapes, liste d'abord (contenu au clic), abandon du brouillon (bouton ou marqueur `[[CANCEL_DRAFT]]`), liens directs vers les pages modifiées (permalinks) | vanilla, Astro SSR on Workers |
 
 ## Key decisions (ADR-lite)
@@ -73,9 +73,12 @@ Publish ──▶ /api/commit-draft ──▶ branch draft/* + PR (never main)
    **« 🗑️ Abandonner le brouillon »** button — or a `[[CANCEL_DRAFT]]` marker
    the model emits when the user asks to cancel — clears the **local draft**
    (chat history kept); an open PR is only closed by the explicit preview-cancel
-   action. The repo never accumulates stale preview PRs. (No cron cleanup:
-   every git action runs with the logged-in collaborator's OAuth token — no
-   server-side service token.)
+   action. **Publish is tracked post-merge**: the studio keeps polling the
+   production deployment (quality checks + deploy on main) and only declares
+   « Publié » when it succeeds — a failed gate is reported as an explicit
+   failure (content merged but not live), never a false success. The repo never
+   accumulates stale preview PRs. (No cron cleanup: every git action runs with
+   the logged-in collaborator's OAuth token — no server-side service token.)
 7. **Draft iteration**: plan → patch per file → final payload; the draft is
    sent back on every message (C1 active).
 8. **Dependency maintenance (Renovate, automerged minors).**

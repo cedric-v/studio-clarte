@@ -182,6 +182,18 @@ const fr: Dictionary = {
   'workflow.toastMerged': '🚀 Publié en production !',
   'workflow.toastCreateFailed': 'Échec de la création de la pré-visualisation',
   'workflow.toastMergeFailed': 'Publication impossible',
+  'workflow.mergeNote':
+    '⚠️ Les checks qualité s\'exécutent après la fusion sur main — la mise en ligne n\'est effective que s\'ils passent.',
+  'workflow.publishingPending':
+    '⏳ Publication en cours — les checks qualité s\'exécutent sur main…',
+  'workflow.publishingInProgress': '🚀 Déploiement en production en cours…',
+  'workflow.publishFailed': '⚠️ Publication échouée',
+  'workflow.mergedFailed': 'Publication échouée — checks qualité non passés sur main',
+  'workflow.mergedFailedNote':
+    'Publication échouée : le contenu est fusionné mais pas en ligne (checks qualité non passés sur main). Corrigez puis republiez, ou utilisez « Historique & Rollback ».',
+  'workflow.mergeAwaiting': '⏳ En attente de confirmation…',
+  'workflow.mergeAwaitingNote':
+    'La publication est en cours de vérification (peut prendre quelques minutes). Vérifiez l\'état du déploiement sur GitHub.',
   'workflow.cancel': '✕ Annuler la preview',
   'workflow.cancelling': '⏳ Annulation…',
   'workflow.cancelConfirm': (n: number) =>
@@ -400,6 +412,17 @@ const en: Dictionary = {
   'workflow.toastMerged': '🚀 Published to production!',
   'workflow.toastCreateFailed': 'Preview creation failed',
   'workflow.toastMergeFailed': 'Publishing failed',
+  'workflow.mergeNote':
+    '⚠️ Quality checks run after the merge on main — the site only goes live if they pass.',
+  'workflow.publishingPending': '⏳ Publishing — quality checks are running on main…',
+  'workflow.publishingInProgress': '🚀 Deploying to production…',
+  'workflow.publishFailed': '⚠️ Publish failed',
+  'workflow.mergedFailed': 'Publish failed — quality checks did not pass on main',
+  'workflow.mergedFailedNote':
+    'Publish failed: the content is merged but not live (quality checks did not pass on main). Fix it and republish, or use "History & Rollback".',
+  'workflow.mergeAwaiting': '⏳ Awaiting confirmation…',
+  'workflow.mergeAwaitingNote':
+    'The publish is being verified (can take a few minutes). Check the deployment status on GitHub.',
   'workflow.cancel': '✕ Cancel the preview',
   'workflow.cancelling': '⏳ Cancelling…',
   'workflow.cancelConfirm': (n: number) =>

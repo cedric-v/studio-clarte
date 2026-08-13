@@ -70,7 +70,11 @@ neither gives you the *safe pipeline* in between. Studio Clarté connects both.
   speeds things up: the modified page is rendered instantly in the studio
   (content review without waiting for the build), and the **⚡ auto-preview**
   toggle (on by default) starts the CI build as soon as a draft is generated.
-  Includes **rollback**: restore any previous production version or undo the
+  After « Valider & Déployer », the studio **tracks the production deployment**
+  (quality checks + deploy on main): it shows « ⏳ Publication en cours… » until
+  the deploy succeeds (« ✅ Publié en production ! ») or fails (« ⚠️ Publication
+  échouée — checks qualité non passés »), instead of a false success at merge
+  time. Includes **rollback**: restore any previous production version or undo the
   last publish.
 - **Repo-aware AI** — the model browses and reads your repo before editing, so it
   finds the right files and preserves your frontmatter, permalinks and structure
@@ -128,7 +132,10 @@ Cloudflare preview build (Pages Git integration OR GitHub Actions workflow)
 「 Voir la Pré-visualisation ↗ 」 → human validation
    │   (single page → direct link ; several → list of direct page links)
    ▼
-POST /api/merge  →  squash & merge to main  →  production deploys (your CI)
+POST /api/merge  →  squash & merge to main
+   ▼
+post-merge tracking: quality checks + production deploy (your CI)
+   → « ✅ Publié en production ! » only when the deploy succeeds
 ```
 
 ## ☁️ Cloudflare deployment
