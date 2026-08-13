@@ -1,5 +1,6 @@
 ---
 import { t } from '../i18n';
+import { AI_PROVIDER_META, DEFAULT_MODEL_ID, DEFAULT_PROVIDER_ID } from '../lib/ai';
 import type { SiteConfig } from '../config/sites';
 
 interface Props {
@@ -16,66 +17,77 @@ const r2Configured = Boolean(site.r2AccountId && site.r2Bucket);
 const FIELDS = [
   {
     name: 'DEEPSEEK_API_KEY',
+    providerId: 'deepseek',
     labelKey: 'settings.fieldDeepseek',
     placeholderKey: 'settings.placeholderDeepseek',
     hintKey: 'settings.hintDeepseek',
   },
   {
     name: 'OPENROUTER_API_KEY',
+    providerId: 'openrouter',
     labelKey: 'settings.fieldOpenrouter',
     placeholderKey: 'settings.placeholderAiKey',
     hintKey: 'settings.hintOpenrouter',
   },
   {
     name: 'OPENAI_API_KEY',
+    providerId: 'openai',
     labelKey: 'settings.fieldOpenai',
     placeholderKey: 'settings.placeholderAiKey',
     hintKey: 'settings.hintOpenai',
   },
   {
     name: 'GEMINI_API_KEY',
+    providerId: 'google',
     labelKey: 'settings.fieldGemini',
     placeholderKey: 'settings.placeholderAiKey',
     hintKey: 'settings.hintGemini',
   },
   {
     name: 'GROK_API_KEY',
+    providerId: 'grok',
     labelKey: 'settings.fieldGrok',
     placeholderKey: 'settings.placeholderAiKey',
     hintKey: 'settings.hintGrok',
   },
   {
     name: 'OPENCODE_API_KEY',
+    providerId: 'opencode',
     labelKey: 'settings.fieldOpencode',
     placeholderKey: 'settings.placeholderAiKey',
     hintKey: 'settings.hintOpencode',
   },
   {
     name: 'R2_ACCESS_KEY_ID',
+    providerId: undefined,
     labelKey: 'settings.fieldR2AccessKey',
     placeholderKey: 'settings.placeholderR2Key',
     hintKey: 'settings.hintR2AccessKey',
   },
   {
     name: 'R2_SECRET_ACCESS_KEY',
+    providerId: undefined,
     labelKey: 'settings.fieldR2Secret',
     placeholderKey: 'settings.placeholderR2Key',
     hintKey: 'settings.hintR2Secret',
   },
   {
     name: 'OAUTH_GITHUB_CLIENT_ID',
+    providerId: undefined,
     labelKey: 'settings.fieldOAuthClientId',
     placeholderKey: 'settings.placeholderOAuth',
     hintKey: 'settings.hintOAuthClientId',
   },
   {
     name: 'OAUTH_GITHUB_CLIENT_SECRET',
+    providerId: undefined,
     labelKey: 'settings.fieldOAuthClientSecret',
     placeholderKey: 'settings.placeholderOAuth',
     hintKey: 'settings.hintOAuthClientSecret',
   },
   {
     name: 'ALLOWED_GITHUB_LOGINS',
+    providerId: undefined,
     labelKey: 'settings.fieldAllowlist',
     placeholderKey: 'settings.placeholderAllowlist',
     hintKey: 'settings.hintAllowlist',
@@ -85,6 +97,10 @@ const FIELDS = [
 const AI_FIELDS = FIELDS.slice(0, 6);
 const R2_FIELDS = FIELDS.slice(6, 8);
 const OAUTH_FIELDS = FIELDS.slice(8);
+
+// Provider/model metadata embedded for the client-side pickers (no secrets).
+const aiMetaJson = JSON.stringify(AI_PROVIDER_META);
+const aiDefaultsJson = JSON.stringify({ provider: DEFAULT_PROVIDER_ID, model: DEFAULT_MODEL_ID });
 ---
 
 <div class="modal-backdrop" id="settings-modal" hidden data-r2-configured={String(r2Configured)}>
@@ -101,27 +117,65 @@ const OAUTH_FIELDS = FIELDS.slice(8);
       <div class="field-divider">🤖 {t(lang, 'settings.sectionAi')}</div>
       <p class="field-hint modal-env-hint">{t(lang, 'settings.aiHint')}</p>
 
-      {AI_FIELDS.map((field) => (
-        <label class="field" for={`key-${field.name}`}>
-          <span class="field-label">
-            {t(lang, field.labelKey)} <code>{field.name}</code>
-          </span>
-          <div class="masked-row">
-            <span class="masked-value" id={`masked-${field.name}`}>—</span>
-            <span class="badge badge-muted" id={`badge-${field.name}`}>{t(lang, 'settings.notConfigured')}</span>
+      <!-- ── Active provider (ONE radio) + per-provider key accordion ── -->
+      <div class="ai-providers" id="ai-providers" data-providers={aiMetaJson} data-defaults={aiDefaultsJson}>
+        {AI_FIELDS.map((field) => (
+          <div class="ai-card" data-provider={field.providerId}>
+            <div class="ai-card-head">
+              <label class="ai-card-radio">
+                <input type="radio" name="ai-active" value={field.providerId} id={`radio-${field.providerId}`} />
+                <span class="ai-card-name">{t(lang, field.labelKey)}</span>
+              </label>
+              <span class="badge badge-muted ai-card-badge" id={`badge-${field.name}`}>
+                {t(lang, 'settings.notConfigured')}
+              </span>
+              <button
+                type="button"
+                class="ai-key-toggle"
+                id={`toggle-${field.name}`}
+                aria-expanded="false"
+                aria-controls={`editor-${field.name}`}
+              >
+                🔑 {t(lang, 'settings.keyToggle')} <span class="ai-chevron">▾</span>
+              </button>
+            </div>
+            <div class="ai-key-editor" id={`editor-${field.name}`} hidden>
+              <div class="masked-row">
+                <span class="masked-value" id={`masked-${field.name}`}>—</span>
+              </div>
+              <input
+                id={`key-${field.name}`}
+                class="input"
+                type="password"
+                name={field.name}
+                placeholder={t(lang, field.placeholderKey)}
+                autocomplete="new-password"
+                spellcheck="false"
+              />
+              <span class="field-hint">{t(lang, field.hintKey)}</span>
+            </div>
           </div>
-          <input
-            id={`key-${field.name}`}
-            class="input"
-            type="password"
-            name={field.name}
-            placeholder={t(lang, field.placeholderKey)}
-            autocomplete="new-password"
-            spellcheck="false"
-          />
-          <span class="field-hint">{t(lang, field.hintKey)}</span>
-        </label>
-      ))}
+        ))}
+      </div>
+
+      <!-- ── Active model (depends on the active provider) ── -->
+      <label class="field ai-model-row">
+        <span class="field-label">
+          {t(lang, 'settings.activeModel')}
+          <span class="ai-model-provider" id="ai-model-provider"></span>
+        </span>
+        <select id="ai-active-model" class="input ai-select" aria-label={t(lang, 'settings.activeModel')}></select>
+        <input
+          type="text"
+          id="ai-active-custom-model"
+          class="input"
+          placeholder={t(lang, 'chat.customModelPlaceholder')}
+          spellcheck="false"
+          hidden
+        />
+        <span class="field-hint">{t(lang, 'settings.modelHint')}</span>
+      </label>
+      <p class="field-hint ai-warn" id="ai-no-key-warn" role="status" hidden></p>
 
       <div class="field-divider">🖼️ {t(lang, 'settings.sectionR2')}</div>
 
@@ -211,31 +265,141 @@ const OAUTH_FIELDS = FIELDS.slice(8);
   const form = document.getElementById('keys-form') as HTMLFormElement;
   const saveBtn = document.getElementById('keys-save') as HTMLButtonElement;
   const r2Badge = document.getElementById('r2-mode-badge') as HTMLElement | null;
+  const aiProvidersEl = document.getElementById('ai-providers') as HTMLElement;
+  const modelSelect = document.getElementById('ai-active-model') as HTMLSelectElement;
+  const customModelInput = document.getElementById('ai-active-custom-model') as HTMLInputElement;
+  const modelProviderLabel = document.getElementById('ai-model-provider') as HTMLElement;
+  const noKeyWarn = document.getElementById('ai-no-key-warn') as HTMLElement;
 
-  const FIELDS = [
-    { name: 'DEEPSEEK_API_KEY', labelKey: 'settings.fieldDeepseek' },
-    { name: 'OPENROUTER_API_KEY', labelKey: 'settings.fieldOpenrouter' },
-    { name: 'OPENAI_API_KEY', labelKey: 'settings.fieldOpenai' },
-    { name: 'GEMINI_API_KEY', labelKey: 'settings.fieldGemini' },
-    { name: 'GROK_API_KEY', labelKey: 'settings.fieldGrok' },
-    { name: 'OPENCODE_API_KEY', labelKey: 'settings.fieldOpencode' },
+  interface AiModelMeta {
+    id: string;
+    label: string;
+  }
+  interface AiProviderMeta {
+    id: string;
+    label: string;
+    customModels: boolean;
+    models: AiModelMeta[];
+  }
+  interface FieldDef {
+    name: string;
+    providerId?: string;
+    labelKey: string;
+  }
+
+  const FIELDS: FieldDef[] = [
+    { name: 'DEEPSEEK_API_KEY', providerId: 'deepseek', labelKey: 'settings.fieldDeepseek' },
+    { name: 'OPENROUTER_API_KEY', providerId: 'openrouter', labelKey: 'settings.fieldOpenrouter' },
+    { name: 'OPENAI_API_KEY', providerId: 'openai', labelKey: 'settings.fieldOpenai' },
+    { name: 'GEMINI_API_KEY', providerId: 'google', labelKey: 'settings.fieldGemini' },
+    { name: 'GROK_API_KEY', providerId: 'grok', labelKey: 'settings.fieldGrok' },
+    { name: 'OPENCODE_API_KEY', providerId: 'opencode', labelKey: 'settings.fieldOpencode' },
     { name: 'R2_ACCESS_KEY_ID', labelKey: 'settings.fieldR2AccessKey' },
     { name: 'R2_SECRET_ACCESS_KEY', labelKey: 'settings.fieldR2Secret' },
     { name: 'OAUTH_GITHUB_CLIENT_ID', labelKey: 'settings.fieldOAuthClientId' },
     { name: 'OAUTH_GITHUB_CLIENT_SECRET', labelKey: 'settings.fieldOAuthClientSecret' },
     { name: 'ALLOWED_GITHUB_LOGINS', labelKey: 'settings.fieldAllowlist' },
-  ] as const;
+  ];
 
+  const AI_FIELDS = FIELDS.filter((field) => field.providerId);
+
+  // Provider catalogue embedded by the server (no secrets).
+  const providers = JSON.parse(aiProvidersEl?.dataset.providers ?? '[]') as AiProviderMeta[];
+  const aiDefaults = JSON.parse(aiProvidersEl?.dataset.defaults ?? '{}') as {
+    provider: string;
+    model: string;
+  };
+
+  /** Loaded site selection (snapshot for change detection). */
+  let loadedAi = { provider: aiDefaults.provider, model: aiDefaults.model };
   /** True when at least one key is already configured (vault or env). */
   let hasConfigured = false;
 
-  /** The Save button is only enabled when at least one input has content. */
+  function activeProviderId(): string {
+    const checked = form.querySelector<HTMLInputElement>('input[name="ai-active"]:checked');
+    return checked?.value ?? aiDefaults.provider;
+  }
+
+  function activeProvider(): AiProviderMeta | undefined {
+    return providers.find((provider) => provider.id === activeProviderId());
+  }
+
+  function providerField(providerId: string): FieldDef | undefined {
+    return AI_FIELDS.find((field) => field.providerId === providerId);
+  }
+
+  function isConfigured(providerId: string): boolean {
+    const field = providerField(providerId);
+    if (!field) return false;
+    const badge = document.getElementById(`badge-${field.name}`);
+    return badge?.classList.contains('badge-success') ?? false;
+  }
+
+  /** Rebuilds the model <select> for the active provider. */
+  function populateModels() {
+    const provider = activeProvider();
+    if (!provider) return;
+    modelSelect.innerHTML = '';
+    for (const model of provider.models) {
+      const option = document.createElement('option');
+      option.value = model.id;
+      option.textContent = model.label;
+      modelSelect.appendChild(option);
+    }
+    if (provider.customModels) {
+      const option = document.createElement('option');
+      option.value = '__custom__';
+      option.textContent = t(lang, 'chat.customModel');
+      modelSelect.appendChild(option);
+    }
+
+    const isPreset = provider.models.some((model) => model.id === loadedAi.model);
+    if (!provider.models.length && provider.customModels) {
+      // No fixed catalogue (self-hosted gateway…) → free-form by default.
+      modelSelect.value = '__custom__';
+      customModelInput.value = loadedAi.model;
+      customModelInput.hidden = false;
+    } else if (loadedAi.model && !isPreset && provider.customModels) {
+      modelSelect.value = '__custom__';
+      customModelInput.value = loadedAi.model;
+      customModelInput.hidden = false;
+    } else {
+      modelSelect.value = isPreset ? loadedAi.model : (provider.models[0]?.id ?? '');
+      customModelInput.value = '';
+      customModelInput.hidden = true;
+    }
+    modelProviderLabel.textContent = `· ${provider.label}`;
+  }
+
+  /** Current effective model id (preset or free-form). */
+  function currentModelId(): string {
+    const provider = activeProvider();
+    if (!provider) return '';
+    if (modelSelect.value === '__custom__') {
+      return customModelInput.value.trim() || provider.models[0]?.id || '';
+    }
+    return modelSelect.value || provider.models[0]?.id || '';
+  }
+
+  function updateNoKeyWarn() {
+    const provider = activeProvider();
+    if (!provider) return;
+    const keyMissing = !isConfigured(provider.id);
+    noKeyWarn.hidden = !keyMissing;
+    if (keyMissing) {
+      noKeyWarn.textContent = t(lang, 'settings.providerNoKey', provider.label);
+    }
+  }
+
+  /** Save is enabled when a key input has content OR the AI choice changed. */
   function syncSaveState() {
-    const anyValue = FIELDS.some((field) => {
+    const anyKeyValue = FIELDS.some((field) => {
       const input = document.getElementById(`key-${field.name}`) as HTMLInputElement | null;
       return Boolean(input?.value.trim());
     });
-    saveBtn.disabled = !anyValue;
+    const aiChanged =
+      activeProviderId() !== loadedAi.provider || currentModelId() !== loadedAi.model;
+    saveBtn.disabled = !anyKeyValue && !aiChanged;
   }
 
   for (const field of FIELDS) {
@@ -314,13 +478,66 @@ const OAUTH_FIELDS = FIELDS.slice(8);
           }
         }
       }
+      // Restore the site's ACTIVE provider/model (server-side source of truth).
+      loadedAi = {
+        provider:
+          typeof data.ai?.provider === 'string' && providers.some((p) => p.id === data.ai.provider)
+            ? data.ai.provider
+            : aiDefaults.provider,
+        model: typeof data.ai?.model === 'string' ? data.ai.model : aiDefaults.model,
+      };
+      const radio = document.getElementById(`radio-${loadedAi.provider}`) as HTMLInputElement | null;
+      if (radio) radio.checked = true;
+      populateModels();
+      updateNoKeyWarn();
       updateR2Status(
         Boolean(data.configured?.R2_ACCESS_KEY_ID && data.configured?.R2_SECRET_ACCESS_KEY),
       );
       hasConfigured = Object.values(data.configured ?? {}).some(Boolean);
+      syncSaveState();
     } catch {
       toast(t(lang, 'settings.toastReadFailed'), 'error');
     }
+  }
+
+  // ── Active provider: radio → model list + warn + save state ──────
+  for (const field of AI_FIELDS) {
+    const radio = document.getElementById(`radio-${field.providerId}`) as HTMLInputElement | null;
+    radio?.addEventListener('change', () => {
+      populateModels();
+      updateNoKeyWarn();
+      syncSaveState();
+    });
+  }
+  modelSelect.addEventListener('change', () => {
+    if (modelSelect.value === '__custom__') {
+      customModelInput.hidden = false;
+      customModelInput.focus();
+    } else {
+      customModelInput.hidden = true;
+    }
+    syncSaveState();
+  });
+  customModelInput.addEventListener('input', syncSaveState);
+
+  // ── Key accordion: one open editor at a time ─────────────────────
+  for (const field of AI_FIELDS) {
+    const toggle = document.getElementById(`toggle-${field.name}`) as HTMLButtonElement | null;
+    const editor = document.getElementById(`editor-${field.name}`) as HTMLElement | null;
+    toggle?.addEventListener('click', () => {
+      const opening = editor?.hidden ?? false;
+      // Close every other editor (accordion behaviour).
+      for (const other of AI_FIELDS) {
+        const otherEditor = document.getElementById(`editor-${other.name}`) as HTMLElement | null;
+        const otherToggle = document.getElementById(`toggle-${other.name}`) as HTMLButtonElement | null;
+        if (otherEditor) otherEditor.hidden = true;
+        if (otherToggle) otherToggle.setAttribute('aria-expanded', 'false');
+      }
+      if (editor) editor.hidden = !opening;
+      if (toggle) toggle.setAttribute('aria-expanded', String(opening));
+      const input = editor?.querySelector<HTMLInputElement>('input');
+      if (opening) input?.focus();
+    });
   }
 
   form.addEventListener('submit', async (event) => {
@@ -330,10 +547,13 @@ const OAUTH_FIELDS = FIELDS.slice(8);
       const input = document.getElementById(`key-${field.name}`) as HTMLInputElement;
       if (input.value.trim()) payload[field.name] = input.value.trim();
     }
-    if (!Object.keys(payload).length) {
-      // Safety net (the Save button is disabled with empty inputs): a submit
-      // can still arrive via implicit submission (Enter). If keys are already
-      // configured, tell the user they are kept — not that something is wrong.
+    // The ACTIVE AI provider/model always travels with the keys.
+    payload.aiProvider = activeProviderId();
+    payload.aiModel = currentModelId();
+    const aiChanged =
+      payload.aiProvider !== loadedAi.provider || payload.aiModel !== loadedAi.model;
+    if (Object.keys(payload).length <= 2 && !aiChanged) {
+      // Only the (always-sent) AI choice, unchanged — nothing to save.
       toast(
         hasConfigured ? t(lang, 'settings.toastNoChanges') : t(lang, 'settings.toastEmpty'),
         'info',

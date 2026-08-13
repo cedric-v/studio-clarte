@@ -86,8 +86,6 @@ const fr: Dictionary = {
   'chat.send': 'Envoyer',
   'chat.sendTitle': 'Envoyer le message',
   'chat.composerHint': 'Collez ici les images que vous souhaitez intégrer',
-  'chat.aiProvider': 'Fournisseur IA',
-  'chat.aiModel': 'Modèle',
   'chat.customModel': '✏️ Autre (saisie libre)…',
   'chat.customModelPlaceholder': "identifiant exact du modèle (ex: openai/gpt-5.6-luna)",
   'chat.modelActive': 'Modèle actif',
@@ -234,9 +232,15 @@ const fr: Dictionary = {
   'settings.close': 'Fermer',
   'settings.note':
     'Clés chiffrées en AES-256-GCM (Cloudflare KV) et stockées en write-only : une fois enregistrées, elles ne peuvent jamais être relues, affichées en clair ni copiées.',
-  'settings.sectionAi': "🤖 Fournisseurs d'IA",
+  'settings.sectionAi': "Fournisseurs d'IA",
   'settings.aiHint':
-    "Le fournisseur et le modèle se choisissent en bas du chat. La génération (plan + fichiers) utilise le modèle sélectionné.",
+    "Plusieurs fournisseurs peuvent être configurés, mais UN SEUL est actif pour la génération (plan + fichiers). Sélectionnez-le ci-dessous, puis son modèle.",
+  'settings.keyToggle': 'Clé',
+  'settings.activeModel': 'Modèle actif',
+  'settings.modelHint':
+    "Le modèle utilisé pour générer le contenu. « Autre (saisie libre) » si votre identifiant n'est pas dans la liste.",
+  'settings.providerNoKey': (provider: string) =>
+    `⚠️ Aucune clé ${provider} configurée — la génération échouera tant que la clé n'est pas saisie (bouton « 🔑 Clé » ci-dessus).`,
   'settings.fieldDeepseek': 'DeepSeek',
   'settings.placeholderDeepseek': 'sk-… (écrire une nouvelle valeur pour remplacer)',
   'settings.hintDeepseek':
@@ -256,7 +260,7 @@ const fr: Dictionary = {
   'settings.hintGrok': 'Clé API xAI (console.x.ai) — modèles Grok 4.6.',
   'settings.hintOpencode':
     "Clé API OpenCode Go (opencode.ai) — endpoint OpenAI-compatible (https://api.opencode.ai/v1 par défaut, modifiable dans src/lib/ai.ts). Modèles : saisie libre.",
-  'settings.sectionR2': '🖼️ Images — stockage R2 du client',
+  'settings.sectionR2': 'Images — stockage R2 du client',
   'settings.r2GuideTitle': 'Comment configurer le stockage R2 du client',
   'settings.r2StatusConfigured': 'R2 client configuré — upload direct',
   'settings.r2StatusNoKeys': 'R2 configuré mais clés manquantes — mode Git actif',
@@ -345,8 +349,6 @@ const en: Dictionary = {
   'chat.send': 'Send',
   'chat.sendTitle': 'Send message',
   'chat.composerHint': 'Paste here the images you want to include',
-  'chat.aiProvider': 'AI provider',
-  'chat.aiModel': 'Model',
   'chat.customModel': '✏️ Other (free input)…',
   'chat.customModelPlaceholder': 'exact model id (e.g. openai/gpt-5.6-luna)',
   'chat.modelActive': 'Active model',
@@ -487,9 +489,15 @@ const en: Dictionary = {
   'settings.close': 'Close',
   'settings.note':
     'Keys are encrypted with AES-256-GCM (Cloudflare KV) and stored write-only: once saved, they can never be read back, displayed in plaintext, or copied.',
-  'settings.sectionAi': '🤖 AI providers',
+  'settings.sectionAi': 'AI providers',
   'settings.aiHint':
-    'The provider and model are chosen at the bottom of the chat. Generation (plan + files) uses the selected model.',
+    'Several providers can be configured, but only ONE is active for generation (plan + files). Select it below, then its model.',
+  'settings.keyToggle': 'Key',
+  'settings.activeModel': 'Active model',
+  'settings.modelHint':
+    "The model used to generate content. Use 'Other (free input)' if your id is not listed.",
+  'settings.providerNoKey': (provider: string) =>
+    `⚠️ No ${provider} key configured — generation will fail until a key is entered (button “🔑 Key” above).`,
   'settings.fieldDeepseek': 'DeepSeek',
   'settings.placeholderDeepseek': 'sk-… (type a new value to replace)',
   'settings.hintDeepseek':
@@ -509,7 +517,7 @@ const en: Dictionary = {
   'settings.hintGrok': 'xAI API key (console.x.ai) — Grok 4.6 models.',
   'settings.hintOpencode':
     'OpenCode Go API key (opencode.ai) — OpenAI-compatible endpoint (https://api.opencode.ai/v1 by default, adjustable in src/lib/ai.ts). Models: free input.',
-  'settings.sectionR2': '🖼️ Images — client R2 storage',
+  'settings.sectionR2': 'Images — client R2 storage',
   'settings.r2GuideTitle': 'How to configure client R2 storage',
   'settings.r2StatusConfigured': 'Client R2 configured — direct upload',
   'settings.r2StatusNoKeys': 'R2 configured but keys missing — Git mode active',

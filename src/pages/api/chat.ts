@@ -4,20 +4,22 @@ import type { ModelMessage } from 'ai';
 import { z } from 'zod';
 import {
   createAiModel,
+  DEFAULT_MODEL_ID,
   DEFAULT_PROVIDER_ID,
   getAiProvider,
   modelSupportsJsonMode,
 } from '../../lib/ai';
 import { createOctokit, getFileContent, listRepoFiles } from '../../lib/github-edge';
 import { runGeneration } from '../../lib/generator';
-import { resolveSecret } from '../../lib/vault';
+import { readAiConfig, resolveSecret } from '../../lib/vault';
 
 /**
- * POST /api/chat — AI streaming (provider + model selectable).
+ * POST /api/chat — AI streaming.
  *
- * The client picks a provider (`provider`) and a model (`model`) in the
- * composer; the server resolves the matching API key from the site vault
- * (or the agency's global env fallback) and streams the reply.
+ * The site's ACTIVE AI provider + model are chosen in ⚙️ Settings (one per
+ * site: several providers can be configured, one is active). The server
+ * resolves the matching API key from the site vault (or the agency's global
+ * env fallback) and streams the reply.
  *
  * Orchestrates generation via `runGeneration`:
  *   - conversational requests → streamed natural reply ;
@@ -43,30 +45,20 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const body = (await request.json().catch(() => null)) as {
     messages?: ModelMessage[];
     draft?: { path: string; content: string; original?: string }[];
-    /** AI provider id (see AI_PROVIDERS in lib/ai.ts). Default: deepseek. */
-    provider?: string;
-    /** Model id for that provider. Default: the provider's first model. */
-    model?: string;
   } | null;
   const messages = Array.isArray(body?.messages) ? body.messages : [];
   if (!messages.length) return json({ error: 'Parameter "messages" required' }, 400);
 
-  // ── Provider + model selection (client-chosen, server-validated) ──
+  // ── Active AI provider + model (site-level, chosen in ⚙️ Settings) ──
+  const stored = await readAiConfig(locals.env, site.id);
   const providerId =
-    typeof body?.provider === 'string' && body.provider.trim()
-      ? body.provider.trim()
-      : DEFAULT_PROVIDER_ID;
+    stored && getAiProvider(stored.provider) ? stored.provider : DEFAULT_PROVIDER_ID;
   const provider = getAiProvider(providerId);
   if (!provider) {
     return json({ error: `Fournisseur d'IA inconnu : ${providerId}` }, 400);
   }
   const modelId =
-    typeof body?.model === 'string' && body.model.trim()
-      ? body.model.trim()
-      : (provider.models[0]?.id ?? '');
-  if (!modelId) {
-    return json({ error: 'Modèle IA non spécifié.' }, 400);
-  }
+    (stored && stored.model.trim()) || provider.models[0]?.id || DEFAULT_MODEL_ID;
 
   const apiKey = await resolveSecret(locals.env, site, provider.apiKeyName);
   if (!apiKey) {

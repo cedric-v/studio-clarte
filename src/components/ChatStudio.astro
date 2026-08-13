@@ -1,15 +1,16 @@
 ---
 import { t } from '../i18n';
-import { AI_PROVIDER_META, DEFAULT_MODEL_ID, DEFAULT_PROVIDER_ID } from '../lib/ai';
 import type { SiteConfig } from '../config/sites';
 import type { SessionUser } from '../env';
 
 interface Props {
   site: SiteConfig;
   user: SessionUser | null;
+  /** Server-rendered label of the site's ACTIVE AI provider · model. */
+  activeAiLabel?: string;
 }
 
-const { site, user } = Astro.props;
+const { site, user, activeAiLabel } = Astro.props;
 const { lang } = Astro.locals;
 
 // Greeting: the person's FIRST NAME when GitHub exposes it, otherwise the
@@ -17,10 +18,6 @@ const { lang } = Astro.locals;
 const greeting = user?.name?.trim().split(/\s+/)[0] || user?.login || site.name;
 
 const SUGGESTION_KEYS = ['chat.suggestion1', 'chat.suggestion2', 'chat.suggestion3'];
-
-// Provider/model metadata embedded for the client-side pickers (no secrets).
-const aiMetaJson = JSON.stringify(AI_PROVIDER_META);
-const aiDefaultsJson = JSON.stringify({ provider: DEFAULT_PROVIDER_ID, model: DEFAULT_MODEL_ID });
 ---
 
 <div class="chat-panel" id="chat-studio">
@@ -39,28 +36,6 @@ const aiDefaultsJson = JSON.stringify({ provider: DEFAULT_PROVIDER_ID, model: DE
 
   <!-- Composer -->
   <div class="chat-composer">
-    <!-- AI provider + model selection (persisted per browser) -->
-    <div class="model-selector" id="model-selector" data-providers={aiMetaJson} data-defaults={aiDefaultsJson}>
-      <label class="model-field">
-        <span class="model-label">{t(lang, 'chat.aiProvider')}</span>
-        <select id="ai-provider" class="model-select" aria-label={t(lang, 'chat.aiProvider')}></select>
-      </label>
-      <label class="model-field">
-        <span class="model-label">{t(lang, 'chat.aiModel')}</span>
-        <select id="ai-model" class="model-select" aria-label={t(lang, 'chat.aiModel')}></select>
-      </label>
-      <input
-        type="text"
-        id="ai-custom-model"
-        class="model-custom"
-        placeholder={t(lang, 'chat.customModelPlaceholder')}
-        aria-label={t(lang, 'chat.customModel')}
-        spellcheck="false"
-        hidden
-      />
-      <span class="model-badge" id="ai-model-badge" title={t(lang, 'chat.modelActive')}></span>
-    </div>
-
     <div class="composer-strip" id="image-strip" hidden></div>
     <div class="composer-row">
       <button class="icon-btn" id="btn-attach" type="button" title={t(lang, 'chat.attach')}>📎</button>
@@ -78,7 +53,12 @@ const aiDefaultsJson = JSON.stringify({ provider: DEFAULT_PROVIDER_ID, model: DE
       </div>
     </div>
     <input type="file" id="file-input" accept="image/*" multiple hidden />
-    <p class="composer-hint">{t(lang, 'chat.composerHint')}</p>
+    <p class="composer-hint">
+      <span class="composer-hint-text">{t(lang, 'chat.composerHint')}</span>
+      {activeAiLabel && (
+        <span class="model-badge" title={t(lang, 'chat.modelActive')}>🤖 {activeAiLabel}</span>
+      )}
+    </p>
   </div>
 </div>
 
@@ -256,157 +236,7 @@ const aiDefaultsJson = JSON.stringify({ provider: DEFAULT_PROVIDER_ID, model: DE
     inputEl.focus();
   });
 
-  // ── AI provider / model picker (persisted per browser) ──────────
-  interface AiModelMeta {
-    id: string;
-    label: string;
-  }
-  interface AiProviderMeta {
-    id: string;
-    label: string;
-    customModels: boolean;
-    models: AiModelMeta[];
-  }
-  interface AiChoice {
-    provider: string;
-    model: string;
-    /** Per-provider last-used model (kept when switching providers). */
-    byProvider: Record<string, string>;
-  }
-
-  const providerSelect = document.getElementById('ai-provider') as HTMLSelectElement;
-  const modelSelect = document.getElementById('ai-model') as HTMLSelectElement;
-  const customModelInput = document.getElementById('ai-custom-model') as HTMLInputElement;
-  const modelBadge = document.getElementById('ai-model-badge') as HTMLElement;
-
-  const selectorEl = document.getElementById('model-selector') as HTMLElement;
-  const providers = JSON.parse(selectorEl?.dataset.providers ?? '[]') as AiProviderMeta[];
-  const aiDefaults = JSON.parse(selectorEl?.dataset.defaults ?? '{}') as {
-    provider: string;
-    model: string;
-  };
-
-  const AI_CHOICE_KEY = 'sc:ai-choice';
-
-  function loadAiChoice(): AiChoice {
-    try {
-      const raw = localStorage.getItem(AI_CHOICE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw) as Partial<AiChoice>;
-        return {
-          provider: typeof parsed.provider === 'string' ? parsed.provider : aiDefaults.provider,
-          model: typeof parsed.model === 'string' ? parsed.model : aiDefaults.model,
-          byProvider: parsed.byProvider ?? {},
-        };
-      }
-    } catch {
-      // Corrupted storage → fall through to defaults.
-    }
-    return { provider: aiDefaults.provider, model: aiDefaults.model, byProvider: {} };
-  }
-  function saveAiChoice() {
-    try {
-      localStorage.setItem(AI_CHOICE_KEY, JSON.stringify(aiChoice));
-    } catch {
-      // Private mode / quota → best effort.
-    }
-  }
-
-  let aiChoice = loadAiChoice();
-
-  function activeProvider(): AiProviderMeta | undefined {
-    return providers.find((provider) => provider.id === aiChoice.provider) ?? providers[0];
-  }
-
-  function populateProviders() {
-    providerSelect.innerHTML = '';
-    for (const provider of providers) {
-      const option = document.createElement('option');
-      option.value = provider.id;
-      option.textContent = provider.label;
-      providerSelect.appendChild(option);
-    }
-    providerSelect.value = activeProvider()?.id ?? '';
-  }
-
-  function populateModels() {
-    const provider = activeProvider();
-    if (!provider) return;
-    modelSelect.innerHTML = '';
-    for (const model of provider.models) {
-      const option = document.createElement('option');
-      option.value = model.id;
-      option.textContent = model.label;
-      modelSelect.appendChild(option);
-    }
-    if (provider.customModels) {
-      const option = document.createElement('option');
-      option.value = '__custom__';
-      option.textContent = t(lang, 'chat.customModel');
-      modelSelect.appendChild(option);
-    }
-
-    // Restore the last model used with THIS provider (per-provider memory).
-    const saved = aiChoice.byProvider[provider.id] ?? '';
-    const isPreset = provider.models.some((model) => model.id === saved);
-    if (!provider.models.length && provider.customModels) {
-      // Provider without a fixed catalogue (self-hosted gateway…) → the
-      // free-form input is the DEFAULT state.
-      modelSelect.value = '__custom__';
-      customModelInput.value = saved;
-      customModelInput.hidden = false;
-    } else if (saved && !isPreset && provider.customModels) {
-      // A free-form model was used before → reopen the free input.
-      modelSelect.value = '__custom__';
-      customModelInput.value = saved;
-      customModelInput.hidden = false;
-    } else {
-      modelSelect.value = isPreset ? saved : (provider.models[0]?.id ?? '');
-      customModelInput.value = '';
-      customModelInput.hidden = true;
-    }
-  }
-
-  /** Current effective model id (preset or free-form). */
-  function currentModelId(): string {
-    const provider = activeProvider();
-    if (!provider) return '';
-    if (modelSelect.value === '__custom__') {
-      return customModelInput.value.trim() || provider.models[0]?.id || '';
-    }
-    return modelSelect.value || provider.models[0]?.id || '';
-  }
-
-  function syncChoice() {
-    const provider = activeProvider();
-    if (!provider) return;
-    const model = currentModelId();
-    aiChoice = { provider: provider.id, model, byProvider: { ...aiChoice.byProvider, [provider.id]: model } };
-    saveAiChoice();
-    modelBadge.textContent = `${provider.label} · ${model || '—'}`;
-  }
-
-  providerSelect.addEventListener('change', () => {
-    aiChoice = { provider: providerSelect.value, model: '', byProvider: aiChoice.byProvider };
-    populateModels();
-    syncChoice();
-  });
-  modelSelect.addEventListener('change', () => {
-    if (modelSelect.value === '__custom__') {
-      customModelInput.hidden = false;
-      customModelInput.focus();
-    } else {
-      customModelInput.hidden = true;
-    }
-    syncChoice();
-  });
-  customModelInput.addEventListener('input', syncChoice);
-
-  populateProviders();
-  populateModels();
-  syncChoice();
-
-  // ── Send / AI streaming (provider + model selectable) ───────────
+  // ── Send / AI streaming (the active provider/model come from ⚙️ Settings) ──
   function extractPayload(text: string): { title: string; summary: string; files: unknown[] } | null {
     const tryParse = (candidate: string) => {
       try {
@@ -555,8 +385,6 @@ const aiDefaultsJson = JSON.stringify({ provider: DEFAULT_PROVIDER_ID, model: DE
         body: JSON.stringify({
           messages: sendHistory,
           draft: state.payload?.files ?? [],
-          provider: aiChoice.provider,
-          model: aiChoice.model,
         }),
       });
       if (!res.ok) {

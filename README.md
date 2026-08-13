@@ -52,9 +52,10 @@ neither gives you the *safe pipeline* in between. Studio Clarté connects both.
   token limit), and assembles everything into a **single PR**.
 - **Multi-provider AI** — connect your own keys for **DeepSeek**, **OpenRouter**
   (hundreds of models via one key), **OpenAI** (incl. GPT-5.6 Luna), **Google
-  Gemini** (3.7 Pro/Flash), **Grok (xAI)** (4.6) and **OpenCode Go**, and switch
-  provider + model right in the composer (per-browser memory, free-form model
-  ids allowed). Generation always plans first, then calls the model once per file.
+  Gemini** (3.7 Pro/Flash), **Grok (xAI)** (4.6) and **OpenCode Go**. Several
+  providers can be configured per site; **one is ACTIVE** — chosen in ⚙️
+  Settings with its model (free-form model ids allowed). Generation always
+  plans first, then calls the model once per file.
 - **Human-in-the-loop editor** — review and fine-tune the generated files in an
   integrated, PagesCMS-style editor (monospace, Tab = 2 spaces for YAML/JSON,
   ⌘S to save). The « Fichiers concernés » panel shows the **file list only** by
@@ -125,7 +126,7 @@ curl -H "Host: studio.yourdomain.com" http://localhost:4321/login
 ## 🧭 How it works
 
 ```
-AI chat (multi-provider, streaming — provider + model au choix)
+AI chat (multi-provider, streaming — provider + modèle choisis dans ⚙️ Paramètres)
    │  site prompt (per subdomain) + media references (CDN or repo paths)
    ▼
 PLAN (file list) → one model call per file → payload assembled
@@ -240,7 +241,7 @@ Pages project, preview workflow, per-client R2 storage, DNS, vault keys, final t
 
 | Endpoint | Method | Role |
 |---|---|---|
-| `/api/chat` | POST | AI streaming (provider + model au choix): plan + one call per file; repo read tools (`listFiles`/`readFile`) |
+| `/api/chat` | POST | AI streaming (provider + modèle actifs du site, choisis dans ⚙️ Paramètres): plan + one call per file; repo read tools (`listFiles`/`readFile`) |
 | `/api/draft/:token` | GET | Fetch a generated draft payload out of band (KV-backed, 2h TTL, unguessable token) |
 | `/api/upload-url` | POST | Upload target: client R2 presigned URL **or** git-mode path |
 | `/api/commit-draft` | POST | `draft/*` branch + PR in ~1-2 s (Direct Git API) — auto-closes any previous open `draft/*` PR (one active preview per site) |

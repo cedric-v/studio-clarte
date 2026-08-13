@@ -13,7 +13,18 @@ import type { SiteConfig } from '../config/sites';
  */
 
 const VAULT_PREFIX = 'vault:';
+const AI_CONFIG_PREFIX = 'ai:config:';
 const IV_BYTES = 12;
+
+/**
+ * Site-level AI selection: ONE active provider + model (multiple providers
+ * can be configured in the vault, but only this one is used for generation).
+ * Not a secret — stored as plain JSON in KV (`ai:config:{siteId}`).
+ */
+export interface AiConfig {
+  provider: string;
+  model: string;
+}
 
 export const SECRET_KEYS = [
   // ── AI providers (OpenAI-compatible endpoints) ───────────────────
@@ -184,7 +195,41 @@ export async function writeSecrets(
 }
 
 /**
- * Resolves a key for a site: the site vault first, then — ONLY for the
+ * Reads the site's ACTIVE AI provider/model selection (plain KV, non-secret).
+ * Returns null when never configured — callers fall back to the default
+ * provider/model (DeepSeek chat).
+ */
+export async function readAiConfig(
+  env: CloudflareEnv,
+  siteId: string,
+): Promise<AiConfig | null> {
+  const kv: KVNamespace | undefined = env.KV;
+  if (!kv) return null;
+  try {
+    const raw = await kv.get(`${AI_CONFIG_PREFIX}${siteId}`, 'text');
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { v?: number; provider?: unknown; model?: unknown };
+    if (typeof parsed.provider === 'string' && typeof parsed.model === 'string') {
+      return { provider: parsed.provider, model: parsed.model };
+    }
+  } catch {
+    // Corrupted/partial record → treat as unset.
+  }
+  return null;
+}
+
+/** Persists the site's ACTIVE AI provider/model selection. */
+export async function writeAiConfig(
+  env: CloudflareEnv,
+  siteId: string,
+  config: AiConfig,
+): Promise<void> {
+  const kv: KVNamespace | undefined = env.KV;
+  if (!kv) return;
+  await kv.put(`${AI_CONFIG_PREFIX}${siteId}`, JSON.stringify({ v: 1, ...config }));
+}
+
+/** Resolves a key for a site: the site vault first, then — ONLY for the
  * webmaster's own site (`isAgency`) — the global env fallback (Worker secret).
  *
  * Clients NEVER inherit global keys: each client must provide its own

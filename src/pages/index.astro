@@ -6,6 +6,8 @@ import WorkflowTracker from '../components/WorkflowTracker.astro';
 import SettingsModal from '../components/SettingsModal.astro';
 import ToastContainer from '../components/ToastContainer.astro';
 import { listSites } from '../config/sites';
+import { DEFAULT_MODEL_ID, DEFAULT_PROVIDER_ID, getAiProvider } from '../lib/ai';
+import { readAiConfig } from '../lib/vault';
 import { t } from '../i18n';
 import '../styles/global.css';
 
@@ -20,6 +22,14 @@ const siteId = siteConfig.id;
 // Super-Admin only: the full site list powers the site switcher.
 // Clients never receive the registry (multi-tenant isolation).
 const sites = isAgency ? listSites(Astro.locals.env) : [];
+
+// The site's ACTIVE AI provider · model (chosen in ⚙️ Settings) — rendered
+// as a small badge under the composer so the user always sees what generates.
+const storedAi = await readAiConfig(Astro.locals.env, siteConfig.id);
+const activeProvider =
+  (storedAi && getAiProvider(storedAi.provider)) || getAiProvider(DEFAULT_PROVIDER_ID)!;
+const activeModel = (storedAi?.model || '').trim() || DEFAULT_MODEL_ID;
+const activeAiLabel = `${activeProvider.label} · ${activeModel}`;
 ---
 
 <!doctype html>
@@ -59,7 +69,7 @@ const sites = isAgency ? listSites(Astro.locals.env) : [];
 
         <!-- Column 1: AI chat -->
         <section class="pane pane-chat" aria-label={t(lang, 'tabs.chat')}>
-          <ChatStudio site={siteConfig} user={user} />
+          <ChatStudio site={siteConfig} user={user} activeAiLabel={activeAiLabel} />
         </section>
 
         <!-- Resizable divider (desktop only) -->
