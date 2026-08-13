@@ -32,6 +32,12 @@ export interface WorkflowState {
   branch: string;
   /** True once the production deploy succeeded (post-merge tracking). */
   published?: boolean;
+  /**
+   * Direct page links (from the draft's frontmatter permalinks) at the time
+   * the preview PR was created — persisted so the publish-success links keep
+   * working even if the local draft/payload is later cleared or lost.
+   */
+  pageLinks?: { path: string; url: string; title: string }[];
 }
 
 export interface ScState {

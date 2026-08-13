@@ -328,6 +328,9 @@ const { lang } = Astro.locals;
           prNumber: data.prNumber,
           prUrl: data.prUrl,
           branch: data.branch,
+          // Snapshot the page links with the workflow: the publish-success
+          // links keep working even if the draft/payload is later cleared.
+          pageLinks: pageLinks.map((l) => ({ ...l })),
         } satisfies WorkflowState;
         persistState();
 
@@ -378,6 +381,10 @@ const { lang } = Astro.locals;
       return;
     }
     computePageLinks();
+    // Prefer the page links snapshot persisted with the workflow: they match
+    // the PR that was actually created, even if the draft payload was later
+    // cleared or lost.
+    if (workflow.pageLinks?.length) pageLinks = workflow.pageLinks;
     btnCreate.disabled = true;
     btnCancel.hidden = false;
     activateStep(2);
@@ -425,12 +432,17 @@ const { lang } = Astro.locals;
             publishTrackLink.hidden = true;
             if (status.prodUrl) {
               const base = safeHttpUrl(status.prodUrl).replace(/\/$/, '');
+              // Prefer the workflow's snapshot (persisted at preview creation)
+              // over the live module state — robust to a cleared/lost draft.
+              const links = state.workflow?.pageLinks?.length
+                ? state.workflow.pageLinks
+                : pageLinks;
               prodLink.href =
-                pageLinks.length === 1
-                  ? safeHttpUrl(joinUrl(base, pageLinks[0].url))
+                links.length === 1
+                  ? safeHttpUrl(joinUrl(base, links[0].url))
                   : base;
-              if (pageLinks.length === 1) {
-                previewHint.textContent = `${t(lang, 'workflow.mergedNote', workflow.prNumber)} — ${pageLinks[0].title}`;
+              if (links.length === 1) {
+                previewHint.textContent = `${t(lang, 'workflow.mergedNote', workflow.prNumber)} — ${links[0].title}`;
               }
               prodLink.hidden = false;
               renderPageLinks(base);
