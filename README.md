@@ -56,6 +56,13 @@ neither gives you the *safe pipeline* in between. Studio Clarté connects both.
   providers can be configured per site; **one is ACTIVE** — chosen in ⚙️
   Settings with its model (free-form model ids allowed). Generation always
   plans first, then calls the model once per file.
+- **Per-site skills** — client-specific instructions live in the **client's own
+  repo** (`.agents/skills/<skill>/SKILL.md`, frontmatter `name` + `description`),
+  are loaded via the GitHub API and injected into the prompts **only when the
+  user request matches the skill description** (same semantics as CLI agent
+  skills: pi / opencode / codex). Example: instant-academie's « ajouter une
+  offre » generates the exact validated file set for a new offer. Other
+  tenants are unaffected (`skillPaths` is empty by default).
 - **Human-in-the-loop editor** — review and fine-tune the generated files in an
   integrated, PagesCMS-style editor (monospace, Tab = 2 spaces for YAML/JSON,
   ⌘S to save). The « Fichiers concernés » panel shows the **file list only** by
@@ -261,7 +268,7 @@ Pages project, preview workflow, per-client R2 storage, DNS, vault keys, final t
 
 | Endpoint | Method | Role |
 |---|---|---|
-| `/api/chat` | POST | AI streaming (provider + modèle actifs du site, choisis dans ⚙️ Paramètres): plan + one call per file; repo read tools (`listFiles`/`readFile`) |
+| `/api/chat` | POST | AI streaming (provider + modèle actifs du site, choisis dans ⚙️ Paramètres): plan + one call per file; repo read tools (`listFiles`/`readFile`); per-site skills activées si la demande matche leur description |
 | `/api/draft/:token` | GET | Fetch a generated draft payload out of band (KV-backed, 2h TTL, unguessable token) |
 | `/api/upload-url` | POST | Upload target: client R2 presigned URL **or** git-mode path |
 | `/api/commit-draft` | POST | `draft/*` branch + PR in ~1-2 s (Direct Git API) — auto-closes any previous open `draft/*` PR (one active preview per site) |
@@ -285,6 +292,8 @@ src/
 ├── lib/
 │   ├── ai.ts            Provider registry (DeepSeek/OpenRouter/OpenAI/Gemini/
 │   │                    Grok/OpenCode Go — OpenAI-compat) + prompts
+│   ├── skills.ts        Per-site skills: frontmatter parse, description
+│   │                    matcher, load from the site repo (GitHub API)
 │   ├── generator.ts     Sequential multi-page generation (plan → one call/file)
 │   ├── github-edge.ts   Direct Git API: draft/* + PR, preview status, merge, rollback
 │   ├── storage.ts       R2 presigned URLs / git-mode targets (per-client)
