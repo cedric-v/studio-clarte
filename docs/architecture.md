@@ -120,6 +120,18 @@ not for text edits.
 - Gitleaks pre-commit/pre-push hooks; security headers in middleware.
 - Previews never touch production; publishing is PR-gated by human validation.
 
+## Known limitations (accepted for now)
+
+- **Preview-failure diagnostics**: when a gate (quality/build) fails on a draft
+  PR, the deploy job is skipped and the studio's `buildUrl` points at the
+  *skipped* run rather than the failing one. The failure is correctly surfaced
+  (« pré-visualisation échouée ») but the direct link may not point to the root
+  cause — surfacing it would require reading all check runs on the head SHA.
+- **Preview URL extracted from GitHub Deployments only**: a client using pure
+  Cloudflare Pages *Git integration* (no `environment:` on a preview job, hence
+  no Deployment) gets a check run instead — the studio would stay « en attente »
+  with no link even though the preview built. See E3 below.
+
 ## Future evolutions
 
 Candidates are listed with the **need they would fulfill** and the trigger
@@ -152,6 +164,19 @@ for the detailed C1–C4 designs (C1 is already active).
 - **Trigger**: visual/interactive verification becomes a client-visible
   requirement that screenshots cannot cover. On adoption, re-add the
   `cloudflare-computer` topic to the repo.
+
+### E3 — Preview URL from check runs (Pages Git integration, candidate)
+- **Need**: today the preview URL is extracted from GitHub **Deployments** only
+  (`getPRStatus` Strategy 1); check runs only contribute the state (Strategy 2),
+  not the URL. A client using pure Cloudflare Pages **Git integration** — where
+  Pages reports a check run and no GitHub Deployment — would never get a preview
+  link in the studio, even though the preview builds fine.
+- **Cheap step**: read the check run's `details_url` / `output` for Pages
+  deployments, or standardize the client workflows on a job `environment:`
+  (which creates a Deployment automatically — what `preview.yml` and
+  `ci-site.yml` already do).
+- **Trigger**: a client migrates to pure Pages Git integration and needs the
+  preview link in the studio.
 
 ### C2–C4 (from iteration-strategy.md)
 Conditional draft context (C2), KV snapshot for cross-device continuity (C3),

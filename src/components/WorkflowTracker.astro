@@ -74,6 +74,9 @@ const { lang } = Astro.locals;
             {t(lang, 'workflow.merge')}
           </button>
           <p class="publish-note">{t(lang, 'workflow.mergeNote')}</p>
+          <a class="preview-link" id="prod-link" href="#" target="_blank" rel="noopener noreferrer" hidden>
+            {t(lang, 'workflow.viewSite')}
+          </a>
           <span class="step-hint">{t(lang, 'workflow.step2Hint')}</span>
           <details class="tech-details">
             <summary>{t(lang, 'workflow.techDetails')}</summary>
@@ -115,6 +118,7 @@ const { lang } = Astro.locals;
   const prStatusTech = document.getElementById('pr-status-tech') as HTMLElement;
   const buildLink = document.getElementById('build-link') as HTMLAnchorElement;
   const btnMerge = document.getElementById('btn-merge') as HTMLButtonElement;
+  const prodLink = document.getElementById('prod-link') as HTMLAnchorElement;
 
   let polling: ReturnType<typeof setInterval> | null = null;
   let pollingStarted = false;
@@ -227,6 +231,7 @@ const { lang } = Astro.locals;
   // New payload generated → ready for step 1
   on('sc:payload', () => {
     computePageLinks();
+    prodLink.hidden = true; // back to draft mode — the site link is stale
     btnCreate.disabled = false;
     if (!state.workflow) {
       resetStepper();
@@ -255,6 +260,7 @@ const { lang } = Astro.locals;
   on('sc:payload-cleared', () => {
     btnCreate.disabled = true;
     pageLinks = [];
+    prodLink.hidden = true;
     pagesEl.hidden = true;
     pagesList.innerHTML = '';
     if (!state.workflow) {
@@ -393,6 +399,11 @@ const { lang } = Astro.locals;
             btnMerge.disabled = true;
             btnMerge.textContent = t(lang, 'workflow.mergedDone');
             previewHint.textContent = t(lang, 'workflow.mergedNote', workflow.prNumber);
+            // Point the user at the live site once the deploy succeeded.
+            if (status.prodUrl) {
+              prodLink.href = safeHttpUrl(status.prodUrl);
+              prodLink.hidden = false;
+            }
             stopPolling();
             toast(t(lang, 'workflow.toastMerged'), 'success');
             return;
@@ -402,6 +413,7 @@ const { lang } = Astro.locals;
             btnMerge.disabled = true;
             btnMerge.textContent = t(lang, 'workflow.publishFailed');
             previewHint.textContent = t(lang, 'workflow.mergedFailedNote');
+            prodLink.hidden = true;
             stopPolling();
             toast(t(lang, 'workflow.mergedFailed'), 'error');
             return;
@@ -485,6 +497,7 @@ const { lang } = Astro.locals;
     pageLinks = [];
     previewBase = null;
     mergePolls = 0;
+    prodLink.hidden = true;
     pagesEl.hidden = true;
     pagesList.innerHTML = '';
     btnCreate.disabled = true;
@@ -524,6 +537,7 @@ const { lang } = Astro.locals;
       stopPolling();
       resetStepper();
       previewBase = null;
+      prodLink.hidden = true;
       pagesEl.hidden = true;
       pagesList.innerHTML = '';
       previewLink.hidden = true;
