@@ -17,7 +17,7 @@ const SUGGESTION_KEYS = ['chat.suggestion1', 'chat.suggestion2', 'chat.suggestio
   <div class="chat-messages" id="chat-messages">
     <div class="welcome">
       <div class="welcome-title">{t(lang, 'chat.welcomeTitle', site.name)}</div>
-      <p class="welcome-text">{t(lang, 'chat.welcomeText', site.cdnDomain)}</p>
+      <p class="welcome-text">{t(lang, 'chat.welcomeText')}</p>
       <div class="chips" id="suggestion-chips">
         {SUGGESTION_KEYS.map((key) => (
           <button class="chip" type="button" data-suggestion={t(lang, key)}>{t(lang, key)}</button>

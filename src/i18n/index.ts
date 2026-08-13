@@ -74,8 +74,8 @@ const fr: Dictionary = {
 
   // ── Chat ─────────────────────────────────────────────────────────
   'chat.welcomeTitle': (name: string) => `💬 Bonjour, ${name} !`,
-  'chat.welcomeText': (cdn: string) =>
-    `Décrivez le contenu à créer. Glissez-déposez une image ou faites Ctrl+V : elle sera compressée en WebP dans votre navigateur puis téléversée sur le CDN ${cdn}.`,
+  'chat.welcomeText': () =>
+    'Décrivez le contenu à créer. Glissez-déposez une image ou faites Ctrl+V : elle sera intégrée au projet.',
   'chat.suggestion1': 'Crée la page « Offres » avec 3 accompagnements',
   'chat.suggestion2': 'Rédige un article de blog sur notre méthode',
   'chat.suggestion3': 'Génère les témoignages clients (5 avis)',
@@ -309,8 +309,8 @@ const en: Dictionary = {
     `Use the configured admin subdomain (e.g. ${domain}).`,
 
   'chat.welcomeTitle': (name: string) => `💬 Hello, ${name}!`,
-  'chat.welcomeText': (cdn: string) =>
-    `Describe the content to create. Drag & drop an image or press Ctrl+V: it will be compressed to WebP in your browser, then uploaded to the ${cdn} CDN.`,
+  'chat.welcomeText': () =>
+    'Describe the content to create. Drag & drop an image or press Ctrl+V: it will be added to the project.',
   'chat.suggestion1': "Create the 'Services' page with 3 packages",
   'chat.suggestion2': 'Write a blog post about our method',
   'chat.suggestion3': 'Generate client testimonials (5 reviews)',
