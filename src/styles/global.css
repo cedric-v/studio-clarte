@@ -702,16 +702,20 @@ body.resizing * {
   align-items: flex-end;
   gap: 8px;
 }
+.composer-row .icon-btn {
+  flex-shrink: 0;
+}
 
 /* Contained input box (ChatGPT/Gemini/Claude pattern): the textarea and its
    action buttons (expand, send) live inside ONE rounded container — the send
-   stays a compact circular icon, always visible even on small screens. */
+   stays a compact circular icon, always visible even on small screens.
+   The textarea is a BLOCK child (width:100%) — not a flex item — so it always
+   shrinks with the box, including on iOS Safari (textarea-in-flex quirk). */
 .composer-box {
   position: relative;
   flex: 1;
   min-width: 0;
-  display: flex;
-  align-items: flex-end;
+  max-width: 100%;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
   background: var(--bg-app);
@@ -722,8 +726,9 @@ body.resizing * {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand-primary) 25%, transparent);
 }
 .composer-box textarea {
-  flex: 1;
-  min-width: 0;
+  display: block;
+  width: 100%;
+  max-width: 100%;
   min-height: 44px;
   max-height: 200px;
   resize: none;
@@ -734,6 +739,7 @@ body.resizing * {
   color: var(--text-main);
   font-size: 14px;
   line-height: 1.5;
+  font-family: inherit;
 }
 .composer-actions {
   position: absolute;
@@ -1924,5 +1930,12 @@ body.resizing * {
   }
   .msg {
     max-width: 96%;
+  }
+  /* Mobile chat: full-width composer, tighter message padding */
+  .chat-composer {
+    padding: 8px 10px;
+  }
+  .chat-messages {
+    padding: 12px;
   }
 }
