@@ -1,13 +1,19 @@
 ---
 import { t } from '../i18n';
 import type { SiteConfig } from '../config/sites';
+import type { SessionUser } from '../env';
 
 interface Props {
   site: SiteConfig;
+  user: SessionUser | null;
 }
 
-const { site } = Astro.props;
+const { site, user } = Astro.props;
 const { lang } = Astro.locals;
+
+// Greeting: the person's FIRST NAME when GitHub exposes it, otherwise the
+// GitHub login — never the site name (best practice for personal onboarding).
+const greeting = user?.name?.trim().split(/\s+/)[0] || user?.login || site.name;
 
 const SUGGESTION_KEYS = ['chat.suggestion1', 'chat.suggestion2', 'chat.suggestion3'];
 ---
@@ -16,7 +22,7 @@ const SUGGESTION_KEYS = ['chat.suggestion1', 'chat.suggestion2', 'chat.suggestio
   <!-- Messages -->
   <div class="chat-messages" id="chat-messages">
     <div class="welcome">
-      <div class="welcome-title">{t(lang, 'chat.welcomeTitle', site.name)}</div>
+      <div class="welcome-title">{t(lang, 'chat.welcomeTitle', greeting)}</div>
       <p class="welcome-text">{t(lang, 'chat.welcomeText')}</p>
       <div class="chips" id="suggestion-chips">
         {SUGGESTION_KEYS.map((key) => (

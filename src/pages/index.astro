@@ -59,7 +59,7 @@ const sites = isAgency ? listSites(Astro.locals.env) : [];
 
         <!-- Column 1: AI chat -->
         <section class="pane pane-chat" aria-label={t(lang, 'tabs.chat')}>
-          <ChatStudio site={siteConfig} />
+          <ChatStudio site={siteConfig} user={user} />
         </section>
 
         <!-- Resizable divider (desktop only) -->
