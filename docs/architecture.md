@@ -76,7 +76,10 @@ Publish ──▶ /api/commit-draft ──▶ branch draft/* + PR (never main)
    action. **Publish is tracked post-merge**: the studio keeps polling the
    production deployment (quality checks + deploy on main) and only declares
    « Publié » when it succeeds — a failed gate is reported as an explicit
-   failure (content merged but not live), never a false success. The repo never
+   failure (content merged but not live), never a false success. A `published`
+   flag on the workflow triggers a **soft reset** of the stepper as soon as a
+   new draft is generated (or on refresh with a fresh draft), so the UI never
+   lingers on a closed publish. The repo never
    accumulates stale preview PRs. (No cron cleanup: every git action runs with
    the logged-in collaborator's OAuth token — no server-side service token.)
 7. **Draft iteration**: plan → patch per file → final payload; the draft is

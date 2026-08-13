@@ -30,6 +30,8 @@ export interface WorkflowState {
   prNumber: number;
   prUrl: string;
   branch: string;
+  /** True once the production deploy succeeded (post-merge tracking). */
+  published?: boolean;
 }
 
 export interface ScState {

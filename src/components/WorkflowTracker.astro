@@ -233,7 +233,10 @@ const { lang } = Astro.locals;
     computePageLinks();
     prodLink.hidden = true; // back to draft mode — the site link is stale
     btnCreate.disabled = false;
-    if (!state.workflow) {
+    if (!state.workflow || state.workflow.published) {
+      // Fresh draft: reset the stepper. A *published* workflow is closed — the
+      // new draft starts a new cycle (soft reset); an in-progress preview stays
+      // visible until its replacement PR is created a moment later.
       resetStepper();
       previewLink.hidden = true;
       prLink.hidden = true;
@@ -241,6 +244,7 @@ const { lang } = Astro.locals;
       prStatusTech.textContent = '';
       buildLink.hidden = true;
       btnMerge.disabled = true;
+      btnMerge.textContent = t(lang, 'workflow.merge');
       btnCancel.hidden = true;
     }
     previewHint.textContent = t(lang, 'workflow.toastPayloadReady');
@@ -356,6 +360,15 @@ const { lang } = Astro.locals;
   (function restoreWorkflow() {
     const workflow = state.workflow;
     if (!workflow) return;
+    // A published workflow with a fresh draft present → the draft is the
+    // current work: soft-reset the stepper instead of re-showing the old
+    // publish (the published PR stays in state, replaced on the next preview).
+    if (workflow.published && getState().payload?.files?.length) {
+      resetStepper();
+      btnCreate.disabled = false;
+      previewHint.textContent = t(lang, 'workflow.toastPayloadReady');
+      return;
+    }
     computePageLinks();
     btnCreate.disabled = true;
     btnCancel.hidden = false;
@@ -403,6 +416,12 @@ const { lang } = Astro.locals;
             if (status.prodUrl) {
               prodLink.href = safeHttpUrl(status.prodUrl);
               prodLink.hidden = false;
+            }
+            // Mark the workflow as published: a new draft later triggers the
+            // soft reset instead of inheriting this closed state.
+            if (state.workflow) {
+              state.workflow.published = true;
+              persistState();
             }
             stopPolling();
             toast(t(lang, 'workflow.toastMerged'), 'success');
