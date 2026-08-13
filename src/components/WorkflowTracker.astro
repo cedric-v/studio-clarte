@@ -291,28 +291,43 @@ const { lang } = Astro.locals;
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? `Error ${res.status}`);
 
-      state.workflow = {
-        siteId,
-        prNumber: data.prNumber,
-        prUrl: data.prUrl,
-        branch: data.branch,
-      } satisfies WorkflowState;
-      persistState();
+      const latestPayload = getState().payload;
+      // Draft discarded while the PR was being created → cancel the orphan
+      // preview instead of surfacing it.
+      if (!latestPayload?.files?.length) {
+        await fetch('/api/cancel-preview', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ prNumber: data.prNumber }),
+        }).catch(() => undefined);
+        return;
+      }
+      // Draft replaced while creating → the stale PR is left to the re-trigger
+      // (finally) which creates the right preview; don't surface this one.
+      if (latestPayload === current) {
+        state.workflow = {
+          siteId,
+          prNumber: data.prNumber,
+          prUrl: data.prUrl,
+          branch: data.branch,
+        } satisfies WorkflowState;
+        persistState();
 
-      // Let the chat clear its pending Git-fallback images (now committed).
-      window.dispatchEvent(new CustomEvent('sc:pr-created'));
+        // Let the chat clear its pending Git-fallback images (now committed).
+        window.dispatchEvent(new CustomEvent('sc:pr-created'));
 
-      activateStep(1);
-      btnCancel.hidden = false;
-      // Technical details (small print): PR link + branch
-      prLink.href = safeHttpUrl(data.prUrl);
-      prLink.textContent = t(lang, 'workflow.techPrLink', data.prNumber);
-      prLink.hidden = false;
-      prBranch.textContent = data.branch;
-      prBranch.hidden = false;
-      toast(t(lang, 'workflow.toastPrCreated', data.prNumber), 'success');
-      switchToWorkspaceTab();
-      startPolling();
+        activateStep(1);
+        btnCancel.hidden = false;
+        // Technical details (small print): PR link + branch
+        prLink.href = safeHttpUrl(data.prUrl);
+        prLink.textContent = t(lang, 'workflow.techPrLink', data.prNumber);
+        prLink.hidden = false;
+        prBranch.textContent = data.branch;
+        prBranch.hidden = false;
+        toast(t(lang, 'workflow.toastPrCreated', data.prNumber), 'success');
+        switchToWorkspaceTab();
+        startPolling();
+      }
     } catch (error) {
       console.error('[workflow]', error);
       toast(error instanceof Error ? error.message : t(lang, 'workflow.toastCreateFailed'), 'error');
@@ -320,6 +335,12 @@ const { lang } = Astro.locals;
       btnCreate.textContent = t(lang, 'workflow.createPreview');
     } finally {
       creatingPreview = false;
+      // A newer draft arrived while this preview was being created → start its
+      // preview too (the flag just cleared prevents runaway loops).
+      const latest = getState().payload;
+      if (latest && latest !== current && latest.files?.length && isAutoPreviewEnabled()) {
+        void createPreview(true);
+      }
     }
   }
 
@@ -363,6 +384,10 @@ const { lang } = Astro.locals;
           // Post-merge: track the production deploy (quality checks + deploy
           // on main) instead of declaring success at merge time.
           btnCancel.hidden = true;
+          // The preview (draft branch) no longer exists once merged.
+          previewLink.hidden = true;
+          pagesEl.hidden = true;
+          pagesList.innerHTML = '';
           if (status.prodState === 'success') {
             activateStep(2, true);
             btnMerge.disabled = true;

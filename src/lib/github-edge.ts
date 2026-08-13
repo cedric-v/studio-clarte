@@ -450,9 +450,19 @@ export async function getProductionDeployState(
       const { data: deployments } = await octokit.repos.listDeployments({
         owner,
         repo: repoName,
-        environment: 'production',
       });
-      const post = deployments.find((d) => d.created_at >= mergedAt);
+      const mergedMs = Date.parse(mergedAt);
+      const postMerge = deployments.filter((d) => {
+        if (!d.created_at) return false;
+        const created = Date.parse(d.created_at);
+        return Number.isFinite(mergedMs) && Number.isFinite(created) ? created >= mergedMs : false;
+      });
+      // Prefer the deployment whose environment clearly names production
+      // (handles 'production', 'Production', 'prod', 'deploy', 'live'…),
+      // otherwise fall back to the newest post-merge deployment.
+      const post =
+        postMerge.find((d) => /production|prod|deploy|live/i.test(d.environment ?? '')) ??
+        postMerge[0];
       if (post) {
         const { data: statuses } = await octokit.repos.listDeploymentStatuses({
           owner,
