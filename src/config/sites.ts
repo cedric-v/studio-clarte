@@ -27,6 +27,14 @@ export const SiteConfigSchema = z.object({
   framework: z.enum(['astro', 'eleventy', 'generic']),
   /** Extra directives injected into the DeepSeek system prompt. */
   systemPromptAddon: z.string().default(''),
+  /**
+   * Per-site AI "skills": repo-relative paths to SKILL.md files (frontmatter
+   * `name` + `description`), loaded from the SITE's own repo via the GitHub
+   * API and injected into the prompts ONLY when the user request matches the
+   * skill description. Empty for sites without skills — other tenants are
+   * completely unaffected. Configurable per site via `SITE_OVERRIDES`.
+   */
+  skillPaths: z.array(z.string()).default([]),
   /** Media CDN domain (e.g. "https://cdn.cedricv.com"). */
   cdnDomain: z.url(),
   /** Base branch for PRs (never push directly to it). */
@@ -72,6 +80,7 @@ const SEED_SITES: SiteConfig[] = [
     isAgency: true,
     systemPromptAddon:
       'Site vitrine du webmaster : services, offres d\'accompagnement, témoignages clients. Ton expert et rassurant.',
+    skillPaths: [],
     theme: { primaryColor: '#3b82f6' },
   },
 ];
@@ -113,6 +122,7 @@ export function buildRegistry(env: CloudflareEnv): SiteRegistry {
         repo: override.repo ?? '',
         framework: override.framework ?? 'generic',
         systemPromptAddon: override.systemPromptAddon ?? '',
+        skillPaths: override.skillPaths ?? [],
         cdnDomain: override.cdnDomain ?? 'https://cdn.example.com',
         defaultBranch: override.defaultBranch ?? 'main',
         isAgency: false,

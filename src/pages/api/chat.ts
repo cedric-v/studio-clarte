@@ -11,6 +11,7 @@ import {
 } from '../../lib/ai';
 import { createOctokit, getFileContent, listRepoFiles } from '../../lib/github-edge';
 import { runGeneration } from '../../lib/generator';
+import { loadSkill, loadSkillContent, skillMatches, type ActiveSkill } from '../../lib/skills';
 import { readAiConfig, resolveSecret } from '../../lib/vault';
 
 /**
@@ -75,6 +76,35 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const gitToken = locals.user?.token;
   const octokit = gitToken ? createOctokit(gitToken) : null;
 
+  // ── Per-site skills (ex: la skill « ajouter une offre » d'instant-academie) ──
+  // Chargées depuis le repo DU SITE (jamais un autre tenant), injectées dans
+  // les prompts UNIQUEMENT quand la dernière demande utilisateur correspond à
+  // la description de la skill (sémantique identique aux skills des agents CLI).
+  // Site sans `skillPaths` → aucun impact.
+  let activeSkill: ActiveSkill | null = null;
+  if (octokit && site.repo && site.skillPaths.length) {
+    // Dernière demande réelle de l'utilisateur (le message « [BROUILLON EN
+    // COURS …] » synthétique du client ne doit pas déclencher la skill).
+    let userText = '';
+    for (const m of [...messages].reverse()) {
+      if (
+        m.role === 'user' &&
+        typeof m.content === 'string' &&
+        !m.content.startsWith('[BROUILLON EN COURS')
+      ) {
+        userText = m.content;
+        break;
+      }
+    }
+    for (const path of site.skillPaths) {
+      const skill = await loadSkill(octokit, site.repo, path, site.defaultBranch);
+      if (skill && skillMatches(userText, skill)) {
+        activeSkill = await loadSkillContent(octokit, site.repo, path, site.defaultBranch);
+        if (activeSkill) break;
+      }
+    }
+  }
+
   const tools =
     octokit && site.repo
       ? {
@@ -124,6 +154,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         for await (const chunk of runGeneration(createAiModel(provider, modelId, apiKey), site, {
           messages,
           tools,
+          activeSkill,
           storeDraft,
           draft: Array.isArray(body?.draft)
             ? body.draft.filter((f) => typeof f.path === 'string' && typeof f.content === 'string')

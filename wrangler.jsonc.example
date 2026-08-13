@@ -42,6 +42,10 @@
     "SITE_DOMAINS": "{}",
     // JSON map siteId → partial site overrides (repo, cdnDomain, r2…).
     // e.g. {"agence":{"name":"Your Site Name","repo":"your-org/your-site","cdnDomain":"https://cdn.your-domain.com"}}
+    // Per-site AI skills (optionnel): `skillPaths` = chemins repo-relative vers
+    // des SKILL.md (frontmatter name + description) chargés depuis le repo du
+    // site et injectés dans les prompts quand la demande utilisateur matche la
+    // description. Ex: "skillPaths":[".agents/skills/ajouter-offre/SKILL.md"]
     "SITE_OVERRIDES": "{}",
     "SESSION_TTL_SECONDS": 604800
   }

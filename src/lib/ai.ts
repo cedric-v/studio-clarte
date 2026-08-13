@@ -2,6 +2,7 @@ import { createOpenAI } from '@ai-sdk/openai';
 import type { LanguageModel } from 'ai';
 import type { SiteConfig } from '../config/sites';
 import type { SecretName } from './vault';
+import type { ActiveSkill } from './skills';
 
 // ═══════════════════════════════════════════════════════════════════
 // AI PROVIDER REGISTRY
@@ -205,10 +206,11 @@ export const AI_PROVIDER_META = AI_PROVIDERS.map((provider) => ({
  * Shared base prompt: client site context (white label), repo read tools
  * (listFiles/readFile) and content rules. The prompt stays in French: it
  * drives the CONTENT language of the (French-speaking) client sites,
- * independently of the UI locale.
+ * independently of the UI locale. When a per-site skill is active, its full
+ * body is appended so the model applies it at every step (plan AND files).
  */
-export function buildBasePrompt(site: SiteConfig): string {
-  return [
+export function buildBasePrompt(site: SiteConfig, activeSkill?: ActiveSkill): string {
+  const lines = [
     `Tu es « Studio Clarté », l'assistant de création de contenu de l'équipe de contenu pour le site « ${site.name} » (framework: ${site.framework}).`,
     '',
     '## Règles de production',
@@ -226,7 +228,16 @@ export function buildBasePrompt(site: SiteConfig): string {
     site.systemPromptAddon,
     '',
     `CDN d'images du site : ${site.cdnDomain}`,
-  ].join('\n');
+  ];
+  if (activeSkill) {
+    lines.push(
+      '',
+      '## Skill active — règles à appliquer',
+      `Nom de la skill : ${activeSkill.name}`,
+      activeSkill.content,
+    );
+  }
+  return lines.join('\n');
 }
 
 /**
@@ -234,9 +245,9 @@ export function buildBasePrompt(site: SiteConfig): string {
  * conversationally (no JSON) or returns a PLAN (file paths + descriptions),
  * never file contents (each file is generated in a separate call).
  */
-export function buildPlanPrompt(site: SiteConfig): string {
+export function buildPlanPrompt(site: SiteConfig, activeSkill?: ActiveSkill): string {
   return [
-    buildBasePrompt(site),
+    buildBasePrompt(site, activeSkill),
     '',
     '## Ta tâche — PREMIÈRE ÉTAPE : planifier, converser OU annuler',
     '- Si l\'utilisateur demande d\'ANNULER / ABANDONNER / DÉFAIRE la modification en cours (un brouillon « [BROUILLON EN COURS] » figure dans les messages) → commence ta réponse par le marqueur exact [[CANCEL_DRAFT]] (seul sur sa ligne), suivi éventuellement d\'un court message de confirmation. Ce marqueur déclenche l\'effacement du brouillon côté système.',
@@ -268,9 +279,10 @@ export function buildFilePrompt(
   path: string,
   description: string,
   originalContent?: string,
+  activeSkill?: ActiveSkill,
 ): string {
   const prompt = [
-    buildBasePrompt(site),
+    buildBasePrompt(site, activeSkill),
     '',
     `## Ta tâche : générer UN fichier — « ${path} »`,
     `Description : ${description}`,
@@ -314,9 +326,10 @@ export function buildPatchPrompt(
   path: string,
   description: string,
   baseContent: string,
+  activeSkill?: ActiveSkill,
 ): string {
   return [
-    buildBasePrompt(site),
+    buildBasePrompt(site, activeSkill),
     '',
     `## Ta tâche : modifier UNE PARTIE du fichier « ${path} »`,
     `Description : ${description}`,

@@ -2,6 +2,7 @@ import { generateText, isStepCount } from 'ai';
 import type { LanguageModel, ModelMessage, Tool } from 'ai';
 import type { SiteConfig } from '../config/sites';
 import { buildFilePrompt, buildPatchPrompt, buildPlanPrompt } from './ai';
+import type { ActiveSkill } from './skills';
 
 /**
  * Sequential content generator — makes multi-page generation reliable.
@@ -172,6 +173,12 @@ export interface GenerationOptions {
    */
   jsonMode?: boolean;
   /**
+   * Per-site skill active for this request (matched by the caller in
+   * chat.ts). Injected into the plan AND per-file prompts so the model
+   * applies the skill rules at every step. Absent for sites without skills.
+   */
+  activeSkill?: ActiveSkill | null;
+  /**
    * When provided, the final payload is stored OUT OF BAND (server-side)
    * and the stream carries a compact marker `[[PAYLOAD:<token>]]` instead of
    * the full JSON. Large payloads (full file contents ≈ 15-30 KB) streamed
@@ -206,7 +213,7 @@ export async function* runGeneration(
   try {
     const result = await generateText({
       model,
-      system: buildPlanPrompt(site),
+      system: buildPlanPrompt(site, opts.activeSkill ?? undefined),
       messages: opts.messages,
       temperature: 0.4,
       maxOutputTokens: 2048,
@@ -291,8 +298,20 @@ export async function* runGeneration(
         // Editing an existing file → PATCH mode (targeted replacements, tiny
         // output — no truncation even for large pages). New files → full content.
         const system = baseContent
-          ? buildPatchPrompt(site, target.path, target.description, baseContent)
-          : buildFilePrompt(site, target.path, target.description);
+          ? buildPatchPrompt(
+              site,
+              target.path,
+              target.description,
+              baseContent,
+              opts.activeSkill ?? undefined,
+            )
+          : buildFilePrompt(
+              site,
+              target.path,
+              target.description,
+              undefined,
+              opts.activeSkill ?? undefined,
+            );
         // Retries: the previous attempt failed (invalid JSON or output cap) —
         // replaying the same doomed prompt reproduces the failure. Steer the
         // model to a SHORTER but complete file instead.
