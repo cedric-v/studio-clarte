@@ -4,6 +4,7 @@
   "dependencyDashboard": true,
   "labels": ["dependencies"],
   "rebaseWhen": "behind-base-branch",
+  "gitAuthor": "Cédric V. <cedric-v@users.noreply.github.com>",
   "automerge": true,
   "automergeType": "pr",
   "platformAutomerge": true,

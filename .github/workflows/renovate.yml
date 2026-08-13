@@ -56,3 +56,7 @@ jobs:
         with:
           token: ${{ secrets.RENOVATE_TOKEN }}
           configurationFile: renovate.json
+        env:
+          # Required with a custom token (the action does not inject the
+          # current repo itself): tells Renovate which repository to run on.
+          RENOVATE_REPOSITORIES: ${{ github.repository }}
