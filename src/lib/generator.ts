@@ -37,14 +37,62 @@ export interface Payload {
 const MAX_FILES = 8;
 const MAX_RETRIES = 2;
 
+/**
+ * Lenient JSON parsing: strict first, then repairs the most common LLM
+ * mistake — literal line breaks/tabs emitted inside JSON strings (models
+ * often output real newlines instead of escaped `\n`), which makes strict
+ * JSON.parse throw. Scanning char-by-char, only in-string raw `\n`/`\r`/`\t`
+ * are escaped; `\"` and `\\` sequences are preserved as-is.
+ */
+export function parseJsonLoose(candidate: string): unknown | null {
+  try {
+    return JSON.parse(candidate) as unknown;
+  } catch {
+    /* fall through to the repair pass */
+  }
+
+  let out = '';
+  let inString = false;
+  let escaped = false;
+  for (const ch of candidate) {
+    if (inString) {
+      if (escaped) {
+        out += ch;
+        escaped = false;
+        continue;
+      }
+      if (ch === '\\') {
+        out += ch;
+        escaped = true;
+        continue;
+      }
+      if (ch === '"') {
+        inString = false;
+        out += ch;
+        continue;
+      }
+      if (ch === '\n' || ch === '\r' || ch === '\t') {
+        out += ch === '\t' ? '\\t' : ch === '\r' ? '\\r' : '\\n';
+        continue;
+      }
+      out += ch;
+      continue;
+    }
+    if (ch === '"') inString = true;
+    out += ch;
+  }
+  try {
+    return JSON.parse(out) as unknown;
+  } catch {
+    return null;
+  }
+}
+
 /** Extracts the first valid JSON object from a model reply (fenced or bare). */
 export function extractJsonObject(text: string): unknown | null {
   const tryParse = (candidate: string) => {
-    try {
-      return JSON.parse(candidate) as unknown;
-    } catch {
-      return null;
-    }
+    // Strict first, then the lenient repair pass.
+    return parseJsonLoose(candidate);
   };
 
   // 1. Fenced blocks (last one wins)
@@ -153,7 +201,7 @@ export async function* runGeneration(
       system: buildPlanPrompt(site),
       messages: opts.messages,
       temperature: 0.4,
-      maxOutputTokens: 1024,
+      maxOutputTokens: 2048,
       // Allow the tool loop (listFiles/readFile) to run for a few steps
       // (AI SDK v7 defaults to a single step).
       stopWhen: isStepCount(5),
@@ -229,6 +277,7 @@ export async function* runGeneration(
     }
 
     let ok = false;
+    let lastWasTruncated = false;
     for (let attempt = 0; attempt < MAX_RETRIES && !ok; attempt++) {
       try {
         // Editing an existing file → PATCH mode (targeted replacements, tiny
@@ -236,15 +285,33 @@ export async function* runGeneration(
         const system = baseContent
           ? buildPatchPrompt(site, target.path, target.description, baseContent)
           : buildFilePrompt(site, target.path, target.description);
+        // Retries: the previous attempt failed (invalid JSON or output cap) —
+        // replaying the same doomed prompt reproduces the failure. Steer the
+        // model to a SHORTER but complete file instead.
+        const retrySystem =
+          attempt > 0
+            ? system +
+              '\n\n## ⚠️ TENTATIVE PRÉCÉDENTE ÉCHOUÉE\n' +
+              "Ta réponse précédente a dépassé la limite de sortie ou était un JSON invalide. Génère UNE VERSION PLUS COURTE mais COMPLÈTE de ce fichier (max ~2500 mots), sous forme d'objet json strictement valide."
+            : system;
         const result = await generateText({
           model,
-          system,
+          system: retrySystem,
           messages: [{ role: 'user', content: userText }] as never,
           temperature: 0.3,
           maxOutputTokens: 8192,
+          // Force the model to emit valid JSON (DeepSeek `json_object` mode):
+          // full-content responses for NEW files are large escaped strings,
+          // and unescaped quotes/newlines are the #1 intermittent failure for
+          // new-file generation (edits use tiny patch JSON and never hit it).
+          // NOTE: `responseFormat` is supported at runtime (the AI SDK
+          // forwards it to the model call → `response_format` on the wire)
+          // but is not exposed in the public generateText typings — cast.
+          responseFormat: { type: 'json' } as never,
           stopWhen: isStepCount(2),
         });
         const lengthTruncated = result.finishReason === 'length';
+        lastWasTruncated = lengthTruncated;
         const obj = extractJsonObject(result.text) as
           | { path?: unknown; content?: unknown; patch?: unknown }
           | null;
@@ -295,7 +362,13 @@ export async function* runGeneration(
         console.error(`[generator] file ${target.path} failed:`, error);
       }
     }
-    if (!ok) yield `\n⚠️ Échec de génération de \`${target.path}\``;
+    if (!ok) {
+      if (lastWasTruncated) {
+        yield `\n⚠️ \`${target.path}\` est trop long pour une seule génération (limite de sortie atteinte). Reformulez en demandant une version plus courte, ou découpez la demande en plusieurs fichiers.`;
+      } else {
+        yield `\n⚠️ Échec de génération de \`${target.path}\` — réessayez ou reformulez la demande.`;
+      }
+    }
   }
 
   if (!files.length) {
