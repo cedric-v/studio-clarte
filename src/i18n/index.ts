@@ -76,7 +76,7 @@ const fr: Dictionary = {
   'chat.welcomeTitle': (name: string) => `💬 Bonjour, ${name} !`,
   'chat.welcomeText': () =>
     'Décrivez le contenu à créer. Glissez-déposez une image ou faites Ctrl+V : elle sera intégrée au projet.',
-  'chat.suggestion1': 'Intègre une nouvelle offre, demande moi toutes les informations requises',
+  'chat.suggestion1': 'Intègre une nouvelle offre, demande-moi toutes les informations requises',
   'chat.suggestion2': 'Modifie la page XYZ',
   'chat.suggestion3': "Intègre l'image ci-jointe sur la page XYZ à l'emplacement ABC",
   'chat.attach': 'Joindre une image',
