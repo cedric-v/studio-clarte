@@ -498,4 +498,25 @@ const { lang } = Astro.locals;
     a.click();
     URL.revokeObjectURL(a.href);
   });
+
+  // Restore a persisted draft on page refresh — same rendering as a new
+  // payload (list only, content on click). The chat history (ChatStudio) and
+  // the stepper (WorkflowTracker) already restore on load; this keeps the
+  // « Fichiers concernés » panel in sync with them.
+  (function restorePayload() {
+    const payload = state.payload;
+    if (!payload || !Array.isArray(payload.files) || !payload.files.length) return;
+    files = payload.files;
+    active = -1;
+    opened.clear();
+    userChoseView = false;
+    exitEdit();
+    renderTabs();
+    renderFile();
+    emptyEl.hidden = true;
+    rootEl.hidden = false;
+    discardBtn.hidden = false;
+    const kb = (files.reduce((sum, file) => sum + file.content.length, 0) / 1024).toFixed(1);
+    metaEl.textContent = t(lang, 'preview.meta', files.length, kb, payload.title ?? '');
+  })();
 </script>
