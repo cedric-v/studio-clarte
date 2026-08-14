@@ -56,6 +56,10 @@ neither gives you the *safe pipeline* in between. Studio Clarté connects both.
   providers can be configured per site; **one is ACTIVE** — chosen in ⚙️
   Settings with its model (free-form model ids allowed). Generation always
   plans first, then calls the model once per file.
+- **Answers in the user's language** — the model replies in the language it
+  detects in the conversation (falling back to the interface language), for
+  both conversational answers and generated content. Chat system messages are
+  localized (FR/EN).
 - **Per-site skills** — client-specific instructions live in the **client's own
   repo** (`.agents/skills/<skill>/SKILL.md`, frontmatter `name` + `description`),
   are loaded via the GitHub API and injected into the prompts **only when the
