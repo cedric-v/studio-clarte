@@ -226,18 +226,12 @@ npm run deploy
 - [`renovate.json`](renovate.json): **minor & patch updates automerge**
   (squash) as soon as the CI gate (`.github/workflows/ci.yml` — `astro check`
   + build) is green ; **major updates stay manual PRs**.
-- Runs **self-hosted on GitHub Actions** (`.github/workflows/renovate.yml`,
-  hourly + manual trigger): the Renovate GitHub App is **not installed on this
-  repo** (no webhook registered, even though it is enabled on other repos).
-- Requires the repo secret **`RENOVATE_TOKEN`**: a fine-grained PAT (or classic
-  PAT with `repo` scope) with **Contents: Read & write** + **Pull requests:
-  Read & write**. A PAT is mandatory — PRs opened with `GITHUB_TOKEN` do not
-  trigger the `ci` workflow, which would deadlock `platformAutomerge` (no green
-  check → no automerge).
-- ⚠️ If you later enable the Renovate GitHub App on this repo
-  (`github.com/settings/installations` → Renovate → Configure → add
-  `studio-clarte`), **delete `.github/workflows/renovate.yml`** to avoid
-  duplicate PRs.
+- Runs via the **Renovate GitHub App** (Mend), installed at the account level
+  (`github.com/settings/installations`). ⚠️ The app only processes repos that
+  are **included in its installation scope** — repos created **after** the
+  install are not auto-discovered. If a new repo never gets a Dependency
+  Dashboard, open the app installation → Configure → set "All repositories"
+  (or select the repo explicitly) → Save.
 - `typescript` is capped at `< 7.0.0` (Renovate rule): TS 7 is the new
   native compiler, not yet supported by `@astrojs/check` (peer `^5 || ^6`).
 - `astro` / `@astrojs/cloudflare` are **exact-pinned** (7.1.6 / 14.1.7):
