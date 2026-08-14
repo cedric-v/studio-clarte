@@ -111,6 +111,23 @@ const fr: Dictionary = {
     "⚠️ Réponse tronquée : le contenu demandé dépasse la limite de sortie du modèle. Scindez la demande (ex: un fichier à la fois) ou demandez un périmètre plus réduit.",
   'chat.invalidPayload': 'Payload reçu mais aucun fichier exploitable',
   'chat.filesReady': (n: number) => `${n} fichier(s) généré(s) ✓ — prêt pour le draft PR`,
+
+  // ── Chat — génération (messages système dans la langue de l'interface) ──
+  'chat.generatingFiles': (n: number) => `📄 Génération de ${n} fichier(s)…`,
+  'chat.fileProgress': (i: number, total: number, path: string) =>
+    `\n\n**${i}/${total}** — \`${path}\``,
+  'chat.fileTooLong': (path: string) =>
+    `\n⚠️ \`${path}\` est trop long pour une seule génération (limite de sortie atteinte). Reformulez en demandant une version plus courte, ou découpez la demande en plusieurs fichiers.`,
+  'chat.fileFailed': (path: string) =>
+    `\n⚠️ Échec de génération de \`${path}\` — réessayez ou reformulez la demande.`,
+  'chat.noFilesGenerated': '\n\n⚠️ Aucun fichier n’a pu être généré. Reformulez la demande.',
+  'chat.planFailed': '⚠️ La planification a échoué. Réessayez ou reformulez la demande.',
+  'chat.generationFailed': '\n⚠️ La génération a échoué. Réessayez.',
+  'chat.emptyResponse': '(réponse vide)',
+  'chat.errorMessagesRequired': 'Paramètre « messages » requis',
+  'chat.errorUnknownProvider': (id: string) => `Fournisseur d'IA inconnu : ${id}`,
+  'chat.errorMissingKey': (label: string) =>
+    `Clé API ${label} non configurée pour ce site — ajoutez-la dans ⚙️ Paramètres.`,
   'chat.streamError': '⚠️ Erreur réseau lors du streaming',
 
   // ── Preview ──────────────────────────────────────────────────────
@@ -375,6 +392,23 @@ const en: Dictionary = {
     '⚠️ Truncated response: the requested content exceeds the model output limit. Split the request (e.g. one file at a time) or ask for a smaller scope.',
   'chat.invalidPayload': 'Payload received but no usable files',
   'chat.filesReady': (n: number) => `${n} file(s) generated ✓ — ready for the draft PR`,
+
+  // ── Chat — generation (system messages in the interface language) ──
+  'chat.generatingFiles': (n: number) => `📄 Generating ${n} file(s)…`,
+  'chat.fileProgress': (i: number, total: number, path: string) =>
+    `\n\n**${i}/${total}** — \`${path}\``,
+  'chat.fileTooLong': (path: string) =>
+    `\n⚠️ \`${path}\` is too long for a single generation (output limit reached). Rephrase and ask for a shorter version, or split the request into several files.`,
+  'chat.fileFailed': (path: string) =>
+    `\n⚠️ Failed to generate \`${path}\` — retry or rephrase your request.`,
+  'chat.noFilesGenerated': '\n\n⚠️ No files could be generated. Please rephrase your request.',
+  'chat.planFailed': '⚠️ Planning failed. Retry or rephrase your request.',
+  'chat.generationFailed': '\n⚠️ Generation failed. Please retry.',
+  'chat.emptyResponse': '(empty response)',
+  'chat.errorMessagesRequired': 'Parameter "messages" required',
+  'chat.errorUnknownProvider': (id: string) => `Unknown AI provider: ${id}`,
+  'chat.errorMissingKey': (label: string) =>
+    `${label} API key not configured for this site — add it in ⚙️ Settings.`,
   'chat.streamError': '⚠️ Network error while streaming',
 
   'preview.title': '📄 Affected files',

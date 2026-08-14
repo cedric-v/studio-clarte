@@ -1,6 +1,7 @@
 import { generateText, isStepCount } from 'ai';
 import type { LanguageModel, ModelMessage, Tool } from 'ai';
 import type { SiteConfig } from '../config/sites';
+import { t, type Locale } from '../i18n';
 import { buildFilePrompt, buildPatchPrompt, buildPlanPrompt } from './ai';
 import type { ActiveSkill } from './skills';
 
@@ -187,7 +188,15 @@ export interface GenerationOptions {
    * token the client can use to fetch the payload (e.g. via /api/draft).
    */
   storeDraft?: (payload: Payload) => Promise<string>;
+  /**
+   * Active UI locale ('fr' | 'en'). Localizes the progress lines streamed
+   * into the chat (see the i18n dictionary) and is the FALLBACK language for
+   * the model when the user's own language can't be determined from the
+   * conversation. Defaults to 'fr' (the app's primary market).
+   */
+  lang?: Locale;
 }
+
 
 export async function* runGeneration(
   model: LanguageModel,
@@ -208,12 +217,13 @@ export async function* runGeneration(
       )?.content ?? '';
 
   // ── Step 1: plan (or conversational reply) ────────────────────────
+  const lang = opts.lang ?? 'fr';
   let plan: { title?: string; summary?: string; plan?: unknown } | null = null;
   let reply = '';
   try {
     const result = await generateText({
       model,
-      system: buildPlanPrompt(site, opts.activeSkill ?? undefined),
+      system: buildPlanPrompt(site, opts.activeSkill ?? undefined, lang),
       messages: opts.messages,
       temperature: 0.4,
       maxOutputTokens: 2048,
@@ -240,11 +250,11 @@ export async function* runGeneration(
     }
   } catch (error) {
     console.error('[generator] plan failed:', error);
-    reply = '⚠️ La planification a échoué. Réessayez ou reformulez la demande.';
+    reply = t(lang, 'chat.planFailed');
   }
 
   if (!plan) {
-    yield reply || '(empty response)';
+    yield reply || t(lang, 'chat.emptyResponse');
     return;
   }
 
@@ -259,17 +269,17 @@ export async function* runGeneration(
     .slice(0, MAX_FILES);
 
   if (!targets.length) {
-    yield reply || '(empty response)';
+    yield reply || t(lang, 'chat.emptyResponse');
     return;
   }
 
   // ── Step 2: generate each file in its own call ────────────────────
   const files: PayloadFile[] = [];
-  yield `📄 Génération de ${targets.length} fichier(s)…`;
+  yield t(lang, 'chat.generatingFiles', targets.length);
 
   for (let i = 0; i < targets.length; i++) {
     const target = targets[i];
-    yield `\n\n**${i + 1}/${targets.length}** — \`${target.path}\``;
+    yield t(lang, 'chat.fileProgress', i + 1, targets.length, target.path);
 
     // Edit base: the current DRAFT (follow-up messages) if present,
     // otherwise the repo original. The diff base stays the REPO version.
@@ -304,6 +314,7 @@ export async function* runGeneration(
               target.description,
               baseContent,
               opts.activeSkill ?? undefined,
+              lang,
             )
           : buildFilePrompt(
               site,
@@ -311,6 +322,7 @@ export async function* runGeneration(
               target.description,
               undefined,
               opts.activeSkill ?? undefined,
+              lang,
             );
         // Retries: the previous attempt failed (invalid JSON or output cap) —
         // replaying the same doomed prompt reproduces the failure. Steer the
@@ -396,15 +408,15 @@ export async function* runGeneration(
     }
     if (!ok) {
       if (lastWasTruncated) {
-        yield `\n⚠️ \`${target.path}\` est trop long pour une seule génération (limite de sortie atteinte). Reformulez en demandant une version plus courte, ou découpez la demande en plusieurs fichiers.`;
+        yield t(lang, 'chat.fileTooLong', target.path);
       } else {
-        yield `\n⚠️ Échec de génération de \`${target.path}\` — réessayez ou reformulez la demande.`;
+        yield t(lang, 'chat.fileFailed', target.path);
       }
     }
   }
 
   if (!files.length) {
-    yield '\n\n⚠️ Aucun fichier n’a pu être généré. Reformulez la demande.';
+    yield t(lang, 'chat.noFilesGenerated');
     return;
   }
 

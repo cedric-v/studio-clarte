@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { createTextStreamResponse } from 'ai';
 import type { ModelMessage } from 'ai';
 import { z } from 'zod';
+import { t } from '../../i18n';
 import {
   createAiModel,
   DEFAULT_MODEL_ID,
@@ -48,7 +49,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
     draft?: { path: string; content: string; original?: string }[];
   } | null;
   const messages = Array.isArray(body?.messages) ? body.messages : [];
-  if (!messages.length) return json({ error: 'Parameter "messages" required' }, 400);
+  if (!messages.length)
+    return json({ error: t(locals.lang, 'chat.errorMessagesRequired') }, 400);
 
   // ── Active AI provider + model (site-level, chosen in ⚙️ Settings) ──
   const stored = await readAiConfig(locals.env, site.id);
@@ -56,7 +58,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     stored && getAiProvider(stored.provider) ? stored.provider : DEFAULT_PROVIDER_ID;
   const provider = getAiProvider(providerId);
   if (!provider) {
-    return json({ error: `Fournisseur d'IA inconnu : ${providerId}` }, 400);
+    return json({ error: t(locals.lang, 'chat.errorUnknownProvider', providerId) }, 400);
   }
   const modelId =
     (stored && stored.model.trim()) || provider.models[0]?.id || DEFAULT_MODEL_ID;
@@ -65,7 +67,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   if (!apiKey) {
     return json(
       {
-        error: `Clé API ${provider.label} non configurée pour ce site — ajoutez-la dans ⚙️ Paramètres.`,
+        error: t(locals.lang, 'chat.errorMissingKey', provider.label),
       },
       400,
     );
@@ -167,12 +169,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
           // Reasoning models (Grok Reasoning, Gemini thinking…) reject
           // `response_format: json_object` — the generator drops it.
           jsonMode: modelSupportsJsonMode(provider, modelId),
+          // UI locale — fallback language for the model's replies + localizes
+          // the progress lines streamed into the chat.
+          lang: locals.lang,
         })) {
           controller.enqueue(chunk);
         }
       } catch (error) {
         console.error('[chat] generation failed:', error);
-        controller.enqueue('\n⚠️ La génération a échoué. Réessayez.');
+        controller.enqueue(t(locals.lang, 'chat.generationFailed'));
       } finally {
         controller.close();
       }

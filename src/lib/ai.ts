@@ -3,6 +3,7 @@ import type { LanguageModel } from 'ai';
 import type { SiteConfig } from '../config/sites';
 import type { SecretName } from './vault';
 import type { ActiveSkill } from './skills';
+import type { Locale } from '../i18n';
 
 // ═══════════════════════════════════════════════════════════════════
 // AI PROVIDER REGISTRY
@@ -202,23 +203,36 @@ export const AI_PROVIDER_META = AI_PROVIDERS.map((provider) => ({
   models: provider.models.map((model) => ({ id: model.id, label: model.label })),
 }));
 
+/** Human names of the UI locales — used as the prompt's fallback language. */
+const LANG_NAMES: Record<Locale, string> = {
+  fr: 'français',
+  en: 'anglais',
+};
+
 /**
  * Shared base prompt: client site context (white label), repo read tools
- * (listFiles/readFile) and content rules. The prompt stays in French: it
- * drives the CONTENT language of the (French-speaking) client sites,
- * independently of the UI locale. When a per-site skill is active, its full
- * body is appended so the model applies it at every step (plan AND files).
+ * (listFiles/readFile), language rules and content rules. The model answers
+ * in the USER's language (determined from the conversation), falling back to
+ * the active UI locale (`lang`) when it can't be determined — for both
+ * conversational replies and generated file content. When a per-site skill
+ * is active, its full body is appended so the model applies it at every
+ * step (plan AND files).
  */
-export function buildBasePrompt(site: SiteConfig, activeSkill?: ActiveSkill): string {
+export function buildBasePrompt(site: SiteConfig, activeSkill?: ActiveSkill, lang: Locale = 'fr'): string {
   const lines = [
     `Tu es « Studio Clarté », l'assistant de création de contenu de l'équipe de contenu pour le site « ${site.name} » (framework: ${site.framework}).`,
+    '',
+    '## Langue de réponse',
+    '- Détermine la langue de l\'utilisateur à partir de la conversation (ex: messages en français → réponds en français ; en anglais → en anglais).',
+    `- Si la langue de l'utilisateur est indéterminable (premier message sans indice, consignes techniques…), utilise la langue de l'interface : ${LANG_NAMES[lang] ?? lang}.`,
+    '- Cette règle s\'applique à TES réponses conversationnelles ET au contenu des fichiers que tu génères.',
     '',
     '## Règles de production',
     `- Tu génères UNIQUEMENT des fichiers de contenu (Markdown, JSON, YAML) destinés à être commités dans le dépôt git « ${site.repo} ».`,
     '- Chemin de fichier ABSOLU depuis la racine du dépôt (ex: src/content/offres/accompagnement.md).',
     '- Les images déjà téléversées par l\'utilisateur sont référencées dans les messages par leur URL CDN (https://cdn...) ou leur chemin relatif dans le dépôt (/images/client-a/...). Réutilise ces références TELLES QUELLES avec un texte alternatif accessible (alt), au format : ![Texte alternatif descriptif](<référence>). Ne modifie ni le domaine CDN ni le chemin.',
     '- Frontmatter YAML correctement formé pour les fichiers .md si le framework attend du frontmatter (title, description, date…).',
-    '- Contenu en français, rédactionnel de haute qualité, sans lorem ipsum.',
+    '- Contenu rédactionnel de haute qualité, sans lorem ipsum, dans la langue de l\'utilisateur (voir « Langue de réponse »).',
     '',
     '## Accès au dépôt — OUTILS',
     '- Tu disposes de deux outils pour LIRE le dépôt du site : `listFiles` (liste des chemins) et `readFile` (contenu d\'un fichier, chemin absolu depuis la racine).',
@@ -245,14 +259,14 @@ export function buildBasePrompt(site: SiteConfig, activeSkill?: ActiveSkill): st
  * conversationally (no JSON) or returns a PLAN (file paths + descriptions),
  * never file contents (each file is generated in a separate call).
  */
-export function buildPlanPrompt(site: SiteConfig, activeSkill?: ActiveSkill): string {
+export function buildPlanPrompt(site: SiteConfig, activeSkill?: ActiveSkill, lang: Locale = 'fr'): string {
   return [
-    buildBasePrompt(site, activeSkill),
+    buildBasePrompt(site, activeSkill, lang),
     '',
     '## Ta tâche — PREMIÈRE ÉTAPE : planifier, converser OU annuler',
     '- Si l\'utilisateur demande d\'ANNULER / ABANDONNER / DÉFAIRE la modification en cours (un brouillon « [BROUILLON EN COURS] » figure dans les messages) → commence ta réponse par le marqueur exact [[CANCEL_DRAFT]] (seul sur sa ligne), suivi éventuellement d\'un court message de confirmation. Ce marqueur déclenche l\'effacement du brouillon côté système.',
     '- N\'utilise [[CANCEL_DRAFT]] QUE si un brouillon non publié est réellement en cours de traitement dans la conversation. Sinon, réponds naturellement, sans marqueur.',
-    '- Si l\'utilisateur ne demande PAS de générer/modifier du contenu (salutation, question, discussion) → réponds naturellement en français, SANS JSON.',
+    '- Si l\'utilisateur ne demande PAS de générer/modifier du contenu (salutation, question, discussion) → réponds naturellement dans la langue de l\'utilisateur (voir « Langue de réponse »), SANS JSON.',
     '- Si l\'utilisateur demande de CRÉER OU DE MODIFIER du contenu — création, édition, réorganisation de paragraphes, correction, ajustement d\'une page existante… → réponds UNIQUEMENT avec ce JSON de plan (SANS ```, SANS texte autour, SANS contenu de fichier) :',
     '- NE COLLE JAMAIS le contenu d\'un fichier dans ta réponse : la modification est appliquée via le plan (un fichier par appel). Si l\'utilisateur fournit le texte désiré, utilise-le pour décrire précisément la modification dans le plan.',
     '{',
@@ -280,9 +294,10 @@ export function buildFilePrompt(
   description: string,
   originalContent?: string,
   activeSkill?: ActiveSkill,
+  lang: Locale = 'fr',
 ): string {
   const prompt = [
-    buildBasePrompt(site, activeSkill),
+    buildBasePrompt(site, activeSkill, lang),
     '',
     `## Ta tâche : générer UN fichier — « ${path} »`,
     `Description : ${description}`,
@@ -327,9 +342,10 @@ export function buildPatchPrompt(
   description: string,
   baseContent: string,
   activeSkill?: ActiveSkill,
+  lang: Locale = 'fr',
 ): string {
   return [
-    buildBasePrompt(site, activeSkill),
+    buildBasePrompt(site, activeSkill, lang),
     '',
     `## Ta tâche : modifier UNE PARTIE du fichier « ${path} »`,
     `Description : ${description}`,
