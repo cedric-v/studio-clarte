@@ -21,9 +21,19 @@
       "automerge": false
     },
     {
-      "description": "astro/@astrojs/cloudflare are EXACT-PINNED: 7.2.0/14.2.0 break `astro dev` (vite route-cache SSR error; CI only builds, so it would merge green). Updates stay manual PRs — verify `astro dev` locally before merging.",
+      "description": "astro/@astrojs/cloudflare are EXACT-PINNED: they need manual PRs — verify `astro dev` locally before merging (CI only builds, so a dev-only break would merge green).",
       "matchPackageNames": ["astro", "@astrojs/cloudflare"],
       "automerge": false
+    },
+    {
+      "description": "astro 7.2.x breaks `astro dev`: the Cloudflare worker crashes on first SSR render (missing deps_ssr file in vite optimizeDeps, dev process dies). Verified locally on 7.2.0 and 7.2.2 — main/7.1.6 works fine. Re-evaluate when 7.3.0 is out.",
+      "matchPackageNames": ["astro"],
+      "allowedVersions": "<7.2.0 || >=7.3.0"
+    },
+    {
+      "description": "@astrojs/cloudflare 14.2.x breaks `astro dev` (same SSR crash as astro 7.2.x — verified locally on 14.2.0 and 14.2.1). Re-evaluate when 14.3.0 is out.",
+      "matchPackageNames": ["@astrojs/cloudflare"],
+      "allowedVersions": "<14.2.0 || >=14.3.0"
     },
     {
       "description": "typescript 7.x is the new native compiler — NOT yet supported by the Astro/Volar toolchain (@astrojs/check peerDependencies: ^5 || ^6). Never propose it.",
