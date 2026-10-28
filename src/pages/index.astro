@@ -41,11 +41,13 @@ const activeAiLabel = `${activeProvider.label} · ${activeModel}`;
     <meta name="robots" content="noindex,nofollow" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <title>{siteConfig.name} — Studio Clarté</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- Polices auto-hébergées (public/fonts) : aucun appel à Google Fonts. -->
     <link
-      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap"
-      rel="stylesheet"
+      rel="preload"
+      href="/fonts/jetbrains-mono-normal-100-to-800-latin.1e06740a.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
     />
     <!-- Client dynamic theme (white label) -->
     <style is:global>

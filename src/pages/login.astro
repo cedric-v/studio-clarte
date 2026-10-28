@@ -23,6 +23,14 @@ const agencyExample = Astro.locals.env.AGENCY_DOMAIN ?? 'studio.example.com';
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="dark" />
     <meta name="robots" content="noindex,nofollow" />
+    <!-- Polices auto-hébergées (public/fonts) : aucun appel à Google Fonts. -->
+    <link
+      rel="preload"
+      href="/fonts/jetbrains-mono-normal-100-to-800-latin.1e06740a.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <title>Connexion — {siteName}</title>
     <style is:global>

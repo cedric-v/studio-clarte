@@ -2,6 +2,10 @@
    STUDIO CLARTÉ — DESIGN SYSTEM (Vanilla CSS, Dark Mode First)
    ═══════════════════════════════════════════════════════════════════ */
 
+/* Polices auto-hébergées (public/fonts) : aucun appel à Google Fonts.
+   Généré par tools/selfhost-fonts.mjs. */
+@import './fonts.css';
+
 :root {
   /* Dynamic Brand Theme (surchargé par la config du client via <style is:global>) */
   --brand-primary: #3b82f6;
@@ -824,10 +828,188 @@ body.resizing * {
   resize: vertical;
 }
 
+.composer-footer {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
 .composer-hint {
   margin-top: 8px;
+  min-width: 0;
   font-size: 11.5px;
   color: var(--text-faint);
+}
+
+/* Heavy work is an explicit secondary mode: discoverable, but never confused
+   with the fast content chat. The status stays visible after the dialog closes
+   so a user can safely navigate away while the runner continues. */
+.heavy-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  flex-shrink: 0;
+  margin-top: 5px;
+  padding: 5px 9px;
+  border: 1px solid color-mix(in srgb, var(--color-warning) 38%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-warning) 8%, transparent);
+  color: var(--text-muted);
+  font-size: 11.5px;
+  font-weight: 600;
+  transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+}
+.heavy-trigger:hover {
+  color: var(--text-main);
+  background: color-mix(in srgb, var(--color-warning) 16%, transparent);
+  border-color: color-mix(in srgb, var(--color-warning) 65%, transparent);
+}
+.heavy-trigger-badge,
+.heavy-dialog-badge {
+  color: var(--color-warning);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 400;
+}
+.heavy-status {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 9px;
+  padding: 8px 10px;
+  border: 1px solid var(--border-color);
+  border-left: 3px solid var(--color-info);
+  border-radius: var(--radius-md);
+  background: var(--bg-app);
+  font-size: 12px;
+}
+.heavy-status-text { font-weight: 600; }
+.heavy-status-in_progress { color: var(--color-info); }
+.heavy-status-queued { color: var(--text-muted); }
+.heavy-status-success { color: var(--color-success); }
+.heavy-status-failure { color: var(--color-danger); }
+.heavy-status-cancelled { color: var(--text-muted); }
+.heavy-status a {
+  color: var(--brand-primary);
+  font-weight: 600;
+}
+.heavy-stop {
+  margin-left: auto;
+  padding: 4px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 11px;
+}
+.heavy-stop:hover:not(:disabled) { color: var(--color-danger); border-color: var(--color-danger); }
+.heavy-stop:disabled { opacity: .5; cursor: wait; }
+.heavy-status-note { width: 100%; color: var(--text-faint); }
+
+.heavy-dialog {
+  width: min(620px, calc(100% - 24px));
+  max-height: min(760px, calc(100dvh - 24px));
+  padding: 0;
+  border: 1px solid var(--border-color-strong);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface);
+  color: var(--text-main);
+  box-shadow: var(--shadow-lg);
+}
+.heavy-dialog::backdrop {
+  background: rgba(3, 7, 18, .76);
+  backdrop-filter: blur(5px);
+}
+.heavy-form { padding: 22px; }
+.heavy-dialog-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.heavy-dialog-head h2 { font-size: 18px; margin-bottom: 3px; }
+.heavy-description,
+.heavy-safety {
+  padding: 11px 13px;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.heavy-description {
+  color: var(--text-muted);
+  background: var(--bg-app);
+  border: 1px solid var(--border-color);
+}
+.heavy-safety {
+  margin-top: 8px;
+  color: var(--color-success);
+  background: color-mix(in srgb, var(--color-success) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-success) 24%, transparent);
+}
+.heavy-label {
+  display: block;
+  margin: 18px 0 6px;
+  font-size: 13px;
+  font-weight: 700;
+}
+.heavy-input {
+  display: block;
+  width: 100%;
+  min-height: 150px;
+  resize: vertical;
+  padding: 11px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  outline: none;
+  background: var(--bg-app);
+  color: var(--text-main);
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.heavy-input:focus {
+  border-color: var(--brand-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand-primary) 25%, transparent);
+}
+.heavy-examples {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+  color: var(--text-faint);
+  font-size: 11.5px;
+}
+.heavy-examples button {
+  padding: 4px 7px;
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  cursor: pointer;
+}
+.heavy-examples button:hover { color: var(--text-main); background: var(--bg-surface-elevated); }
+.heavy-confirm {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 17px;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.4;
+  cursor: pointer;
+}
+.heavy-confirm input { margin-top: 3px; accent-color: var(--brand-primary); }
+.heavy-error { margin-top: 10px; color: var(--color-danger); font-size: 12.5px; }
+.heavy-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 20px;
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -2079,5 +2261,14 @@ body.resizing * {
   }
   .chat-messages {
     padding: 12px;
+  }
+  .composer-footer {
+    flex-wrap: wrap;
+  }
+  .composer-hint {
+    flex: 1 1 100%;
+  }
+  .heavy-trigger {
+    margin-top: 2px;
   }
 }

@@ -1,0 +1,26 @@
+/* ------------------------------------------------------------------
+ * Polices auto-hébergées — généré par tools/selfhost-fonts.mjs
+ * Ne pas modifier à la main : relancer le script pour mettre à jour.
+ *
+ * Source : Google Fonts (licences OFL/Apache), servies depuis notre domaine.
+ * Aucune requête vers Google Fonts au runtime,
+ * donc aucune transmission d'IP visiteurs à Google (RGPD).
+ * ------------------------------------------------------------------ */
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: italic;
+  font-weight: 100 800;
+  font-display: swap;
+  src: url('/fonts/jetbrains-mono-italic-100-to-800-latin.6548575d.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 100 800;
+  font-display: swap;
+  src: url('/fonts/jetbrains-mono-normal-100-to-800-latin.1e06740a.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
