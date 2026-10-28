@@ -1,10 +1,14 @@
 /* ------------------------------------------------------------------
- * Polices auto-hébergées — généré par tools/selfhost-fonts.mjs
- * Ne pas modifier à la main : relancer le script pour mettre à jour.
+ * Polices auto-hébergées — fichier généré, ne pas modifier à la main.
  *
- * Source : Google Fonts (licences OFL/Apache), servies depuis notre domaine.
- * Aucune requête vers Google Fonts au runtime,
- * donc aucune transmission d'IP visiteurs à Google (RGPD).
+ * Source : Google Fonts (licences SIL Open Font License 1.1), servies depuis
+ * ce domaine. Aucune requête vers Google Fonts au runtime, donc aucune
+ * transmission d'adresse IP de visiteur à Google (RGPD/LPD).
+ *
+ * Licences : voir les fichiers OFL-<Police>.txt de ce dossier.
+ *
+ * Pour ajouter une police : déposer le .woff2 (sous-ensemble latin) dans ce
+ * dossier, puis ajouter le bloc @font-face ci-dessous avec son unicode-range.
  * ------------------------------------------------------------------ */
 
 @font-face {
