@@ -48,7 +48,7 @@
     // description. Ex: "skillPaths":[".agents/skills/ajouter-offre/SKILL.md"]
     "SITE_OVERRIDES": "{}",
     "SESSION_TTL_SECONDS": 604800
-  }
+  },
   // ── Secrets — `npx wrangler secret put <NAME>` (or dashboard Secrets) ─────────
   //   VAULT_MASTER_KEY, the AI provider keys (DEEPSEEK_API_KEY,
   //   OPENROUTER_API_KEY, OPENAI_API_KEY, GEMINI_API_KEY, GROK_API_KEY,
@@ -59,5 +59,28 @@
   // Per site, either:
   //   • own R2 → r2AccountId/r2Bucket in SITE_OVERRIDES + the site's
   //     R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY in the vault (⚙️ Settings);
-  //   • Git fallback → images are committed into the site repo.
+  //   • Git fallback → images are committed into the site repo.,
+
+  // ── Cloudflare Observability (Workers Logs) ────────────────────────────────
+  // Le 1er décembre 2026, Cloudflare passe l'Observability à une tarification
+  // au volume : le plan gratuit offre 0,5 Go d'ingestion par jour (7 jours de
+  // rétention). Au-delà, l'ingestion se met en pause (aucun site en panne, mais
+  // plus de logs).
+  //
+  // On déclare donc explicitement la configuration plutôt que de subir le
+  // défaut Cloudflare (logs activés à 100 % pour les Workers récents) :
+  //   - head_sampling_rate = 0.1  → 10 % des requêtes sont loggées ;
+  //   - invocation_logs = false   → supprime le log automatique par requête
+  //     (c'était le double du volume : 1 log d'invocation + 1 console.log).
+  // Les console.error / console.warn métier sont conservés : ce sont eux qui
+  // servent au débogage.
+  //
+  // Référence : tools/docs/cloudflare-observability.md
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 0.1,
+    "logs": {
+      "invocation_logs": false
+    }
+  }
 }
