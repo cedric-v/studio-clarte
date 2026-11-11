@@ -9,6 +9,9 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
   check-build:
     name: astro check + build
@@ -20,5 +23,7 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      - name: Audit des dépendances (vulnérabilités connues)
+        run: npm audit --audit-level=high
       - run: npm run check
       - run: npm run build

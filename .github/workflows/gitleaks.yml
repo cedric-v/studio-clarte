@@ -1,21 +1,60 @@
-name: gitleaks
+name: Secrets (gitleaks)
+
+# Binaire officiel (pas d'action marketplace) : aucun licence requise pour les
+# dépôts d'organisation, et comportement identique sur tous les dépôts.
+# Scan de TOUT l'historique à chaque push : un secret ajouté puis « supprimé »
+# dans le même push reste détecté.
 
 on:
-  pull_request:
   push:
-  workflow_dispatch:
+    branches: [main, master]
+  pull_request:
   schedule:
-    - cron: "0 4 * * *" # run once a day at 4 AM
+    - cron: '0 5 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gitleaks-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   scan:
-    name: gitleaks
+    name: Historique + arbre de travail
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
+      # Historique complet : un clone superficiel masquerait les secrets
+      # introduits puis supprimés dans un commit antérieur.
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: gitleaks/gitleaks-action@v3
+
+      - name: Installer gitleaks
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }} # Only required for Org level scanning
+          GITLEAKS_VERSION: 8.30.1
+        run: |
+          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
+            | tar -xz -C /usr/local/bin gitleaks
+          gitleaks version
+
+      - name: Scanner l'historique git
+        run: |
+          gitleaks git --log-opts="--all" --redact -v \
+            --report-path gitleaks-history.json --report-format json
+
+      - name: Scanner l'arbre de travail (fichiers non suivis inclus)
+        if: always()
+        run: |
+          gitleaks dir --redact -v \
+            --report-path gitleaks-worktree.json --report-format json
+
+      - name: Publier les rapports
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: gitleaks-reports
+          path: gitleaks-*.json
+          retention-days: 7
