@@ -1,57 +1,85 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["config:recommended"],
+  "extends": [
+    "config:recommended",
+    "helpers:pinGitHubActionDigests",
+    ":automergeRequireAllStatusChecks"
+  ],
   "osvVulnerabilityAlerts": true,
   "vulnerabilityAlerts": {
     "enabled": true,
-    "labels": ["security"],
-    "schedule": ["at any time"],
+    "labels": [
+      "security"
+    ],
+    "schedule": [
+      "at any time"
+    ],
     "automerge": true
   },
   "lockFileMaintenance": {
     "enabled": true,
     "automerge": true,
-    "schedule": ["before 4am on monday"]
+    "schedule": [
+      "before 4am on monday"
+    ]
   },
   "dependencyDashboard": true,
-  "labels": ["dependencies"],
+  "labels": [
+    "dependencies"
+  ],
   "rebaseWhen": "behind-base-branch",
   "gitAuthor": "Cédric V. <cedric-v@users.noreply.github.com>",
-  "automerge": true,
   "automergeType": "pr",
   "platformAutomerge": true,
   "automergeStrategy": "squash",
   "packageRules": [
     {
       "description": "Automerge minor & patch updates (dependencies AND devDependencies).",
-      "matchUpdateTypes": ["minor", "patch"],
+      "matchUpdateTypes": [
+        "minor",
+        "patch"
+      ],
       "automerge": true
     },
     {
       "description": "Never automerge major updates — they need human validation.",
-      "matchUpdateTypes": ["major"],
+      "matchUpdateTypes": [
+        "major"
+      ],
       "automerge": false
     },
     {
       "description": "astro/@astrojs/cloudflare are EXACT-PINNED: they need manual PRs — verify `astro dev` locally before merging (CI only builds, so a dev-only break would merge green).",
-      "matchPackageNames": ["astro", "@astrojs/cloudflare"],
+      "matchPackageNames": [
+        "astro",
+        "@astrojs/cloudflare"
+      ],
       "automerge": false
     },
     {
       "description": "astro 7.2.x breaks `astro dev`: the Cloudflare worker crashes on first SSR render (missing deps_ssr file in vite optimizeDeps, dev process dies). Verified locally on 7.2.0 and 7.2.2 — main/7.1.6 works fine. Re-evaluate when 7.3.0 is out.",
-      "matchPackageNames": ["astro"],
+      "matchPackageNames": [
+        "astro"
+      ],
       "allowedVersions": "<7.2.0 || >=7.3.0"
     },
     {
       "description": "@astrojs/cloudflare 14.2.x breaks `astro dev` (same SSR crash as astro 7.2.x — verified locally on 14.2.0 and 14.2.1). Re-evaluate when 14.3.0 is out.",
-      "matchPackageNames": ["@astrojs/cloudflare"],
+      "matchPackageNames": [
+        "@astrojs/cloudflare"
+      ],
       "allowedVersions": "<14.2.0 || >=14.3.0"
     },
     {
       "description": "typescript 7.x is the new native compiler — NOT yet supported by the Astro/Volar toolchain (@astrojs/check peerDependencies: ^5 || ^6). Never propose it.",
-      "matchPackageNames": ["typescript"],
+      "matchPackageNames": [
+        "typescript"
+      ],
       "allowedVersions": "<7.0.0"
     }
   ],
-  "postUpdateOptions": ["npmDedupe"]
+  "postUpdateOptions": [
+    "npmDedupe"
+  ],
+  "minimumReleaseAge": "7 days"
 }
