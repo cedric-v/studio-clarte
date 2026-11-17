@@ -1,0 +1,8 @@
+[
+  {
+    "package": "picomatch",
+    "advisory": "GHSA-fc5q-39xc-vjpf",
+    "reason": "CVE-2026-112366 (ReDoS CWE-1333) : aucune version corrigée publiée, 4.0.7 est à la fois la dernière version et la dernière version vulnérable (correctif en attente dans micromatch/picomatch#194). Non exploitable ici : la faille demande un motif glob contrôlé par l'attaquant, or les motifs glob viennent de la configuration de build du dépôt (Astro / Eleventy / outillage), jamais d'une entrée utilisateur. À retirer dès qu'un picomatch corrigé est publié.",
+    "expires": "2026-12-15"
+  }
+]
