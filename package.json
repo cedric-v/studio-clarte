@@ -26,9 +26,9 @@
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.12",
-    "@astrojs/cloudflare": "14.4.3",
+    "@astrojs/cloudflare": "14.4.9",
     "@cloudflare/workers-types": "^5.20260804.1",
-    "astro": "7.4.7",
+    "astro": "7.4.13",
     "tsx": "^4.23.5",
     "typescript": "^6.0.3",
     "wrangler": "^4.118.0"
